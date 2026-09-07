@@ -1,11 +1,14 @@
 import os
+import secrets
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-INTERN_PASSWORD = os.environ["INTERN_PASSWORD"]
+# INTERN_PASSWORD may hold multiple comma-separated passwords, e.g.
+# "bryllupsband,sommerturne2027" — any of them logs in, no per-person identity.
+VALID_PASSWORDS = [p.strip() for p in os.environ["INTERN_PASSWORD"].split(",") if p.strip()]
 SESSION_SECRET = os.environ["SESSION_SECRET"]
 
 app = FastAPI()
@@ -33,7 +36,7 @@ async def login_form(request: Request):
 
 @app.post("/login")
 async def login(request: Request, password: str = Form(...)):
-    if password == INTERN_PASSWORD:
+    if any(secrets.compare_digest(password, valid) for valid in VALID_PASSWORDS):
         request.session["authed"] = True
         return RedirectResponse("/", status_code=303)
     return templates.TemplateResponse(
