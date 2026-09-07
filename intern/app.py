@@ -1,10 +1,14 @@
+import json
 import os
 import secrets
+from urllib.parse import quote
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+
+import setlist
 
 # INTERN_PASSWORD may hold multiple comma-separated passwords, e.g.
 # "bryllupsband,sommerturne2027" — any of them logs in, no per-person identity.
@@ -49,5 +53,45 @@ async def home(request: Request):
     return templates.TemplateResponse(request, "home.html", {})
 
 
-# Feature routes (setlist generator, scan cleanup, chord library/transpose)
-# get added here in later build phases.
+@app.get("/setlist", response_class=HTMLResponse)
+async def setlist_page(request: Request, sync_error: str = None, build_error: str = None):
+    return templates.TemplateResponse(
+        request,
+        "setlist.html",
+        {
+            "config": setlist.get_config(),
+            "songbook": setlist.get_songbook(),
+            "sync_error": sync_error,
+            "build_error": build_error,
+        },
+    )
+
+
+@app.post("/setlist/sync")
+async def setlist_sync(doc_url: str = Form(...)):
+    try:
+        setlist.sync(doc_url)
+    except setlist.SyncError as exc:
+        return RedirectResponse(f"/setlist?sync_error={quote(str(exc))}", status_code=303)
+    return RedirectResponse("/setlist", status_code=303)
+
+
+@app.post("/setlist/build")
+async def setlist_build(order: str = Form(...)):
+    try:
+        titles = json.loads(order)
+        if not isinstance(titles, list) or not titles:
+            raise setlist.SyncError("Add at least one song to tonight's order.")
+        pdf_bytes = setlist.build_ordered_pdf(titles)
+    except (setlist.SyncError, json.JSONDecodeError) as exc:
+        return RedirectResponse(f"/setlist?build_error={quote(str(exc))}", status_code=303)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="setlist.pdf"'},
+    )
+
+
+# Feature routes (scan cleanup, chord library/transpose) get added here in
+# later build phases.
