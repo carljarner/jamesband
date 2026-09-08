@@ -313,7 +313,6 @@ ul.songs li {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 1.5rem;
 }
 
 .toolbar-right {
@@ -460,6 +459,17 @@ table.repertoire button.row-delete:hover {
 }
 
 .modal-box p { margin: 0 0 1.25rem; }
+.modal-box--centered { max-width: 380px; }
+.modal-box--centered p { text-align: center; font-weight: 600; }
+.modal-box--centered .modal-actions { justify-content: center; }
+.modal-box input[type="url"] { width: 100%; }
+.modal-box .save-status { display: block; }
+
+.lyrics-overlay-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
 
 .modal-actions {
   display: flex;
@@ -555,6 +565,7 @@ img#preview {
 }
 
 .button-link:hover { background: var(--accent); color: #12130f; }
+.button-link[hidden] { display: none; }
 
 .setlist-section + .setlist-section { margin-top: 2rem; }
 
@@ -821,6 +832,10 @@ textarea:focus {
   font-size: 0.85rem;
 }
 
+.lyrics-column__link-row { display: flex; gap: 0.5rem; }
+.lyrics-column__link-row input { flex: 1; min-width: 0; }
+#mastersongbook-status { font-size: 0.8rem; margin: 0.75rem 0; }
+
 #repertoire-list li { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
 #repertoire-list li:hover { border-color: var(--accent-2); }
 #repertoire-list li.is-selected {
@@ -834,6 +849,76 @@ textarea:focus {
   .setlist-top-columns { flex-direction: column; }
   .top-box { height: auto; max-height: 400px; }
 }
+
+/* Nested inside the Lyrics column (.top-box), so kept compact -- the two
+   lists get their own small scrollviews rather than growing the column. */
+.connect-titles {
+  display: flex;
+  align-items: stretch;
+  gap: 0.6rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.connect-titles__col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-alt);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 0.6rem;
+}
+
+.connect-titles__col h3 {
+  margin: 0 0 0.4rem;
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.04em;
+  font-size: 0.8rem;
+  color: var(--accent-2);
+  font-weight: 400;
+}
+
+.connect-titles__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.connect-titles__list li {
+  padding: 0.3rem 0.5rem;
+  margin-bottom: 0.25rem;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.connect-titles__list li:hover { border-color: var(--accent-2); }
+.connect-titles__list li.is-selected {
+  border-color: var(--accent-2);
+  background: rgba(79,215,209,0.12);
+}
+.connect-titles__list li.is-selected::before { content: '✓ '; color: var(--accent-2); }
+
+.connect-btn {
+  display: block;
+  margin: 0.75rem auto 0;
+  padding: 0.35rem 1rem;
+  font-size: 0.78rem;
+}
+
+.connect-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.connect-btn:disabled:hover { background: transparent; color: var(--text); }
 
 .setlist-wrap {
   overflow-x: auto;
@@ -919,6 +1004,7 @@ table.setlist-table td.drag-handle:active { cursor: grabbing; }
 .singer-btn {
   flex: 1;
   min-width: 0;
+  text-align: center;
   padding: 0.3rem 0.15rem;
   border-radius: 6px;
   border: 1px solid rgba(255,255,255,0.15);
@@ -1057,3 +1143,117 @@ table.setlist-table tr.setlist-break-row > td {
 }
 
 table.setlist-table tr.setlist-break-row:hover .setlist-break-cell__delete { opacity: 1; }
+
+/* ---------- Gig detail (read-only setlist view) ---------- */
+.gig-layout {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  margin-top: 1.5rem;
+}
+
+.gig-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gig-right {
+  flex: 2;
+  min-width: 0;
+}
+
+.gig-actions-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.gig-actions-row > * {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.gig-songs-view__delete {
+  display: block;
+  margin: 1.5rem auto 0;
+}
+
+@media (max-width: 900px) {
+  .gig-layout { flex-direction: column; }
+}
+
+.gig-details-box--standalone {
+  height: auto;
+}
+
+.gig-details-box--standalone .field--grow textarea {
+  height: 120px;
+  resize: vertical;
+}
+
+.gig-songs-view {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.gig-songs-view .top-box__header { margin-bottom: 0.5rem; }
+.gig-songs-view .top-box__header h2 { font-size: 1rem; }
+
+table.gig-songs-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+table.gig-songs-table th {
+  text-align: left;
+  color: var(--accent-2);
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.04em;
+  font-size: 1.05rem;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 2px solid rgba(255,255,255,0.15);
+  white-space: nowrap;
+}
+
+table.gig-songs-table td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+table.gig-songs-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+table.gig-songs-table tr.setlist-break-row > td { padding: 0; border-bottom: none; height: 16px; }
+
+table.gig-songs-table .singer-toggle { max-width: 160px; }
+table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translate(-50%, 10px);
+  background: #12130f;
+  color: var(--text);
+  padding: 0.7rem 1.5rem;
+  border-radius: 100px;
+  font-size: 0.9rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 200;
+}
+
+.toast[hidden] { display: none; }
+
+.toast--visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.toast--error { box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 0 1px var(--accent); color: var(--accent); }

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Setlist{% endblock %}
+{% block container_class %}container--full{% endblock %}
+{% block content %}
+<div class="setlists-toolbar">
+  <h1>Setlist</h1>
+</div>
+
+{% set card_href_base = "/setlist" %}
+{% set empty_message = "No gigs yet — create one in Gigs first." %}
+{% include "_gig_cards.html" %}
+
+{% if not upcoming_setlists and not past_setlists %}
+<p><a class="button-link" href="/gigs/new">+ Gig</a></p>
+{% endif %}
+{% endblock %}

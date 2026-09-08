@@ -50,7 +50,7 @@
         "key": "F",
         "signe": "2 op (A)",
         "jonas": "",
-        "duet": "1 op (F)",
+        "duet": "1 op (G)",
         "indstilling": "406",
         "singer": "duet",
         "repertoire_id": "0d9a68d6",
@@ -985,7 +985,7 @@
     "date": "2026-05-23",
     "venue": "Bryllup p\u00e5 \u00c6r\u00f8",
     "lineup": "Signe, Jonas, Ludivg, Elias, Buster, Valdemar",
-    "notes": "",
+    "notes": "Emilie",
     "songs": []
   },
   {
@@ -3986,7 +3986,7 @@
   {
     "id": "f4f48382",
     "date": "2022-04-29",
-    "venue": "DSBS",
+    "venue": "DSBS Jubil\u00e6um",
     "lineup": "Carl, Signe, Jonas, Ludivg, Elias, Buster",
     "notes": "Generalforsamling for Dansk Selskab for Bio-Statistik",
     "songs": [

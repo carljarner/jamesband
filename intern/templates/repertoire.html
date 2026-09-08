@@ -2,13 +2,15 @@
 {% block title %}Repertoire{% endblock %}
 {% block container_class %}container--full{% endblock %}
 {% block content %}
-<h1>Repertoire</h1>
+<div class="setlists-toolbar">
+  <h1>Repertoire</h1>
+</div>
 
 <div class="repertoire-toolbar">
   <span id="song-count" class="muted">{{ songs|length }} song{{ "" if songs|length == 1 else "s" }}</span>
   <div class="toolbar-right">
     <span id="save-status" class="save-status">Saved</span>
-    <button type="button" id="save-all" class="primary">Save changes</button>
+    <button type="button" id="save-all" class="primary">Save</button>
   </div>
 </div>
 <div class="repertoire-wrap">
@@ -76,9 +78,34 @@
     saveStatus.classList.toggle('unsaved', unsaved);
   }
 
+  const ROW_FIELDS = ['title', 'artist', 'year', 'key', 'signe', 'jonas', 'duet', 'indstilling'];
+
+  function currentFields(row) {
+    const fields = {};
+    ROW_FIELDS.forEach(f => {
+      const input = row.querySelector(`input[data-field="${f}"]`);
+      fields[f] = input ? input.value : '';
+    });
+    return fields;
+  }
+
+  // A row's "dirty" state is a live comparison against its last-saved
+  // values, not just "has this row been typed into" -- so undoing an edit
+  // back to the saved value clears the dirty flag again.
+  function setBaseline(row) {
+    row.dataset.baseline = JSON.stringify(currentFields(row));
+  }
+
+  function refreshDirty(row) {
+    const dirty = JSON.stringify(currentFields(row)) !== row.dataset.baseline;
+    row.classList.toggle('row-dirty', dirty);
+  }
+
+  body.querySelectorAll('tr').forEach(setBaseline);
+
   body.addEventListener('input', e => {
     if (e.target.tagName === 'INPUT') {
-      e.target.closest('tr').classList.add('row-dirty');
+      refreshDirty(e.target.closest('tr'));
       updateStatus();
     }
   });
@@ -122,8 +149,6 @@
   });
 
   updateSortArrows();
-
-  const ROW_FIELDS = ['title', 'artist', 'year', 'key', 'signe', 'jonas', 'duet', 'indstilling'];
 
   document.getElementById('add-song').addEventListener('click', () => {
     const tr = document.createElement('tr');
@@ -171,6 +196,9 @@
       }
       const song = await resp.json();
       tr.dataset.id = song.id;
+      setBaseline(tr);
+      refreshDirty(tr);
+      updateStatus();
       applySort();
       updateCount();
     }
@@ -230,7 +258,7 @@
       }).then(resp => ({ row, ok: resp.ok }));
     }));
 
-    results.forEach(({ row, ok }) => { if (ok) row.classList.remove('row-dirty'); });
+    results.forEach(({ row, ok }) => { if (ok) { setBaseline(row); refreshDirty(row); } });
     updateStatus();
     if (results.some(r => !r.ok)) alert('Some rows failed to save.');
   });

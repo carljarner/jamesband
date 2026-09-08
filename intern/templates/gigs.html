@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Gigs{% endblock %}
+{% block container_class %}container--full{% endblock %}
+{% block content %}
+<div class="setlists-toolbar">
+  <h1>Gigs</h1>
+  <a class="button-link" href="/gigs/new">+ Gig</a>
+</div>
+
+{% set card_href_base = "/gigs" %}
+{% set empty_message = "No gigs yet — add one to start building gig history." %}
+{% include "_gig_cards.html" %}
+{% endblock %}

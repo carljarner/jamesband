@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% block title %}{{ (setlist.venue or "Untitled gig") if setlist else "New gig" }}{% endblock %}
+{% block container_class %}container--full{% endblock %}
+{% block content %}
+<h1>{{ (setlist.venue or "Untitled gig") if setlist else "New gig" }}</h1>
+
+<form method="post" action="{{ ('/gigs/' + setlist.id) if setlist else '/gigs' }}" id="gig-form">
+  <div class="gig-layout">
+    <div class="gig-left">
+      <div class="top-box gig-details-box gig-details-box--standalone">
+        <h2>Gig details</h2>
+        <label class="field">
+          <span>Date</span>
+          <div class="date-picker" id="date-picker">
+            <button type="button" class="date-picker__trigger" id="date-trigger">
+              <span id="date-display" class="muted">Select a date</span>
+            </button>
+            <input type="hidden" name="date" id="date-input" value="{{ setlist.date if setlist else '' }}" />
+            <div class="date-picker__panel" id="date-panel" hidden>
+              <div class="date-picker__header">
+                <button type="button" class="date-picker__nav" id="date-prev" aria-label="Previous month">&lsaquo;</button>
+                <span class="date-picker__month" id="date-month"></span>
+                <button type="button" class="date-picker__nav" id="date-next" aria-label="Next month">&rsaquo;</button>
+              </div>
+              <div class="date-picker__weekdays">
+                <span>man</span><span>tir</span><span>ons</span><span>tor</span><span>fre</span><span>lør</span><span>søn</span>
+              </div>
+              <div class="date-picker__grid" id="date-grid"></div>
+            </div>
+          </div>
+        </label>
+        <label class="field">
+          <span>Venue</span>
+          <input type="text" name="venue" value="{{ setlist.venue if setlist else '' }}" placeholder="e.g. Smith wedding" />
+        </label>
+        <label class="field">
+          <span>Lineup</span>
+          <input type="text" name="lineup" value="{{ setlist.lineup if setlist else '' }}" placeholder="Who played" />
+        </label>
+        <label class="field field--grow">
+          <span>Notes</span>
+          <textarea name="notes" placeholder="Notes">{{ setlist.notes if setlist else '' }}</textarea>
+        </label>
+      </div>
+
+      <div class="gig-actions-row">
+        {% include "_lyrics_overlay.html" %}
+        <a id="leadsheets-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/leadsheets') if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Lead sheets</a>
+        <button class="primary" type="submit">Save</button>
+      </div>
+    </div>
+
+    <div class="gig-right">
+      <div class="gig-songs-view">
+        <div class="top-box__header">
+          <h2>Setlist</h2>
+          <a id="edit-setlist-link" class="button-link" href="{{ ('/setlist/' + setlist.id) if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Edit</a>
+        </div>
+        {% if setlist and setlist.songs %}
+        <table class="gig-songs-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Key</th>
+              <th>Singer</th>
+              <th>Transposed</th>
+              <th>Elias</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for song in setlist.songs %}
+            {% if song.type == 'break' %}
+            <tr class="setlist-break-row"><td colspan="5"><span class="setlist-break-cell__bar"></span></td></tr>
+            {% else %}
+            <tr>
+              <td>{{ song.title }}</td>
+              <td>{{ song.key }}</td>
+              <td>
+                <div class="singer-toggle">
+                  <span class="singer-btn{{ ' is-active' if song.singer == 'signe' }}">Signe</span>
+                  <span class="singer-btn{{ ' is-active' if song.singer == 'jonas' }}">Jonas</span>
+                  <span class="singer-btn{{ ' is-active' if song.singer == 'duet' }}">Duet</span>
+                </div>
+              </td>
+              <td>{{ song[song.singer] if song.singer else '' }}</td>
+              <td>{{ song.indstilling }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="muted">No songs yet.</p>
+        {% endif %}
+      </div>
+      <button type="button" id="delete-gig" class="danger gig-songs-view__delete" {% if not setlist %}hidden{% endif %}>Delete</button>
+    </div>
+  </div>
+</form>
+
+<div id="toast" class="toast" hidden></div>
+
+<div id="confirm-modal" class="modal-overlay" hidden>
+  <div class="modal-box modal-box--centered">
+    <p>Delete &quot;{{ (setlist.venue or "Untitled gig") if setlist else "" }}&quot;?</p>
+    <div class="modal-actions">
+      <button type="button" id="confirm-cancel">Cancel</button>
+      <button type="button" id="confirm-ok" class="danger">Delete</button>
+    </div>
+  </div>
+</div>
+<form method="post" action="{{ ('/gigs/' + setlist.id + '/delete') if setlist else '' }}" id="delete-form" hidden></form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  /* ---------- Date picker ---------- */
+  (function () {
+    const picker = document.getElementById('date-picker');
+    const trigger = document.getElementById('date-trigger');
+    const display = document.getElementById('date-display');
+    const input = document.getElementById('date-input');
+    const panel = document.getElementById('date-panel');
+    const monthLabel = document.getElementById('date-month');
+    const grid = document.getElementById('date-grid');
+
+    const DA_MONTHS = ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli',
+      'august', 'september', 'oktober', 'november', 'december'];
+
+    function parseISO(value) {
+      if (!value) return null;
+      const [y, m, d] = value.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function toISO(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function formatDisplay(date) {
+      return `${date.getDate()}. ${DA_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+    }
+
+    let selected = parseISO(input.value);
+    let viewDate = selected ? new Date(selected.getFullYear(), selected.getMonth(), 1) : new Date();
+    viewDate.setDate(1);
+
+    if (selected) {
+      display.textContent = formatDisplay(selected);
+      display.classList.remove('muted');
+    }
+
+    function render() {
+      const monthName = DA_MONTHS[viewDate.getMonth()];
+      monthLabel.textContent = `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${viewDate.getFullYear()}`;
+      grid.innerHTML = '';
+
+      const firstOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+      const startOffset = (firstOfMonth.getDay() + 6) % 7; // Monday-first
+      const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+      const today = new Date();
+
+      for (let i = 0; i < startOffset; i++) {
+        grid.appendChild(document.createElement('span'));
+      }
+      for (let day = 1; day <= daysInMonth; day++) {
+        const cellDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = day;
+        btn.className = 'date-picker__day';
+        if (selected && toISO(cellDate) === toISO(selected)) btn.classList.add('is-selected');
+        if (toISO(cellDate) === toISO(today)) btn.classList.add('is-today');
+        btn.addEventListener('click', () => {
+          selected = cellDate;
+          input.value = toISO(cellDate);
+          display.textContent = formatDisplay(cellDate);
+          display.classList.remove('muted');
+          trigger.classList.remove('date-picker__trigger--error');
+          panel.hidden = true;
+          picker.classList.remove('open');
+          render();
+        });
+        grid.appendChild(btn);
+      }
+    }
+
+    render();
+
+    trigger.addEventListener('click', () => {
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      picker.classList.toggle('open', opening);
+    });
+
+    document.getElementById('date-prev').addEventListener('click', () => {
+      viewDate.setMonth(viewDate.getMonth() - 1);
+      render();
+    });
+    document.getElementById('date-next').addEventListener('click', () => {
+      viewDate.setMonth(viewDate.getMonth() + 1);
+      render();
+    });
+
+    document.addEventListener('click', e => {
+      if (!picker.contains(e.target)) {
+        panel.hidden = true;
+        picker.classList.remove('open');
+      }
+    });
+  })();
+
+  /* ---------- Toast ---------- */
+  const toast = document.getElementById('toast');
+  let toastTimer = null;
+
+  function showToast(message, isError) {
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.classList.toggle('toast--error', !!isError);
+    toast.hidden = false;
+    requestAnimationFrame(() => toast.classList.add('toast--visible'));
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('toast--visible');
+      setTimeout(() => { toast.hidden = true; }, 200);
+    }, 2200);
+  }
+
+  /* ---------- Save (stays on the page; never navigates) ---------- */
+  const gigForm = document.getElementById('gig-form');
+  const deleteBtn = document.getElementById('delete-gig');
+  const deleteForm = document.getElementById('delete-form');
+  const leadsheetsLink = document.getElementById('leadsheets-link');
+  const editSetlistLink = document.getElementById('edit-setlist-link');
+  let currentId = {{ (('"' + setlist.id + '"') if setlist else 'null') | safe }};
+
+  function activateEditMode(id) {
+    currentId = id;
+    history.replaceState(null, '', `/gigs/${id}`);
+    deleteBtn.hidden = false;
+    leadsheetsLink.hidden = false;
+    leadsheetsLink.href = `/gigs/${id}/leadsheets`;
+    editSetlistLink.hidden = false;
+    editSetlistLink.href = `/setlist/${id}`;
+    deleteForm.action = `/gigs/${id}/delete`;
+  }
+
+  gigForm.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const dateInput = document.getElementById('date-input');
+    if (!dateInput.value) {
+      document.getElementById('date-trigger').classList.add('date-picker__trigger--error');
+      document.getElementById('date-picker').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    const body = new URLSearchParams(new FormData(gigForm));
+    const url = currentId ? `/gigs/${currentId}` : '/gigs';
+
+    try {
+      const resp = await fetch(url, { method: 'POST', body });
+      if (!resp.ok) {
+        showToast((await resp.text()) || 'Failed to save.', true);
+        return;
+      }
+      if (!currentId) {
+        const created = await resp.json();
+        activateEditMode(created.id);
+      }
+      showToast('Saved');
+    } catch (err) {
+      showToast('Failed to save.', true);
+    }
+  });
+
+  const modal = document.getElementById('confirm-modal');
+  deleteBtn.addEventListener('click', () => { modal.hidden = false; });
+  modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
+  document.getElementById('confirm-cancel').addEventListener('click', () => { modal.hidden = true; });
+  document.getElementById('confirm-ok').addEventListener('click', () => {
+    deleteForm.submit();
+  });
+</script>
+{% endblock %}
