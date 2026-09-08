@@ -244,10 +244,7 @@ async def gigs_edit_page(request: Request, gig_id: str):
     return templates.TemplateResponse(
         request,
         "gig_form.html",
-        {
-            "setlist": setlist_data,
-            "master_songbook_url": setlist.get_master_songbook_url(),
-        },
+        {"setlist": setlist_data},
     )
 
 
@@ -289,6 +286,19 @@ async def gigs_leadsheets(gig_id: str):
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="lead-sheets.pdf"'},
+    )
+
+
+@app.get("/gigs/{gig_id}/lyrics")
+async def gigs_lyrics(gig_id: str):
+    try:
+        pdf_bytes, _missing = gig_bundle.build_lyrics_bundle(gig_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="lyrics.pdf"'},
     )
 
 

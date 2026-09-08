@@ -44,7 +44,7 @@
       </div>
 
       <div class="gig-actions-row">
-        {% include "_lyrics_overlay.html" %}
+        <a id="lyrics-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/lyrics') if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Lyrics</a>
         <a id="leadsheets-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/leadsheets') if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Lead sheets</a>
         <button class="primary" type="submit">Save</button>
       </div>
@@ -233,6 +233,7 @@
   const gigForm = document.getElementById('gig-form');
   const deleteBtn = document.getElementById('delete-gig');
   const deleteForm = document.getElementById('delete-form');
+  const lyricsLink = document.getElementById('lyrics-link');
   const leadsheetsLink = document.getElementById('leadsheets-link');
   const editSetlistLink = document.getElementById('edit-setlist-link');
   let currentId = {{ (('"' + setlist.id + '"') if setlist else 'null') | safe }};
@@ -241,6 +242,8 @@
     currentId = id;
     history.replaceState(null, '', `/gigs/${id}`);
     deleteBtn.hidden = false;
+    lyricsLink.hidden = false;
+    lyricsLink.href = `/gigs/${id}/lyrics`;
     leadsheetsLink.hidden = false;
     leadsheetsLink.href = `/gigs/${id}/leadsheets`;
     editSetlistLink.hidden = false;

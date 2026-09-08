@@ -79,7 +79,7 @@ def set_alias(setlist_title: str, doc_title: str) -> None:
     data_store.commit_and_push(f"Connect '{setlist_title}' -> '{doc_title}'")
 
 
-def _master_pdf_path():
+def get_master_pdf_path():
     return data_store.DATA_DIR / MASTER_PDF_RELATIVE
 
 
@@ -150,7 +150,7 @@ def sync(doc_url_or_id: str) -> dict:
     pdf_bytes = _fetch_doc_pdf(doc_id)
     songs = _group_pages_into_songs(PdfReader(BytesIO(pdf_bytes)))
 
-    master_path = _master_pdf_path()
+    master_path = get_master_pdf_path()
     master_path.parent.mkdir(parents=True, exist_ok=True)
     master_path.write_bytes(pdf_bytes)
 
