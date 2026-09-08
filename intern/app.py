@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 import chords
+import repertoire
 import scan_cleanup
 import setlist
 
@@ -95,6 +96,42 @@ async def setlist_build(order: str = Form(...)):
         media_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="setlist.pdf"'},
     )
+
+
+@app.get("/repertoire", response_class=HTMLResponse)
+async def repertoire_page(request: Request):
+    return templates.TemplateResponse(
+        request, "repertoire.html", {"songs": repertoire.list_songs()}
+    )
+
+
+@app.post("/repertoire")
+async def repertoire_create(request: Request):
+    body = await request.json()
+    if not str(body.get("title") or "").strip():
+        return Response(content="Song title can't be empty.", status_code=400)
+    return repertoire.add_song(body)
+
+
+@app.post("/repertoire/{song_id}")
+async def repertoire_update(song_id: str, request: Request):
+    try:
+        body = await request.json()
+        repertoire.update_song(song_id, body)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    except (ValueError, TypeError) as exc:
+        return Response(content=str(exc), status_code=400)
+    return Response(status_code=204)
+
+
+@app.post("/repertoire/{song_id}/delete")
+async def repertoire_delete(song_id: str):
+    try:
+        repertoire.delete_song(song_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    return Response(status_code=204)
 
 
 @app.get("/scan", response_class=HTMLResponse)

@@ -39,6 +39,7 @@ a { color: var(--accent-2); }
 }
 
 .container--wide { max-width: 900px; }
+.container--full { max-width: none; padding: 2rem; }
 
 .topbar {
   display: flex;
@@ -280,6 +281,167 @@ ul.songs li {
 
 .transpose-row form { flex-direction: row; gap: 0.3rem; align-items: center; }
 .transpose-row input { width: 90px; }
+
+/* ---------- Repertoire ---------- */
+.repertoire-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.save-status {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.save-status.unsaved { color: var(--accent); }
+
+.repertoire-wrap {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+}
+
+table.repertoire {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+table.repertoire th:nth-child(1), table.repertoire td:nth-child(1) { width: 23%; }
+table.repertoire th:nth-child(2), table.repertoire td:nth-child(2) { width: calc(19% - 20px); }
+table.repertoire th:nth-child(3), table.repertoire td:nth-child(3) { width: 6%; }
+table.repertoire th:nth-child(4), table.repertoire td:nth-child(4) { width: 6%; }
+table.repertoire th:nth-child(5), table.repertoire td:nth-child(5) { width: 11%; }
+table.repertoire th:nth-child(6), table.repertoire td:nth-child(6) { width: 11%; }
+table.repertoire th:nth-child(7), table.repertoire td:nth-child(7) { width: 9%; }
+table.repertoire th:nth-child(8), table.repertoire td:nth-child(8) { width: 8%; }
+table.repertoire th:nth-child(9), table.repertoire td:nth-child(9) { width: 7%; }
+
+table.repertoire th {
+  text-align: left;
+  color: var(--accent-2);
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.04em;
+  font-size: 1.05rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--surface);
+  border-bottom: 2px solid rgba(255,255,255,0.15);
+  white-space: nowrap;
+}
+
+table.repertoire th.sortable { cursor: pointer; user-select: none; }
+table.repertoire th.sortable:hover { color: var(--text); }
+table.repertoire .sort-arrow { font-size: 0.75rem; color: var(--text-dim); }
+
+table.repertoire td {
+  padding: 0.25rem 0.35rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+table.repertoire tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+table.repertoire input[type="text"] {
+  width: 100%;
+  min-width: 90px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.88rem;
+  font-family: inherit;
+}
+
+table.repertoire input[type="text"]:hover {
+  border-color: rgba(255,255,255,0.15);
+  background: var(--surface-alt);
+}
+
+table.repertoire input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface-alt);
+}
+
+td.actions { white-space: nowrap; }
+
+table.repertoire button.row-delete {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.72rem;
+  border-radius: 100px;
+}
+
+table.repertoire button.row-delete {
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+
+table.repertoire button.row-delete:hover {
+  background: var(--text-dim);
+  color: #12130f;
+}
+
+.add-row-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 0.75rem auto 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: transparent;
+  color: var(--text);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.add-row-btn:hover { background: var(--accent); color: #12130f; }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay[hidden] { display: none; }
+
+.modal-box {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 320px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.modal-box p { margin: 0 0 1.25rem; }
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+button.danger { border-color: var(--accent); color: var(--accent); }
+button.danger:hover { background: var(--accent); color: #12130f; }
 
 /* ---------- Scan ---------- */
 img#preview {
