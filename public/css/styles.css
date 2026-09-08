@@ -317,6 +317,15 @@ section {
   transform: scale(1.05);
 }
 
+.galleri__grid video {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius);
+  background: #000;
+}
+
 .lightbox {
   position: fixed;
   inset: 0;

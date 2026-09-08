@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Gallery{% endblock %}
+{% block content %}
+<h1>Gallery</h1>
+<p class="muted">Upload photos or short video clips, then choose which ones show up on the public site.</p>
+
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<fieldset>
+  <legend>Upload</legend>
+  <form class="upload" method="post" action="/gallery" enctype="multipart/form-data">
+    <input type="file" name="photo" accept="image/*,video/*" required />
+    <button type="submit">Upload</button>
+  </form>
+</fieldset>
+
+<fieldset>
+  <legend>Media &mdash; {{ items|selectattr("published")|list|length }}/{{ items|length }} published</legend>
+  {% if items %}
+  <div class="gallery-grid">
+    {% for item in items %}
+    <div class="gallery-item" data-id="{{ item.id }}">
+      {% if item.kind == "image" %}
+      <img src="/gallery/media/{{ item.id }}" alt="" />
+      {% else %}
+      <video src="/gallery/media/{{ item.id }}" controls muted></video>
+      {% endif %}
+      <div class="gallery-item__controls">
+        <label class="toggle">
+          <input type="checkbox" class="publish-toggle" {{ "checked" if item.published }} />
+          On public site
+        </label>
+        <button type="button" class="gallery-delete">Delete</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">No uploads yet.</p>
+  {% endif %}
+</fieldset>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll('.publish-toggle').forEach(checkbox => {
+    checkbox.addEventListener('change', async () => {
+      const id = checkbox.closest('.gallery-item').dataset.id;
+      const body = new URLSearchParams({ published: checkbox.checked });
+      const resp = await fetch(`/gallery/${id}/publish`, { method: 'POST', body });
+      if (!resp.ok) {
+        alert('Failed to update: ' + await resp.text());
+        checkbox.checked = !checkbox.checked;
+      }
+    });
+  });
+
+  document.querySelectorAll('.gallery-delete').forEach(button => {
+    button.addEventListener('click', async () => {
+      const item = button.closest('.gallery-item');
+      if (!confirm('Delete this item?')) return;
+      const resp = await fetch(`/gallery/${item.dataset.id}/delete`, { method: 'POST' });
+      if (resp.ok) {
+        item.remove();
+      } else {
+        alert('Failed to delete: ' + await resp.text());
+      }
+    });
+  });
+</script>
+{% endblock %}

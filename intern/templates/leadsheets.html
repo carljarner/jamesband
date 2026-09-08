@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Lead Sheets{% endblock %}
+{% block content %}
+<p><a class="back" href="/chords">&larr; Chord library</a></p>
+<h1>Lead Sheets</h1>
+
+<fieldset>
+  <legend>Quick scan cleanup</legend>
+  <p class="muted">Photo of a handwritten pencil chart in, clean print-ready PDF out. Doesn't save anything.</p>
+
+  {% if scan_error %}<p class="error">{{ scan_error }}</p>{% endif %}
+
+  <form method="post" action="/scan/clean" enctype="multipart/form-data" id="scan-form">
+    <input type="file" name="photo" accept="image/*" capture="environment" required id="photo-input" />
+    <img id="preview" alt="Preview" />
+    <button class="primary" type="submit" id="submit-btn">Clean up &amp; download PDF</button>
+  </form>
+</fieldset>
+
+<fieldset>
+  <legend>Add a song</legend>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form class="add-song" method="post" action="/songs" enctype="multipart/form-data">
+    <input type="text" name="title" placeholder="Song title" required />
+    <input type="text" name="key" placeholder="Key (e.g. Am)" required />
+    <input type="file" name="photo" accept="image/*" capture="environment" required />
+    <button type="submit">Upload &amp; tag</button>
+  </form>
+</fieldset>
+
+<fieldset>
+  <legend>Song library</legend>
+  {% if songs %}
+  <ul class="songs">
+    {% for song in songs %}
+    <li>
+      <div class="song-title">{{ song.song }}</div>
+      <div class="song-meta">Key: {{ song.key }} &middot; {{ "Tagged" if song.tagged else "Not tagged yet" }}</div>
+      {% if song.tagged %}
+      <div class="transpose-row">
+        <form method="post" action="/songs/{{ song.slug }}/transpose">
+          <input type="number" name="semitones" placeholder="semitones" required />
+          <button type="submit">Transpose</button>
+        </form>
+        <form method="post" action="/songs/{{ song.slug }}/transpose">
+          <input type="text" name="target_key" placeholder="target key" required />
+          <button type="submit">Transpose to key</button>
+        </form>
+        <a href="/songs/{{ song.slug }}/tag">Edit tags</a>
+      </div>
+      {% else %}
+      <a href="/songs/{{ song.slug }}/tag">Finish tagging &rarr;</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No songs yet.</p>
+  {% endif %}
+</fieldset>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const input = document.getElementById('photo-input');
+  const preview = document.getElementById('preview');
+  const form = document.getElementById('scan-form');
+  const submitBtn = document.getElementById('submit-btn');
+
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) {
+      preview.style.display = 'none';
+      return;
+    }
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+  });
+
+  form.addEventListener('submit', () => {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Cleaning up…';
+    setTimeout(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Clean up & download PDF';
+    }, 15000); // safety reset in case the download doesn't navigate away
+  });
+</script>
+{% endblock %}

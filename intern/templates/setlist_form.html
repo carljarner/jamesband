@@ -1,0 +1,626 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit setlist" if setlist else "New setlist" }}{% endblock %}
+{% block container_class %}container--full{% endblock %}
+{% block content %}
+<h1>{{ "Edit setlist" if setlist else "New setlist" }}</h1>
+
+<form method="post" action="{{ ('/setlists/' + setlist.id) if setlist else '/setlists' }}" id="setlist-form">
+  <div class="setlist-top-columns">
+    <div class="top-box gig-details-box">
+      <h2>Gig details</h2>
+      <label class="field">
+        <span>Date</span>
+        <div class="date-picker" id="date-picker">
+          <button type="button" class="date-picker__trigger" id="date-trigger">
+            <span id="date-display" class="muted">Select a date</span>
+          </button>
+          <input type="hidden" name="date" id="date-input" value="{{ setlist.date if setlist else '' }}" />
+          <div class="date-picker__panel" id="date-panel" hidden>
+            <div class="date-picker__header">
+              <button type="button" class="date-picker__nav" id="date-prev" aria-label="Previous month">&lsaquo;</button>
+              <span class="date-picker__month" id="date-month"></span>
+              <button type="button" class="date-picker__nav" id="date-next" aria-label="Next month">&rsaquo;</button>
+            </div>
+            <div class="date-picker__weekdays">
+              <span>man</span><span>tir</span><span>ons</span><span>tor</span><span>fre</span><span>lør</span><span>søn</span>
+            </div>
+            <div class="date-picker__grid" id="date-grid"></div>
+          </div>
+        </div>
+      </label>
+      <label class="field">
+        <span>Venue</span>
+        <input type="text" name="venue" value="{{ setlist.venue if setlist else '' }}" placeholder="e.g. Smith wedding" />
+      </label>
+      <label class="field">
+        <span>Lineup</span>
+        <input type="text" name="lineup" value="{{ setlist.lineup if setlist else '' }}" placeholder="Who played" />
+      </label>
+      <label class="field field--grow">
+        <span>Notes</span>
+        <textarea name="notes" placeholder="Notes">{{ setlist.notes if setlist else '' }}</textarea>
+      </label>
+    </div>
+
+    <div class="top-box">
+      <div class="top-box__header">
+        <h2>Repertoire</h2>
+        <input type="search" id="repertoire-search" class="top-box__search" placeholder="Search…" />
+      </div>
+      <ul id="repertoire-list" class="pick-list"></ul>
+    </div>
+
+    <div class="top-box">
+      <h2>New songs</h2>
+      <ul id="new-song-list" class="pick-list"></ul>
+      <button type="button" id="add-custom-song" class="add-row-btn" title="Add a song" aria-label="Add a song">+</button>
+    </div>
+  </div>
+
+  <div class="setlist-wrap">
+    <table class="setlist-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th id="title-header">Title</th>
+          <th>Artist</th>
+          <th>Year</th>
+          <th>Key</th>
+          <th>Singer</th>
+          <th>Transposed</th>
+          <th>Elias</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="setlist-body"></tbody>
+      <tbody>
+        <tr class="drop-tail" id="setlist-drop-tail"><td colspan="9"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="setlist-break-source" id="break-source" draggable="true" title="Drag into the setlist to mark a pause between sets">
+    <span class="setlist-break-source__line"></span>
+    <span class="setlist-break-source__label">Drag in a pause between sets</span>
+    <span class="setlist-break-source__line"></span>
+  </div>
+
+  <input type="hidden" name="songs" id="songs-input" />
+  <div class="form-actions">
+    <button type="button" id="delete-setlist" class="danger" {% if not setlist %}hidden{% endif %}>Delete setlist</button>
+    <button type="button" id="add-to-repertoire" {% if not setlist %}hidden{% endif %}>Add to repertoire</button>
+    <div class="form-actions__save">
+      <span id="save-status" class="save-status"></span>
+      <button class="primary" type="submit">Save setlist</button>
+    </div>
+  </div>
+</form>
+
+<div id="confirm-modal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <p>Delete this setlist?</p>
+    <div class="modal-actions">
+      <button type="button" id="confirm-cancel">Cancel</button>
+      <button type="button" id="confirm-ok" class="danger">Delete</button>
+    </div>
+  </div>
+</div>
+<form method="post" action="{{ ('/setlists/' + setlist.id + '/delete') if setlist else '' }}" id="delete-form" hidden></form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const repertoireSongs = {{ repertoire_songs_json|safe }};
+  const initialSongs = {{ setlist_songs_json|safe }};
+
+  /* ---------- Date picker ---------- */
+  (function () {
+    const picker = document.getElementById('date-picker');
+    const trigger = document.getElementById('date-trigger');
+    const display = document.getElementById('date-display');
+    const input = document.getElementById('date-input');
+    const panel = document.getElementById('date-panel');
+    const monthLabel = document.getElementById('date-month');
+    const grid = document.getElementById('date-grid');
+
+    const DA_MONTHS = ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli',
+      'august', 'september', 'oktober', 'november', 'december'];
+
+    function parseISO(value) {
+      if (!value) return null;
+      const [y, m, d] = value.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function toISO(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function formatDisplay(date) {
+      return `${date.getDate()}. ${DA_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+    }
+
+    let selected = parseISO(input.value);
+    let viewDate = selected ? new Date(selected.getFullYear(), selected.getMonth(), 1) : new Date();
+    viewDate.setDate(1);
+
+    if (selected) {
+      display.textContent = formatDisplay(selected);
+      display.classList.remove('muted');
+    }
+
+    function render() {
+      const monthName = DA_MONTHS[viewDate.getMonth()];
+      monthLabel.textContent = `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${viewDate.getFullYear()}`;
+      grid.innerHTML = '';
+
+      const firstOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+      const startOffset = (firstOfMonth.getDay() + 6) % 7; // Monday-first
+      const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+      const today = new Date();
+
+      for (let i = 0; i < startOffset; i++) {
+        grid.appendChild(document.createElement('span'));
+      }
+      for (let day = 1; day <= daysInMonth; day++) {
+        const cellDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = day;
+        btn.className = 'date-picker__day';
+        if (selected && toISO(cellDate) === toISO(selected)) btn.classList.add('is-selected');
+        if (toISO(cellDate) === toISO(today)) btn.classList.add('is-today');
+        btn.addEventListener('click', () => {
+          selected = cellDate;
+          input.value = toISO(cellDate);
+          display.textContent = formatDisplay(cellDate);
+          display.classList.remove('muted');
+          trigger.classList.remove('date-picker__trigger--error');
+          panel.hidden = true;
+          picker.classList.remove('open');
+          render();
+        });
+        grid.appendChild(btn);
+      }
+    }
+
+    render();
+
+    trigger.addEventListener('click', () => {
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      picker.classList.toggle('open', opening);
+    });
+
+    document.getElementById('date-prev').addEventListener('click', () => {
+      viewDate.setMonth(viewDate.getMonth() - 1);
+      render();
+    });
+    document.getElementById('date-next').addEventListener('click', () => {
+      viewDate.setMonth(viewDate.getMonth() + 1);
+      render();
+    });
+
+    document.addEventListener('click', e => {
+      if (!picker.contains(e.target)) {
+        panel.hidden = true;
+        picker.classList.remove('open');
+      }
+    });
+  })();
+
+  /* ---------- Setlist builder ---------- */
+  const repertoireListEl = document.getElementById('repertoire-list');
+  const newSongListEl = document.getElementById('new-song-list');
+  const tbody = document.getElementById('setlist-body');
+  const dropTail = document.getElementById('setlist-drop-tail');
+  const titleHeader = document.getElementById('title-header');
+
+  let uidCounter = 0;
+  function nextUid() { return 'row-' + (uidCounter++); }
+
+  function blankSong(overrides) {
+    return Object.assign({
+      title: '', artist: '', year: '', key: '',
+      signe: '', jonas: '', duet: '', indstilling: '',
+      singer: 'signe', repertoire_id: null, type: 'song',
+    }, overrides);
+  }
+
+  const BREAK_DRAG_ID = '__new_break__';
+  function blankBreak() {
+    return blankSong({ uid: nextUid(), type: 'break' });
+  }
+
+  let songs = initialSongs.map(s => blankSong(Object.assign({ uid: nextUid() }, s)));
+
+  function chosenRepertoireIds() {
+    return new Set(songs.filter(s => s.repertoire_id).map(s => s.repertoire_id));
+  }
+
+  // Duet transposition (if noted) wins; else whichever of Signe/Jonas has one;
+  // if both (or neither) have one, Signe is the tie-break default.
+  function pickDefaultSinger(song) {
+    if (song.duet.trim()) return 'duet';
+    const hasSigne = !!song.signe.trim();
+    const hasJonas = !!song.jonas.trim();
+    if (hasJonas && !hasSigne) return 'jonas';
+    return 'signe';
+  }
+
+  function addRepertoireSong(song) {
+    const entry = blankSong({
+      uid: nextUid(),
+      title: song.title, artist: song.artist, year: song.year, key: song.key,
+      signe: song.signe, jonas: song.jonas, duet: song.duet, indstilling: song.indstilling,
+      repertoire_id: song.id,
+    });
+    entry.singer = pickDefaultSinger(entry);
+    songs.push(entry);
+    renderAll();
+  }
+
+  function removeSongByRepertoireId(repertoireId) {
+    songs = songs.filter(s => s.repertoire_id !== repertoireId);
+    renderAll();
+  }
+
+  function addBlankCustomSong() {
+    const song = blankSong({ uid: nextUid() });
+    songs.push(song);
+    renderAll();
+
+    const row = tbody.querySelector(`tr[data-uid="${song.uid}"]`);
+    const titleInput = row && row.children[1].querySelector('input');
+    if (!titleInput) return;
+    titleInput.focus();
+    titleInput.addEventListener('blur', () => {
+      if (!song.title.trim()) removeSong(song.uid);
+    }, { once: true });
+  }
+
+  function removeSong(uid) {
+    songs = songs.filter(s => s.uid !== uid);
+    renderAll();
+  }
+
+  let repertoireSearchTerm = '';
+
+  function renderRepertoireList() {
+    const chosenIds = chosenRepertoireIds();
+    repertoireListEl.innerHTML = '';
+    repertoireSongs
+      .filter(song => {
+        if (!repertoireSearchTerm) return true;
+        const haystack = `${song.title} ${song.artist}`.toLowerCase();
+        return haystack.includes(repertoireSearchTerm);
+      })
+      .forEach(song => {
+        const isChosen = chosenIds.has(song.id);
+        const li = document.createElement('li');
+        li.textContent = song.title;
+        li.classList.toggle('is-selected', isChosen);
+        li.addEventListener('click', () => {
+          if (isChosen) removeSongByRepertoireId(song.id);
+          else addRepertoireSong(song);
+        });
+        repertoireListEl.appendChild(li);
+      });
+  }
+
+  document.getElementById('repertoire-search').addEventListener('input', e => {
+    repertoireSearchTerm = e.target.value.trim().toLowerCase();
+    renderRepertoireList();
+  });
+
+  function renderNewSongList() {
+    newSongListEl.innerHTML = '';
+    songs.filter(s => !s.repertoire_id && s.type !== 'break').forEach(s => {
+      const li = document.createElement('li');
+      li.textContent = s.title || '(untitled)';
+      newSongListEl.appendChild(li);
+    });
+  }
+
+  const SINGER_NAMES = { signe: 'Signe', jonas: 'Jonas', duet: 'Duet' };
+  const SINGER_LABELS = SINGER_NAMES;
+
+  function makeInputCell(song, field) {
+    const td = document.createElement('td');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = song[field];
+    input.addEventListener('input', () => {
+      song[field] = input.value;
+      if (field === 'title') renderNewSongList();
+    });
+    td.appendChild(input);
+    return td;
+  }
+
+  function makeSingerCell(song) {
+    const td = document.createElement('td');
+    const wrap = document.createElement('div');
+    wrap.className = 'singer-toggle';
+    ['signe', 'jonas', 'duet'].forEach(key => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = SINGER_LABELS[key];
+      btn.title = SINGER_NAMES[key];
+      btn.className = 'singer-btn' + (song.singer === key ? ' is-active' : '');
+      btn.addEventListener('click', () => {
+        song.singer = key;
+        renderTable();
+      });
+      wrap.appendChild(btn);
+    });
+    td.appendChild(wrap);
+    return td;
+  }
+
+  function makeTransposedCell(song) {
+    const td = document.createElement('td');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = song[song.singer];
+    input.addEventListener('input', () => { song[song.singer] = input.value; });
+    td.appendChild(input);
+    return td;
+  }
+
+  function wireRowDrag(row, handle, song) {
+    handle.addEventListener('dragstart', e => {
+      dragId = song.uid;
+      e.dataTransfer.effectAllowed = 'move';
+      const ghost = getDragImageEl();
+      ghost.textContent = song.type === 'break' ? 'Pause' : (song.title || '(untitled)');
+      e.dataTransfer.setDragImage(ghost, 12, 16);
+    });
+    handle.addEventListener('dragend', () => row.classList.remove('drop-target'));
+    wireDropHighlight(row, () => {
+      if (dragId && dragId !== song.uid) moveSong(dragId, song.uid);
+    }, { stop: true });
+  }
+
+  function renderTable() {
+    const songCount = songs.filter(s => s.type !== 'break').length;
+    titleHeader.textContent = `Title (${songCount})`;
+    tbody.innerHTML = '';
+    songs.forEach(song => {
+      const tr = document.createElement('tr');
+      tr.dataset.uid = song.uid;
+
+      if (song.type === 'break') {
+        tr.className = 'setlist-break-row';
+        tr.draggable = true;
+
+        const cell = document.createElement('td');
+        cell.className = 'setlist-break-cell';
+        cell.colSpan = 9;
+        cell.innerHTML = '<span class="setlist-break-cell__bar"></span>' +
+          '<button type="button" class="setlist-break-cell__delete" title="Remove pause">&times;</button>';
+        cell.querySelector('.setlist-break-cell__delete').addEventListener('click', e => {
+          e.stopPropagation();
+          removeSong(song.uid);
+        });
+        tr.appendChild(cell);
+
+        wireRowDrag(tr, tr, song);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      const handleTd = document.createElement('td');
+      handleTd.className = 'drag-handle';
+      handleTd.draggable = true;
+      handleTd.textContent = '⋮⋮';
+      tr.appendChild(handleTd);
+
+      tr.appendChild(makeInputCell(song, 'title'));
+      tr.appendChild(makeInputCell(song, 'artist'));
+      tr.appendChild(makeInputCell(song, 'year'));
+      tr.appendChild(makeInputCell(song, 'key'));
+      tr.appendChild(makeSingerCell(song));
+      tr.appendChild(makeTransposedCell(song));
+      tr.appendChild(makeInputCell(song, 'indstilling'));
+
+      const actionsTd = document.createElement('td');
+      actionsTd.className = 'actions';
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'row-delete';
+      delBtn.innerHTML = '&times;';
+      delBtn.addEventListener('click', () => removeSong(song.uid));
+      actionsTd.appendChild(delBtn);
+      tr.appendChild(actionsTd);
+
+      wireRowDrag(tr, handleTd, song);
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderAll() {
+    renderRepertoireList();
+    renderNewSongList();
+    renderTable();
+  }
+
+  /* ---------- Drag-to-reorder ---------- */
+  let dragId = null;
+
+  function getDragImageEl() {
+    let ghost = document.getElementById('drag-image');
+    if (!ghost) {
+      ghost = document.createElement('div');
+      ghost.id = 'drag-image';
+      ghost.className = 'drag-image';
+      document.body.appendChild(ghost);
+    }
+    return ghost;
+  }
+
+  function wireDropHighlight(el, onDrop, { stop = false } = {}) {
+    let depth = 0;
+    el.addEventListener('dragenter', e => {
+      e.preventDefault();
+      if (stop) e.stopPropagation();
+      depth++;
+      el.classList.add('drop-target');
+    });
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (stop) e.stopPropagation();
+    });
+    el.addEventListener('dragleave', e => {
+      if (stop) e.stopPropagation();
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) el.classList.remove('drop-target');
+    });
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      if (stop) e.stopPropagation();
+      depth = 0;
+      el.classList.remove('drop-target');
+      onDrop();
+    });
+  }
+
+  function moveSong(uid, beforeUid) {
+    let item;
+    if (uid === BREAK_DRAG_ID) {
+      item = blankBreak();
+    } else {
+      const idx = songs.findIndex(s => s.uid === uid);
+      if (idx === -1) return;
+      [item] = songs.splice(idx, 1);
+    }
+    const insertIdx = beforeUid ? songs.findIndex(s => s.uid === beforeUid) : -1;
+    if (insertIdx === -1) songs.push(item);
+    else songs.splice(insertIdx, 0, item);
+    renderTable();
+  }
+
+  wireDropHighlight(dropTail, () => {
+    if (dragId) moveSong(dragId, null);
+  }, { stop: true });
+
+  const breakSource = document.getElementById('break-source');
+  breakSource.addEventListener('dragstart', e => {
+    dragId = BREAK_DRAG_ID;
+    e.dataTransfer.effectAllowed = 'copy';
+    const ghost = getDragImageEl();
+    ghost.textContent = 'Pause';
+    e.dataTransfer.setDragImage(ghost, 12, 16);
+  });
+  breakSource.addEventListener('dragend', () => { dragId = null; });
+
+  renderAll();
+
+  document.getElementById('add-custom-song').addEventListener('click', addBlankCustomSong);
+
+  /* ---------- Save (stays on the page; never navigates) ---------- */
+  const setlistForm = document.getElementById('setlist-form');
+  const saveStatus = document.getElementById('save-status');
+  const deleteBtn = document.getElementById('delete-setlist');
+  const deleteForm = document.getElementById('delete-form');
+  const addToRepertoireBtn = document.getElementById('add-to-repertoire');
+  let currentId = {{ (('"' + setlist.id + '"') if setlist else 'null') | safe }};
+
+  function buildSnapshot() {
+    return JSON.stringify({
+      date: document.getElementById('date-input').value,
+      venue: setlistForm.venue.value,
+      lineup: setlistForm.lineup.value,
+      notes: setlistForm.notes.value,
+      songs: songs.map(({ uid, ...rest }) => rest),
+    });
+  }
+
+  let lastSavedSnapshot = buildSnapshot();
+
+  function activateEditMode(id) {
+    currentId = id;
+    history.replaceState(null, '', `/setlists/${id}`);
+    deleteBtn.hidden = false;
+    addToRepertoireBtn.hidden = false;
+    deleteForm.action = `/setlists/${id}/delete`;
+  }
+
+  setlistForm.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const dateInput = document.getElementById('date-input');
+    if (!dateInput.value) {
+      document.getElementById('date-trigger').classList.add('date-picker__trigger--error');
+      document.getElementById('date-picker').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    document.getElementById('songs-input').value = JSON.stringify(
+      songs.map(({ uid, ...rest }) => rest)
+    );
+
+    const body = new URLSearchParams(new FormData(setlistForm));
+    const url = currentId ? `/setlists/${currentId}` : '/setlists';
+
+    saveStatus.textContent = 'Saving…';
+    saveStatus.classList.remove('save-status--error');
+
+    try {
+      const resp = await fetch(url, { method: 'POST', body });
+      if (!resp.ok) {
+        saveStatus.textContent = (await resp.text()) || 'Failed to save.';
+        saveStatus.classList.add('save-status--error');
+        return;
+      }
+      if (!currentId) {
+        const created = await resp.json();
+        activateEditMode(created.id);
+      }
+      saveStatus.textContent = 'Saved';
+      lastSavedSnapshot = buildSnapshot();
+    } catch (err) {
+      saveStatus.textContent = 'Failed to save.';
+      saveStatus.classList.add('save-status--error');
+    }
+  });
+
+  addToRepertoireBtn.addEventListener('click', async () => {
+    if (!currentId) return;
+    if (buildSnapshot() !== lastSavedSnapshot) {
+      const proceed = confirm(
+        "You have unsaved changes that won't be included. Add to repertoire using the last-saved version instead?"
+      );
+      if (!proceed) return;
+    }
+
+    saveStatus.textContent = 'Adding to repertoire…';
+    saveStatus.classList.remove('save-status--error');
+
+    try {
+      const resp = await fetch(`/setlists/${currentId}/add-to-repertoire`, { method: 'POST' });
+      if (!resp.ok) {
+        saveStatus.textContent = (await resp.text()) || 'Failed to add to repertoire.';
+        saveStatus.classList.add('save-status--error');
+        return;
+      }
+      saveStatus.textContent = 'Added to repertoire';
+      location.reload();
+    } catch (err) {
+      saveStatus.textContent = 'Failed to add to repertoire.';
+      saveStatus.classList.add('save-status--error');
+    }
+  });
+
+  const modal = document.getElementById('confirm-modal');
+  deleteBtn.addEventListener('click', () => { modal.hidden = false; });
+  modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
+  document.getElementById('confirm-cancel').addEventListener('click', () => { modal.hidden = true; });
+  document.getElementById('confirm-ok').addEventListener('click', () => {
+    deleteForm.submit();
+  });
+</script>
+{% endblock %}

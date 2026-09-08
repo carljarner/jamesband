@@ -24,14 +24,25 @@ import data_store
 import scan_cleanup
 
 ROOTS = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"]
-QUALITIES = ["", "m", "7", "m7", "maj7", "dim", "sus4", "6"]
+# Black keys get both spellings (charts are handwritten in either); natural
+# keys don't need a flat/sharp alias (no B#, no Fb).
+FLAT_OF_SHARP = {"A#": "Bb", "C#": "Db", "D#": "Eb", "F#": "Gb", "G#": "Ab"}
+SHARP_OF_FLAT = {flat: sharp for sharp, flat in FLAT_OF_SHARP.items()}
 
-CHORD_LABELS = [f"{root}{quality}" for quality in QUALITIES for root in ROOTS]
-LETTER_LABELS = ROOTS + ["/"]
+ROOT_SPELLINGS = []
+for _note in ROOTS:
+    ROOT_SPELLINGS.append(_note)
+    if _note in FLAT_OF_SHARP:
+        ROOT_SPELLINGS.append(FLAT_OF_SHARP[_note])
+
+QUALITIES = ["", "m", "7", "m7", "m7b5", "maj7", "dim", "sus2", "sus4", "6"]
+
+CHORD_LABELS = [f"{root}{quality}" for quality in QUALITIES for root in ROOT_SPELLINGS]
+LETTER_LABELS = ROOT_SPELLINGS + ["/"]
 # Sheet layout shared by the PDF generator and the scan importer: which
 # labels go on a sheet, and how many columns wide the grid is.
 SHEET_LAYOUTS = {
-    "chords": (CHORD_LABELS, len(ROOTS)),
+    "chords": (CHORD_LABELS, len(ROOT_SPELLINGS)),
     "letters": (LETTER_LABELS, len(LETTER_LABELS)),
 }
 
@@ -43,8 +54,9 @@ MARGIN = 30  # pt, recording-sheet page margin on all sides
 LABEL_STRIP_FRAC = 0.22  # fraction of a cell's height reserved for the printed label
 
 _QUALITY_PATTERN = "|".join(sorted((q for q in QUALITIES if q), key=len, reverse=True))
+_ROOT_PATTERN = "|".join(sorted(ROOT_SPELLINGS, key=len, reverse=True))
 CHORD_NAME_RE = re.compile(
-    rf"^(?P<root>[A-G]#?)(?P<quality>{_QUALITY_PATTERN})?(?:/(?P<bass>[A-G]#?))?$"
+    rf"^(?P<root>{_ROOT_PATTERN})(?P<quality>{_QUALITY_PATTERN})?(?:/(?P<bass>{_ROOT_PATTERN}))?$"
 )
 
 
@@ -63,8 +75,16 @@ def parse_chord(name: str) -> tuple[str, str, str | None]:
     return match.group("root"), match.group("quality") or "", match.group("bass")
 
 
+def _pitch_class(note: str) -> int:
+    return ROOTS.index(SHARP_OF_FLAT.get(note, note))
+
+
 def transpose_note(note: str, semitones: int) -> str:
-    return ROOTS[(ROOTS.index(note) + semitones) % 12]
+    new_sharp = ROOTS[(_pitch_class(note) + semitones) % 12]
+    was_flat = note in SHARP_OF_FLAT
+    if was_flat and new_sharp in FLAT_OF_SHARP:
+        return FLAT_OF_SHARP[new_sharp]
+    return new_sharp
 
 
 def transpose_chord_name(name: str, semitones: int) -> str:
@@ -78,7 +98,7 @@ def transpose_chord_name(name: str, semitones: int) -> str:
 def semitones_for_target_key(from_key: str, to_key: str) -> int:
     from_root, _, _ = parse_chord(from_key)
     to_root, _, _ = parse_chord(to_key)
-    return (ROOTS.index(to_root) - ROOTS.index(from_root)) % 12
+    return (_pitch_class(to_root) - _pitch_class(from_root)) % 12
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +140,7 @@ def generate_recording_sheet() -> bytes:
     buf = BytesIO()
     c = pdf_canvas.Canvas(buf, pagesize=page_size)
 
-    _draw_grid_page(c, CHORD_LABELS, cols=len(ROOTS), page_size=page_size)
+    _draw_grid_page(c, CHORD_LABELS, cols=len(ROOT_SPELLINGS), page_size=page_size)
     c.showPage()
     _draw_grid_page(c, LETTER_LABELS, cols=len(LETTER_LABELS), page_size=page_size)
     c.save()

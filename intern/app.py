@@ -1,6 +1,7 @@
 import json
 import os
 import secrets
+from datetime import date
 from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -10,9 +11,11 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 import chords
+import gallery
 import repertoire
 import scan_cleanup
 import setlist
+import setlists
 
 # INTERN_PASSWORD may hold multiple comma-separated passwords, e.g.
 # "bryllupsband,sommerturne2027" — any of them logs in, no per-person identity.
@@ -22,6 +25,25 @@ SESSION_SECRET = os.environ["SESSION_SECRET"]
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+DA_MONTHS_ABBR = (
+    "jan.", "feb.", "mar.", "apr.", "maj", "jun.",
+    "jul.", "aug.", "sep.", "okt.", "nov.", "dec.",
+)
+
+
+def format_date_da(value: str) -> str:
+    """Format an ISO date string as e.g. '5. sep. 2026'."""
+    if not value:
+        return ""
+    try:
+        d = date.fromisoformat(value)
+    except ValueError:
+        return value
+    return f"{d.day}. {DA_MONTHS_ABBR[d.month - 1]} {d.year}"
+
+
+templates.env.filters["dadate"] = format_date_da
 
 
 @app.middleware("http")
@@ -47,15 +69,15 @@ async def login_form(request: Request):
 async def login(request: Request, password: str = Form(...)):
     if any(secrets.compare_digest(password, valid) for valid in VALID_PASSWORDS):
         request.session["authed"] = True
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/setlists", status_code=303)
     return templates.TemplateResponse(
         request, "login.html", {"error": "Wrong password"}, status_code=401
     )
 
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse(request, "home.html", {})
+@app.get("/")
+async def home():
+    return RedirectResponse("/setlists")
 
 
 @app.get("/setlist", response_class=HTMLResponse)
@@ -134,9 +156,111 @@ async def repertoire_delete(song_id: str):
     return Response(status_code=204)
 
 
-@app.get("/scan", response_class=HTMLResponse)
-async def scan_page(request: Request, error: str = None):
-    return templates.TemplateResponse(request, "scan.html", {"error": error})
+@app.get("/setlists", response_class=HTMLResponse)
+async def setlists_page(request: Request):
+    upcoming, past = setlists.split_upcoming_past(setlists.list_setlists())
+    return templates.TemplateResponse(
+        request, "setlists.html", {"upcoming_setlists": upcoming, "past_setlists": past}
+    )
+
+
+@app.get("/setlists/new", response_class=HTMLResponse)
+async def setlists_new_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "setlist_form.html",
+        {
+            "setlist": None,
+            "repertoire_songs_json": json.dumps(repertoire.list_songs()),
+            "setlist_songs_json": json.dumps([]),
+        },
+    )
+
+
+@app.post("/setlists")
+async def setlists_create(
+    date: str = Form(...),
+    venue: str = Form(""),
+    lineup: str = Form(""),
+    notes: str = Form(""),
+    songs: str = Form("[]"),
+):
+    if not date.strip():
+        return Response(content="Date can't be empty.", status_code=400)
+    try:
+        song_list = json.loads(songs)
+        setlist = setlists.add_setlist(
+            {"date": date, "venue": venue, "lineup": lineup, "notes": notes}, song_list
+        )
+    except (json.JSONDecodeError, ValueError) as exc:
+        return Response(content=str(exc), status_code=400)
+    return setlist
+
+
+@app.get("/setlists/{setlist_id}", response_class=HTMLResponse)
+async def setlists_edit_page(request: Request, setlist_id: str):
+    try:
+        setlist_data = setlists.get_setlist(setlist_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    return templates.TemplateResponse(
+        request,
+        "setlist_form.html",
+        {
+            "setlist": setlist_data,
+            "repertoire_songs_json": json.dumps(repertoire.list_songs()),
+            "setlist_songs_json": json.dumps(setlist_data["songs"]),
+        },
+    )
+
+
+@app.post("/setlists/{setlist_id}")
+async def setlists_update(
+    setlist_id: str,
+    date: str = Form(...),
+    venue: str = Form(""),
+    lineup: str = Form(""),
+    notes: str = Form(""),
+    songs: str = Form("[]"),
+):
+    if not date.strip():
+        return Response(content="Date can't be empty.", status_code=400)
+    try:
+        song_list = json.loads(songs)
+        setlists.update_setlist(
+            setlist_id, {"date": date, "venue": venue, "lineup": lineup, "notes": notes}, song_list
+        )
+    except KeyError:
+        raise HTTPException(status_code=404)
+    except (json.JSONDecodeError, ValueError) as exc:
+        return Response(content=str(exc), status_code=400)
+    return Response(status_code=204)
+
+
+@app.post("/setlists/{setlist_id}/delete")
+async def setlists_delete(setlist_id: str):
+    try:
+        setlists.delete_setlist(setlist_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    return RedirectResponse("/setlists", status_code=303)
+
+
+@app.post("/setlists/{setlist_id}/add-to-repertoire")
+async def setlists_add_to_repertoire(setlist_id: str):
+    try:
+        return setlists.add_to_repertoire(setlist_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+
+
+@app.get("/leadsheets", response_class=HTMLResponse)
+async def leadsheets_page(request: Request, error: str = None, scan_error: str = None):
+    return templates.TemplateResponse(
+        request,
+        "leadsheets.html",
+        {"songs": chords.list_songs(), "error": error, "scan_error": scan_error},
+    )
 
 
 @app.post("/scan/clean")
@@ -145,7 +269,7 @@ async def scan_clean(photo: UploadFile = File(...)):
         image_bytes = await photo.read()
         pdf_bytes = scan_cleanup.clean_scan(image_bytes)
     except scan_cleanup.CleanupError as exc:
-        return RedirectResponse(f"/scan?error={quote(str(exc))}", status_code=303)
+        return RedirectResponse(f"/leadsheets?scan_error={quote(str(exc))}", status_code=303)
 
     return Response(
         content=pdf_bytes,
@@ -189,20 +313,13 @@ async def chord_image(kind: str, name: str):
     return FileResponse(path, media_type="image/png")
 
 
-@app.get("/songs", response_class=HTMLResponse)
-async def songs_page(request: Request, error: str = None):
-    return templates.TemplateResponse(
-        request, "songs.html", {"songs": chords.list_songs(), "error": error}
-    )
-
-
 @app.post("/songs")
 async def songs_create(title: str = Form(...), key: str = Form(...), photo: UploadFile = File(...)):
     try:
         image_bytes = await photo.read()
         slug = chords.create_song_draft(title, key, image_bytes)
     except (chords.ChordError, scan_cleanup.CleanupError) as exc:
-        return RedirectResponse(f"/songs?error={quote(str(exc))}", status_code=303)
+        return RedirectResponse(f"/leadsheets?error={quote(str(exc))}", status_code=303)
     return RedirectResponse(f"/songs/{slug}/tag", status_code=303)
 
 
@@ -255,10 +372,53 @@ async def song_transpose(slug: str, semitones: str = Form(""), target_key: str =
             raise chords.ChordError("Enter a semitone shift or a target key.")
         pdf_bytes = chords.transpose_song(slug, n)
     except (chords.ChordError, ValueError) as exc:
-        return RedirectResponse(f"/songs?error={quote(str(exc))}", status_code=303)
+        return RedirectResponse(f"/leadsheets?error={quote(str(exc))}", status_code=303)
 
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{slug}-transposed.pdf"'},
     )
+
+
+@app.get("/gallery", response_class=HTMLResponse)
+async def gallery_page(request: Request, error: str = None):
+    return templates.TemplateResponse(
+        request, "gallery.html", {"items": gallery.list_items(), "error": error}
+    )
+
+
+@app.post("/gallery")
+async def gallery_upload(photo: UploadFile = File(...)):
+    try:
+        file_bytes = await photo.read()
+        gallery.add_item(file_bytes, photo.content_type)
+    except gallery.GalleryError as exc:
+        return RedirectResponse(f"/gallery?error={quote(str(exc))}", status_code=303)
+    return RedirectResponse("/gallery", status_code=303)
+
+
+@app.post("/gallery/{item_id}/publish")
+async def gallery_publish(item_id: str, published: bool = Form(...)):
+    try:
+        gallery.set_published(item_id, published)
+    except gallery.GalleryError:
+        raise HTTPException(status_code=404)
+    return Response(status_code=204)
+
+
+@app.post("/gallery/{item_id}/delete")
+async def gallery_delete(item_id: str):
+    try:
+        gallery.delete_item(item_id)
+    except gallery.GalleryError:
+        raise HTTPException(status_code=404)
+    return Response(status_code=204)
+
+
+@app.get("/gallery/media/{item_id}")
+async def gallery_media(item_id: str):
+    path = gallery.media_path(item_id)
+    if not path:
+        raise HTTPException(status_code=404)
+    return FileResponse(path)
