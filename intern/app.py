@@ -5,6 +5,7 @@ from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -18,13 +19,14 @@ VALID_PASSWORDS = [p.strip() for p in os.environ["INTERN_PASSWORD"].split(",") i
 SESSION_SECRET = os.environ["SESSION_SECRET"]
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):
-    public_paths = {"/login"}
-    if request.url.path not in public_paths and not request.session.get("authed"):
+    public = request.url.path == "/login" or request.url.path.startswith("/static/")
+    if not public and not request.session.get("authed"):
         return RedirectResponse("/login")
     return await call_next(request)
 
