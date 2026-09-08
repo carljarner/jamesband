@@ -5,6 +5,10 @@ python-multipart==0.0.9
 jinja2==3.1.4
 requests==2.32.3
 pypdf==5.1.0
+pillow==11.0.0
+numpy==2.1.3
+opencv-python-headless==4.10.0.84
+reportlab==4.2.5
 
-# Added in later build phases:
-# pillow, opencv-python-headless, reportlab (Features 2-3)
+# Added in a later build phase (Feature 3):
+# chord library / transposition has no new deps beyond the above

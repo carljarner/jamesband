@@ -3,11 +3,13 @@ import os
 import secrets
 from urllib.parse import quote
 
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
+import chords
+import scan_cleanup
 import setlist
 
 # INTERN_PASSWORD may hold multiple comma-separated passwords, e.g.
@@ -93,5 +95,131 @@ async def setlist_build(order: str = Form(...)):
     )
 
 
-# Feature routes (scan cleanup, chord library/transpose) get added here in
-# later build phases.
+@app.get("/scan", response_class=HTMLResponse)
+async def scan_page(request: Request, error: str = None):
+    return templates.TemplateResponse(request, "scan.html", {"error": error})
+
+
+@app.post("/scan/clean")
+async def scan_clean(photo: UploadFile = File(...)):
+    try:
+        image_bytes = await photo.read()
+        pdf_bytes = scan_cleanup.clean_scan(image_bytes)
+    except scan_cleanup.CleanupError as exc:
+        return RedirectResponse(f"/scan?error={quote(str(exc))}", status_code=303)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="chart.pdf"'},
+    )
+
+
+@app.get("/chords", response_class=HTMLResponse)
+async def chords_page(request: Request, error: str = None):
+    return templates.TemplateResponse(
+        request, "chords.html", {"status": chords.library_status(), "error": error}
+    )
+
+
+@app.get("/chords/sheet")
+async def chords_sheet():
+    pdf_bytes = chords.generate_recording_sheet()
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="chord-recording-sheet.pdf"'},
+    )
+
+
+@app.post("/chords/import")
+async def chords_import(kind: str = Form(...), photo: UploadFile = File(...)):
+    try:
+        image_bytes = await photo.read()
+        chords.import_library_sheet(image_bytes, kind)
+    except chords.ChordError as exc:
+        return RedirectResponse(f"/chords?error={quote(str(exc))}", status_code=303)
+    return RedirectResponse("/chords", status_code=303)
+
+
+@app.get("/chords/image/{kind}/{name}")
+async def chord_image(kind: str, name: str):
+    path = chords.library_image_path(kind, name)
+    if not path or not path.exists():
+        raise HTTPException(status_code=404)
+    return FileResponse(path, media_type="image/png")
+
+
+@app.get("/songs", response_class=HTMLResponse)
+async def songs_page(request: Request, error: str = None):
+    return templates.TemplateResponse(
+        request, "songs.html", {"songs": chords.list_songs(), "error": error}
+    )
+
+
+@app.post("/songs")
+async def songs_create(title: str = Form(...), key: str = Form(...), photo: UploadFile = File(...)):
+    try:
+        image_bytes = await photo.read()
+        slug = chords.create_song_draft(title, key, image_bytes)
+    except (chords.ChordError, scan_cleanup.CleanupError) as exc:
+        return RedirectResponse(f"/songs?error={quote(str(exc))}", status_code=303)
+    return RedirectResponse(f"/songs/{slug}/tag", status_code=303)
+
+
+@app.get("/songs/{slug}/tag", response_class=HTMLResponse)
+async def song_tag_page(request: Request, slug: str):
+    song = chords.get_song(slug)
+    if not song:
+        raise HTTPException(status_code=404)
+    return templates.TemplateResponse(
+        request,
+        "tag.html",
+        {
+            "slug": slug,
+            "song": song,
+            "chord_names": chords.CHORD_LABELS,
+            "tags_json": json.dumps(song.get("chords", [])),
+        },
+    )
+
+
+@app.post("/songs/{slug}/tag")
+async def song_tag_save(slug: str, request: Request):
+    try:
+        body = await request.json()
+        chords.save_song_tags(slug, body.get("chords", []))
+    except (chords.ChordError, ValueError, TypeError) as exc:
+        return Response(content=str(exc), status_code=400)
+    return Response(status_code=204)
+
+
+@app.get("/songs/{slug}/image/{which}")
+async def song_image(slug: str, which: str):
+    path = chords.song_image_path(slug, which)
+    if not path:
+        raise HTTPException(status_code=404)
+    return FileResponse(path, media_type="image/png")
+
+
+@app.post("/songs/{slug}/transpose")
+async def song_transpose(slug: str, semitones: str = Form(""), target_key: str = Form("")):
+    try:
+        song = chords.get_song(slug)
+        if not song:
+            raise chords.ChordError(f"Unknown song '{slug}'.")
+        if target_key.strip():
+            n = chords.semitones_for_target_key(song["key"], target_key.strip())
+        elif semitones.strip():
+            n = int(semitones)
+        else:
+            raise chords.ChordError("Enter a semitone shift or a target key.")
+        pdf_bytes = chords.transpose_song(slug, n)
+    except (chords.ChordError, ValueError) as exc:
+        return RedirectResponse(f"/songs?error={quote(str(exc))}", status_code=303)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{slug}-transposed.pdf"'},
+    )

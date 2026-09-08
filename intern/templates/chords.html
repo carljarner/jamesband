@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chord library</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    a.back { font-size: 0.9rem; }
+    .error { color: #c00; }
+    .muted { color: #666; font-size: 0.85rem; }
+    fieldset { margin-top: 1.5rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 4px; margin-top: 0.75rem; }
+    .cell { border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 0.7rem; padding: 2px; }
+    .cell.have { background: #e6f4ea; border-color: #9c9; }
+    .cell img { max-width: 100%; display: block; margin: 2px auto; }
+    form.upload { display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center; }
+    form.upload input[type="file"] { flex: 1; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <p><a class="back" href="/songs">&larr; Songs</a></p>
+  <h1>Chord library</h1>
+  <p class="muted">Print the recording sheet, fill it in by hand, scan it flat, then upload the scan here.</p>
+
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  <fieldset>
+    <legend>Recording sheet</legend>
+    <p class="muted">Two pages: chords (12 roots &times; 8 qualities) and bare note letters + &ldquo;/&rdquo;.</p>
+    <a href="/chords/sheet">Download blank sheet (PDF)</a>
+  </fieldset>
+
+  <fieldset>
+    <legend>Chords &mdash; {{ status.chords|selectattr("have")|list|length }}/{{ status.chords|length }}</legend>
+    <form class="upload" method="post" action="/chords/import" enctype="multipart/form-data">
+      <input type="hidden" name="kind" value="chords" />
+      <input type="file" name="photo" accept="image/*" required />
+      <button type="submit">Import scan</button>
+    </form>
+    <div class="grid">
+      {% for entry in status.chords %}
+      <div class="cell {{ 'have' if entry.have else '' }}">
+        {{ entry.name }}
+        {% if entry.have %}<img src="/chords/image/chords/{{ entry.name|urlencode }}" alt="" />{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Letters &amp; slash &mdash; {{ status.letters|selectattr("have")|list|length }}/{{ status.letters|length }}</legend>
+    <form class="upload" method="post" action="/chords/import" enctype="multipart/form-data">
+      <input type="hidden" name="kind" value="letters" />
+      <input type="file" name="photo" accept="image/*" required />
+      <button type="submit">Import scan</button>
+    </form>
+    <div class="grid">
+      {% for entry in status.letters %}
+      <div class="cell {{ 'have' if entry.have else '' }}">
+        {{ entry.name }}
+        {% if entry.have %}<img src="/chords/image/letters/{{ entry.name|urlencode }}" alt="" />{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </fieldset>
+</body>
+</html>
