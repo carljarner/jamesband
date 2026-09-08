@@ -16,7 +16,7 @@
 <body>
   {% block topbar %}
   <header class="topbar">
-    <a href="/setlists" class="topbar__brand">
+    <a href="/gigs" class="topbar__brand">
       <img src="/static/logo.png" alt="James Band" class="topbar__logo" />
       JAMES BAND &middot; INTERN
     </a>
@@ -26,10 +26,10 @@
   {% set section = request.url.path.split('/')[1] %}
   <nav class="main-nav">
     <div class="main-nav__tabs page-tabs">
-      <a href="/setlists" class="page-tabs__tab {{ 'is-active' if section == 'setlists' }}">Setlists</a>
-      <a href="/repertoire" class="page-tabs__tab {{ 'is-active' if section == 'repertoire' }}">Repertoire</a>
-      <a href="/setlist" class="page-tabs__tab {{ 'is-active' if section == 'setlist' }}">Setlist order generator</a>
+      <a href="/gigs" class="page-tabs__tab {{ 'is-active' if section in ('gigs', 'setlists') }}">Gigs</a>
+      <a href="/setlist" class="page-tabs__tab {{ 'is-active' if section == 'setlist' }}">Setlist</a>
       <a href="/leadsheets" class="page-tabs__tab {{ 'is-active' if section in ('leadsheets', 'songs', 'chords') }}">Lead Sheets</a>
+      <a href="/repertoire" class="page-tabs__tab {{ 'is-active' if section == 'repertoire' }}">Repertoire</a>
       <a href="/gallery" class="page-tabs__tab {{ 'is-active' if section == 'gallery' }}">Gallery</a>
     </div>
   </nav>

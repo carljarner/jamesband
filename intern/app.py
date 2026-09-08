@@ -12,6 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 import chords
 import gallery
+import gig_bundle
 import repertoire
 import scan_cleanup
 import setlist
@@ -69,7 +70,7 @@ async def login_form(request: Request):
 async def login(request: Request, password: str = Form(...)):
     if any(secrets.compare_digest(password, valid) for valid in VALID_PASSWORDS):
         request.session["authed"] = True
-        return RedirectResponse("/setlists", status_code=303)
+        return RedirectResponse("/gigs", status_code=303)
     return templates.TemplateResponse(
         request, "login.html", {"error": "Wrong password"}, status_code=401
     )
@@ -77,47 +78,97 @@ async def login(request: Request, password: str = Form(...)):
 
 @app.get("/")
 async def home():
-    return RedirectResponse("/setlists")
+    return RedirectResponse("/gigs")
 
 
-@app.get("/setlist", response_class=HTMLResponse)
-async def setlist_page(request: Request, sync_error: str = None, build_error: str = None):
-    return templates.TemplateResponse(
-        request,
-        "setlist.html",
-        {
-            "config": setlist.get_config(),
-            "songbook": setlist.get_songbook(),
-            "sync_error": sync_error,
-            "build_error": build_error,
-        },
-    )
+# Old bookmarks: "Setlists" (gig history) was renamed "Gigs".
+@app.get("/setlists")
+async def setlists_redirect():
+    return RedirectResponse("/gigs", status_code=301)
+
+
+@app.get("/setlists/new")
+async def setlists_new_redirect():
+    return RedirectResponse("/gigs/new", status_code=301)
+
+
+@app.get("/setlists/{setlist_id}")
+async def setlists_edit_redirect(setlist_id: str):
+    return RedirectResponse(f"/gigs/{setlist_id}", status_code=301)
+
+
+@app.post("/setlist/master-songbook")
+async def setlist_master_songbook(doc_url: str = Form(...)):
+    try:
+        setlist.set_master_songbook_url(doc_url)
+    except ValueError as exc:
+        return Response(content=str(exc), status_code=400)
+    return {"doc_url": setlist.get_master_songbook_url()}
 
 
 @app.post("/setlist/sync")
 async def setlist_sync(doc_url: str = Form(...)):
     try:
-        setlist.sync(doc_url)
+        return setlist.sync(doc_url)
     except setlist.SyncError as exc:
-        return RedirectResponse(f"/setlist?sync_error={quote(str(exc))}", status_code=303)
-    return RedirectResponse("/setlist", status_code=303)
+        return Response(content=str(exc), status_code=400)
 
 
-@app.post("/setlist/build")
-async def setlist_build(order: str = Form(...)):
+@app.post("/setlist/alias")
+async def setlist_alias(setlist_title: str = Form(...), doc_title: str = Form(...)):
     try:
-        titles = json.loads(order)
-        if not isinstance(titles, list) or not titles:
-            raise setlist.SyncError("Add at least one song to tonight's order.")
-        pdf_bytes = setlist.build_ordered_pdf(titles)
-    except (setlist.SyncError, json.JSONDecodeError) as exc:
-        return RedirectResponse(f"/setlist?build_error={quote(str(exc))}", status_code=303)
+        setlist.set_alias(setlist_title, doc_title)
+    except ValueError as exc:
+        return Response(content=str(exc), status_code=400)
+    return {"setlist_title": setlist_title, "doc_title": doc_title}
 
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": 'attachment; filename="setlist.pdf"'},
+
+@app.get("/setlist", response_class=HTMLResponse)
+async def setlist_picker_page(request: Request):
+    upcoming, past = setlists.split_upcoming_past(setlists.list_setlists())
+    return templates.TemplateResponse(
+        request, "setlist_picker.html", {"upcoming_setlists": upcoming, "past_setlists": past}
     )
+
+
+@app.get("/setlist/{gig_id}", response_class=HTMLResponse)
+async def setlist_editor_page(request: Request, gig_id: str):
+    try:
+        gig = setlists.get_setlist(gig_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    return templates.TemplateResponse(
+        request,
+        "setlist_editor.html",
+        {
+            "setlist": gig,
+            "repertoire_songs_json": json.dumps(repertoire.list_songs()),
+            "setlist_songs_json": json.dumps(gig["songs"]),
+            "master_songbook_url": setlist.get_master_songbook_url(),
+            "songbook_json": json.dumps(setlist.get_songbook()),
+            "aliases_json": json.dumps(setlist.get_aliases()),
+        },
+    )
+
+
+@app.post("/setlist/{gig_id}")
+async def setlist_editor_save(gig_id: str, songs: str = Form("[]")):
+    try:
+        song_list = json.loads(songs)
+        setlists.update_setlist(gig_id, {}, song_list)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    except (json.JSONDecodeError, ValueError) as exc:
+        return Response(content=str(exc), status_code=400)
+    return Response(status_code=204)
+
+
+@app.post("/setlist/{gig_id}/add-to-repertoire")
+async def setlist_add_to_repertoire(gig_id: str):
+    try:
+        return setlists.add_to_repertoire(gig_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
 
 
 @app.get("/repertoire", response_class=HTMLResponse)
@@ -156,102 +207,89 @@ async def repertoire_delete(song_id: str):
     return Response(status_code=204)
 
 
-@app.get("/setlists", response_class=HTMLResponse)
-async def setlists_page(request: Request):
+@app.get("/gigs", response_class=HTMLResponse)
+async def gigs_page(request: Request):
     upcoming, past = setlists.split_upcoming_past(setlists.list_setlists())
     return templates.TemplateResponse(
-        request, "setlists.html", {"upcoming_setlists": upcoming, "past_setlists": past}
+        request, "gigs.html", {"upcoming_setlists": upcoming, "past_setlists": past}
     )
 
 
-@app.get("/setlists/new", response_class=HTMLResponse)
-async def setlists_new_page(request: Request):
-    return templates.TemplateResponse(
-        request,
-        "setlist_form.html",
-        {
-            "setlist": None,
-            "repertoire_songs_json": json.dumps(repertoire.list_songs()),
-            "setlist_songs_json": json.dumps([]),
-        },
-    )
+@app.get("/gigs/new", response_class=HTMLResponse)
+async def gigs_new_page(request: Request):
+    return templates.TemplateResponse(request, "gig_form.html", {"setlist": None})
 
 
-@app.post("/setlists")
-async def setlists_create(
+@app.post("/gigs")
+async def gigs_create(
     date: str = Form(...),
     venue: str = Form(""),
     lineup: str = Form(""),
     notes: str = Form(""),
-    songs: str = Form("[]"),
 ):
     if not date.strip():
         return Response(content="Date can't be empty.", status_code=400)
-    try:
-        song_list = json.loads(songs)
-        setlist = setlists.add_setlist(
-            {"date": date, "venue": venue, "lineup": lineup, "notes": notes}, song_list
-        )
-    except (json.JSONDecodeError, ValueError) as exc:
-        return Response(content=str(exc), status_code=400)
-    return setlist
+    setlist_record = setlists.add_setlist(
+        {"date": date, "venue": venue, "lineup": lineup, "notes": notes}, []
+    )
+    return setlist_record
 
 
-@app.get("/setlists/{setlist_id}", response_class=HTMLResponse)
-async def setlists_edit_page(request: Request, setlist_id: str):
+@app.get("/gigs/{gig_id}", response_class=HTMLResponse)
+async def gigs_edit_page(request: Request, gig_id: str):
     try:
-        setlist_data = setlists.get_setlist(setlist_id)
+        setlist_data = setlists.get_setlist(gig_id)
     except KeyError:
         raise HTTPException(status_code=404)
     return templates.TemplateResponse(
         request,
-        "setlist_form.html",
+        "gig_form.html",
         {
             "setlist": setlist_data,
-            "repertoire_songs_json": json.dumps(repertoire.list_songs()),
-            "setlist_songs_json": json.dumps(setlist_data["songs"]),
+            "master_songbook_url": setlist.get_master_songbook_url(),
         },
     )
 
 
-@app.post("/setlists/{setlist_id}")
-async def setlists_update(
-    setlist_id: str,
+@app.post("/gigs/{gig_id}")
+async def gigs_update(
+    gig_id: str,
     date: str = Form(...),
     venue: str = Form(""),
     lineup: str = Form(""),
     notes: str = Form(""),
-    songs: str = Form("[]"),
 ):
     if not date.strip():
         return Response(content="Date can't be empty.", status_code=400)
     try:
-        song_list = json.loads(songs)
         setlists.update_setlist(
-            setlist_id, {"date": date, "venue": venue, "lineup": lineup, "notes": notes}, song_list
+            gig_id, {"date": date, "venue": venue, "lineup": lineup, "notes": notes}, None
         )
     except KeyError:
         raise HTTPException(status_code=404)
-    except (json.JSONDecodeError, ValueError) as exc:
-        return Response(content=str(exc), status_code=400)
     return Response(status_code=204)
 
 
-@app.post("/setlists/{setlist_id}/delete")
-async def setlists_delete(setlist_id: str):
+@app.post("/gigs/{gig_id}/delete")
+async def gigs_delete(gig_id: str):
     try:
-        setlists.delete_setlist(setlist_id)
+        setlists.delete_setlist(gig_id)
     except KeyError:
         raise HTTPException(status_code=404)
-    return RedirectResponse("/setlists", status_code=303)
+    return RedirectResponse("/gigs", status_code=303)
 
 
-@app.post("/setlists/{setlist_id}/add-to-repertoire")
-async def setlists_add_to_repertoire(setlist_id: str):
+@app.get("/gigs/{gig_id}/leadsheets")
+async def gigs_leadsheets(gig_id: str):
     try:
-        return setlists.add_to_repertoire(setlist_id)
+        pdf_bytes, _missing = gig_bundle.build_leadsheets_bundle(gig_id)
     except KeyError:
         raise HTTPException(status_code=404)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="lead-sheets.pdf"'},
+    )
 
 
 @app.get("/leadsheets", response_class=HTMLResponse)

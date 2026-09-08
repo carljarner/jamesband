@@ -1,9 +1,6 @@
-"""Feature 1: setlist order generator.
-
-Pulls the master song book (a view-only Google Doc, one song per page) down
-as a PDF, maps song title -> page number, and reshuffles pages into whatever
-order tonight's setlist needs. Never parses chord/text formatting -- it just
-moves existing PDF pages around.
+"""Master songbook: sync a view-only Google Doc (one song per page) down as
+a PDF and map song title -> page number, plus manual title connections for
+when a song is titled differently between the setlist tool and the doc.
 
 Uses the doc's public export endpoint (docs.google.com/.../export?format=...)
 rather than the Drive API, so no OAuth/service-account credentials are
@@ -17,7 +14,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 
 import requests
-from pypdf import PdfReader, PdfWriter
+from pypdf import PdfReader
 
 import data_store
 
@@ -27,6 +24,7 @@ EXPORT_URL = "https://docs.google.com/document/d/{doc_id}/export?format=pdf"
 CONFIG_PATH = "setlist/config.json"
 SONGBOOK_PATH = "setlist/songbook.json"
 MASTER_PDF_RELATIVE = "setlist/master.pdf"
+ALIASES_PATH = "setlist/aliases.json"
 
 
 class SyncError(Exception):
@@ -47,8 +45,38 @@ def get_config() -> dict | None:
     return data_store.load_json(CONFIG_PATH)
 
 
+def get_master_songbook_url() -> str | None:
+    config = get_config()
+    return config["doc_url"] if config else None
+
+
+def set_master_songbook_url(url: str) -> None:
+    """Store just the link, without fetching/syncing the doc's pages."""
+    url = url.strip()
+    if not url:
+        raise ValueError("Link can't be empty.")
+    data_store.save_json(CONFIG_PATH, {"doc_id": extract_doc_id(url), "doc_url": url})
+    data_store.commit_and_push("Update master songbook link")
+
+
 def get_songbook() -> dict | None:
     return data_store.load_json(SONGBOOK_PATH)
+
+
+def get_aliases() -> dict[str, str]:
+    """Manual {setlist_title: doc_title} connections, for when a song is
+    titled differently between the setlist tool and the master doc."""
+    return data_store.load_json(ALIASES_PATH, default={})
+
+
+def set_alias(setlist_title: str, doc_title: str) -> None:
+    setlist_title, doc_title = setlist_title.strip(), doc_title.strip()
+    if not setlist_title or not doc_title:
+        raise ValueError("Both a setlist title and a doc title are required.")
+    aliases = get_aliases()
+    aliases[setlist_title] = doc_title
+    data_store.save_json(ALIASES_PATH, aliases)
+    data_store.commit_and_push(f"Connect '{setlist_title}' -> '{doc_title}'")
 
 
 def _master_pdf_path():
@@ -134,28 +162,3 @@ def sync(doc_url_or_id: str) -> dict:
     data_store.save_json(SONGBOOK_PATH, songbook)
     data_store.commit_and_push(f"Sync setlist songbook ({len(songs)} songs)")
     return songbook
-
-
-def build_ordered_pdf(order: list[str]) -> bytes:
-    songbook = get_songbook()
-    if not songbook:
-        raise SyncError("No songbook synced yet.")
-
-    pages_by_title = {song["title"]: song["pages"] for song in songbook["songs"]}
-    missing = [title for title in order if title not in pages_by_title]
-    if missing:
-        raise SyncError(f"Unknown song(s), try resyncing: {', '.join(missing)}")
-
-    master_path = _master_pdf_path()
-    if not master_path.exists():
-        raise SyncError("Master PDF is missing, try resyncing.")
-
-    reader = PdfReader(str(master_path))
-    writer = PdfWriter()
-    for title in order:
-        for page_index in pages_by_title[title]:
-            writer.add_page(reader.pages[page_index])
-
-    buf = BytesIO()
-    writer.write(buf)
-    return buf.getvalue()
