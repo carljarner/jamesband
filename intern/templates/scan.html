@@ -1,57 +1,43 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Scan cleanup</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; }
-    a.back { font-size: 0.9rem; }
-    .error { color: #c00; }
-    .muted { color: #666; font-size: 0.85rem; }
-    form { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
-    input[type="file"] { font-size: 0.95rem; }
-    img#preview { max-width: 100%; border-radius: 6px; display: none; }
-    button.primary { padding: 0.6rem 1.2rem; font-size: 1rem; }
-  </style>
-</head>
-<body>
-  <p><a class="back" href="/">&larr; Intern tools</a></p>
-  <h1>Scan cleanup</h1>
-  <p class="muted">Photo of a handwritten pencil chart in, clean print-ready PDF out.</p>
+{% extends "base.html" %}
+{% block title %}Scan cleanup{% endblock %}
+{% block content %}
+<p><a class="back" href="/">&larr; Intern tools</a></p>
+<h1>Scan cleanup</h1>
+<p class="muted">Photo of a handwritten pencil chart in, clean print-ready PDF out.</p>
 
-  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
 
-  <form method="post" action="/scan/clean" enctype="multipart/form-data" id="scan-form">
-    <input type="file" name="photo" accept="image/*" capture="environment" required id="photo-input" />
-    <img id="preview" alt="Preview" />
-    <button class="primary" type="submit" id="submit-btn">Clean up &amp; download PDF</button>
-  </form>
+<form method="post" action="/scan/clean" enctype="multipart/form-data" id="scan-form">
+  <input type="file" name="photo" accept="image/*" capture="environment" required id="photo-input" />
+  <img id="preview" alt="Preview" />
+  <button class="primary" type="submit" id="submit-btn">Clean up &amp; download PDF</button>
+</form>
+{% endblock %}
 
-  <script>
-    const input = document.getElementById('photo-input');
-    const preview = document.getElementById('preview');
-    const form = document.getElementById('scan-form');
-    const submitBtn = document.getElementById('submit-btn');
+{% block scripts %}
+<script>
+  const input = document.getElementById('photo-input');
+  const preview = document.getElementById('preview');
+  const form = document.getElementById('scan-form');
+  const submitBtn = document.getElementById('submit-btn');
 
-    input.addEventListener('change', () => {
-      const file = input.files[0];
-      if (!file) {
-        preview.style.display = 'none';
-        return;
-      }
-      preview.src = URL.createObjectURL(file);
-      preview.style.display = 'block';
-    });
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) {
+      preview.style.display = 'none';
+      return;
+    }
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+  });
 
-    form.addEventListener('submit', () => {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Cleaning up…';
-      setTimeout(() => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Clean up & download PDF';
-      }, 15000); // safety reset in case the download doesn't navigate away
-    });
-  </script>
-</body>
-</html>
+  form.addEventListener('submit', () => {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Cleaning up…';
+    setTimeout(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Clean up & download PDF';
+    }, 15000); // safety reset in case the download doesn't navigate away
+  });
+</script>
+{% endblock %}
