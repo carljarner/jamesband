@@ -465,12 +465,6 @@ table.repertoire button.row-delete:hover {
 .modal-box input[type="url"] { width: 100%; }
 .modal-box .save-status { display: block; }
 
-.lyrics-overlay-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .modal-actions {
   display: flex;
   justify-content: flex-end;

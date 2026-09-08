@@ -309,11 +309,6 @@
     renderAll();
   }
 
-  function removeSongByRepertoireId(repertoireId) {
-    songs = songs.filter(s => s.repertoire_id !== repertoireId);
-    renderAll();
-  }
-
   function addBlankCustomSong() {
     const song = blankSong({ uid: nextUid() });
     songs.push(song);
@@ -349,10 +344,9 @@
         const li = document.createElement('li');
         li.textContent = song.title;
         li.classList.toggle('is-selected', isChosen);
-        li.addEventListener('click', () => {
-          if (isChosen) removeSongByRepertoireId(song.id);
-          else addRepertoireSong(song);
-        });
+        if (!isChosen) {
+          li.addEventListener('click', () => addRepertoireSong(song));
+        }
         repertoireListEl.appendChild(li);
       });
   }
