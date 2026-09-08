@@ -61,7 +61,7 @@ def commit_and_push(message: str) -> None:
         "GIT_COMMITTER_NAME": GIT_USER_NAME,
         "GIT_COMMITTER_EMAIL": GIT_USER_EMAIL,
     }
-    subprocess.run(["git", "add", "intern/data"], cwd=REPO_DIR, check=True)
+    subprocess.run(["git", "add", "intern/data", "public"], cwd=REPO_DIR, check=True)
     result = subprocess.run(["git", "commit", "-m", message], cwd=REPO_DIR, env=env)
     if result.returncode != 0:
         return  # nothing to commit

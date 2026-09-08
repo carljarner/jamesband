@@ -31,28 +31,65 @@ const observer = new IntersectionObserver(
 
 sections.forEach((section) => observer.observe(section));
 
-// ---------- Repertoire search ----------
+// ---------- Repertoire: fetch + search ----------
+const repertoireList = document.getElementById('repertoire-list');
 const search = document.querySelector('.repertoire__search');
-const songItems = document.querySelectorAll('.repertoire__list li');
 
-search?.addEventListener('input', () => {
-  const query = search.value.trim().toLowerCase();
-  songItems.forEach((item) => {
-    item.hidden = !item.textContent.toLowerCase().includes(query);
+fetch('repertoire.json')
+  .then((r) => (r.ok ? r.json() : []))
+  .catch(() => [])
+  .then((songs) => {
+    if (!repertoireList || !Array.isArray(songs)) return;
+    repertoireList.innerHTML = songs
+      .map((s) => `<li>${s.title} – ${s.artist}</li>`)
+      .join('');
+
+    const songItems = repertoireList.querySelectorAll('li');
+    search?.addEventListener('input', () => {
+      const query = search.value.trim().toLowerCase();
+      songItems.forEach((item) => {
+        item.hidden = !item.textContent.toLowerCase().includes(query);
+      });
+    });
   });
-});
 
-// ---------- Gallery lightbox ----------
+// ---------- Gallery: fetch + lightbox ----------
+const galleryGrid = document.getElementById('galleri-grid');
 const lightbox = document.querySelector('.lightbox');
 const lightboxImg = lightbox?.querySelector('img');
 
-document.querySelectorAll('.galleri__grid button').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    lightboxImg.src = btn.querySelector('img').src;
-    lightboxImg.alt = btn.querySelector('img').alt;
-    lightbox.hidden = false;
+function openLightbox(src, alt) {
+  lightboxImg.src = src;
+  lightboxImg.alt = alt;
+  lightbox.hidden = false;
+}
+
+fetch('gallery/gallery.json')
+  .then((r) => (r.ok ? r.json() : []))
+  .catch(() => [])
+  .then((items) => {
+    if (!galleryGrid || !Array.isArray(items)) return;
+    items.forEach((item) => {
+      const src = `gallery/${item.filename}`;
+      if (item.kind === 'video') {
+        const video = document.createElement('video');
+        video.src = src;
+        video.controls = true;
+        video.muted = true;
+        galleryGrid.appendChild(video);
+      } else {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = 'James Band billede';
+        img.loading = 'lazy';
+        btn.appendChild(img);
+        btn.addEventListener('click', () => openLightbox(src, img.alt));
+        galleryGrid.appendChild(btn);
+      }
+    });
   });
-});
 
 lightbox?.addEventListener('click', (e) => {
   if (e.target === lightbox || e.target.closest('.lightbox__close')) {

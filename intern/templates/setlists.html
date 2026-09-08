@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Setlists{% endblock %}
+{% block container_class %}container--full{% endblock %}
+{% block content %}
+<div class="setlists-toolbar">
+  <h1>Setlists</h1>
+  <a class="button-link" href="/setlists/new">+ New setlist</a>
+</div>
+
+{% if upcoming_setlists or past_setlists %}
+<section class="setlist-section">
+  <h2>Upcoming</h2>
+  {% if upcoming_setlists %}
+  <div class="setlist-cards">
+    {% for setlist in upcoming_setlists %}
+    <a class="setlist-card" href="/setlists/{{ setlist.id }}">
+      <div class="setlist-card__header">
+        <span class="setlist-card__date">{{ setlist.date|dadate }}</span>
+        <span class="setlist-card__venue">{{ setlist.venue or "Untitled gig" }}</span>
+      </div>
+      <p class="setlist-card__lineup muted">{{ setlist.lineup or "No lineup recorded" }}</p>
+      <p class="muted">{{ setlist.songs|length }} song{{ "" if setlist.songs|length == 1 else "s" }}</p>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">No upcoming gigs.</p>
+  {% endif %}
+</section>
+
+<section class="setlist-section">
+  <h2>Past gigs</h2>
+  {% if past_setlists %}
+  <div class="setlist-cards">
+    {% for setlist in past_setlists %}
+    <a class="setlist-card" href="/setlists/{{ setlist.id }}">
+      <div class="setlist-card__header">
+        <span class="setlist-card__date">{{ setlist.date|dadate }}</span>
+        <span class="setlist-card__venue">{{ setlist.venue or "Untitled gig" }}</span>
+      </div>
+      <p class="setlist-card__lineup muted">{{ setlist.lineup or "No lineup recorded" }}</p>
+      <p class="muted">{{ setlist.songs|length }} song{{ "" if setlist.songs|length == 1 else "s" }}</p>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">No past gigs recorded.</p>
+  {% endif %}
+</section>
+{% else %}
+<p class="muted">No setlists yet &mdash; add one to start building gig history.</p>
+{% endif %}
+{% endblock %}

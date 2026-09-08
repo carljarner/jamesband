@@ -11,6 +11,17 @@
     "duet": ""
   },
   {
+    "id": "986f142d",
+    "title": "All My Love",
+    "artist": "Rocazino",
+    "year": "1983",
+    "key": "",
+    "signe": "",
+    "jonas": "3 ned",
+    "duet": "",
+    "indstilling": ""
+  },
+  {
     "id": "0f294de8",
     "title": "American Boy",
     "artist": "Estelle, Kanye West",
@@ -38,7 +49,7 @@
     "artist": "The Weeknd",
     "year": "2020",
     "key": "Eb/Cm",
-    "signe": "2 ned (B/G#m)",
+    "signe": "1.5 op",
     "jonas": "2 ned (B/G#m)",
     "indstilling": "",
     "duet": ""
@@ -104,7 +115,7 @@
     "artist": "S\u00f8s Fenger, Thomas Helmig",
     "year": "1997",
     "key": "F",
-    "signe": "",
+    "signe": "1 ned (Eb)",
     "jonas": "",
     "indstilling": "C8",
     "duet": "1 ned (Eb)"
@@ -352,6 +363,28 @@
     "duet": ""
   },
   {
+    "id": "1f2f5e37",
+    "title": "I Wish",
+    "artist": "Stevie Wonder",
+    "year": "1976",
+    "key": "",
+    "signe": "",
+    "jonas": "",
+    "duet": "",
+    "indstilling": ""
+  },
+  {
+    "id": "16a72a0f",
+    "title": "I'm Shipping Up To Boston",
+    "artist": "Dropkick Murphys",
+    "year": "2005",
+    "key": "",
+    "signe": "",
+    "jonas": "Original",
+    "duet": "",
+    "indstilling": ""
+  },
+  {
     "id": "9dc43cfb",
     "title": "If I Ain't Got You",
     "artist": "Alicia Keys",
@@ -478,7 +511,7 @@
     "artist": "Rasmus Seebach",
     "year": "2009",
     "key": "Bm",
-    "signe": "",
+    "signe": "2 op (Eb)",
     "jonas": "1 ned (Am)",
     "indstilling": "D7+D8",
     "duet": ""
@@ -504,6 +537,17 @@
     "jonas": "",
     "indstilling": "B7+B8",
     "duet": ""
+  },
+  {
+    "id": "f802526a",
+    "title": "Maniac",
+    "artist": "Michael Sembello",
+    "year": "1983",
+    "key": "",
+    "signe": "",
+    "jonas": "2 ned",
+    "duet": "",
+    "indstilling": ""
   },
   {
     "id": "565f2917",
@@ -605,6 +649,28 @@
     "duet": ""
   },
   {
+    "id": "85fc2187",
+    "title": "She's A Bad Mama Jama",
+    "artist": "Carl Carlton",
+    "year": "1981",
+    "key": "",
+    "signe": "",
+    "jonas": "Original",
+    "duet": "",
+    "indstilling": ""
+  },
+  {
+    "id": "c045a724",
+    "title": "Sig Du Ka' Li' Mig",
+    "artist": "T\u00f8sedrengene",
+    "year": "1981",
+    "key": "",
+    "signe": "",
+    "jonas": "",
+    "duet": "Original",
+    "indstilling": ""
+  },
+  {
     "id": "9b21f96c",
     "title": "Sj\u00e6l I Flammer",
     "artist": "Kasper Winding",
@@ -621,7 +687,7 @@
     "artist": "Lord Siva",
     "year": "2020",
     "key": "Dm",
-    "signe": "",
+    "signe": "0.5 ned (C#m)",
     "jonas": "",
     "indstilling": "C6+C7",
     "duet": "0.5 ned (C#m)"
@@ -649,15 +715,26 @@
     "duet": ""
   },
   {
-    "id": "ebcc6c93",
+    "id": "d1d56697",
+    "title": "The Girl From Ipanema",
+    "artist": "Stan Getz",
+    "year": "1964",
+    "key": "",
+    "signe": "Amy Whinehouse",
+    "jonas": "",
+    "duet": "",
+    "indstilling": ""
+  },
+  {
+    "id": "63b25fdd",
     "title": "The Second You Sleep",
     "artist": "Saybia",
     "year": "2002",
     "key": "E",
     "signe": "",
     "jonas": "1 ned (D)",
-    "indstilling": "",
-    "duet": ""
+    "duet": "",
+    "indstilling": ""
   },
   {
     "id": "dd55a2ff",
@@ -677,7 +754,7 @@
     "year": "2005",
     "key": "",
     "signe": "",
-    "jonas": "",
+    "jonas": "1.5 ned",
     "indstilling": "",
     "duet": ""
   },
@@ -764,7 +841,7 @@
     "artist": "Village People",
     "year": "1978",
     "key": "F#",
-    "signe": "",
+    "signe": "2 op (Bb)",
     "jonas": "0.5 ned (F)",
     "indstilling": "",
     "duet": ""
