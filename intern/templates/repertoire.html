@@ -17,6 +17,7 @@
   <table class="repertoire">
     <thead>
       <tr>
+        <th>Cover</th>
         <th class="sortable" data-field="title">Songs<span class="sort-arrow"></span></th>
         <th class="sortable" data-field="artist">Artist<span class="sort-arrow"></span></th>
         <th class="sortable" data-field="year">Year<span class="sort-arrow"></span></th>
@@ -31,6 +32,10 @@
     <tbody id="repertoire-body">
       {% for song in songs %}
       <tr data-id="{{ song.id }}">
+        <td class="cover-cell">
+          <img class="cover-preview" src="{{ song.cover }}" alt="" {{ "hidden" if not song.cover else "" }} />
+          <input type="text" class="cover-url" data-field="cover" value="{{ song.cover }}" placeholder="image URL" />
+        </td>
         <td><input type="text" data-field="title" value="{{ song.title }}" /></td>
         <td><input type="text" data-field="artist" value="{{ song.artist }}" /></td>
         <td><input type="text" data-field="year" value="{{ song.year }}" /></td>
@@ -78,7 +83,14 @@
     saveStatus.classList.toggle('unsaved', unsaved);
   }
 
-  const ROW_FIELDS = ['title', 'artist', 'year', 'key', 'signe', 'jonas', 'duet', 'indstilling'];
+  const ROW_FIELDS = ['cover', 'title', 'artist', 'year', 'key', 'signe', 'jonas', 'duet', 'indstilling'];
+
+  function updateCoverPreview(input) {
+    const img = input.closest('td').querySelector('.cover-preview');
+    const url = input.value.trim();
+    img.src = url;
+    img.hidden = !url;
+  }
 
   function currentFields(row) {
     const fields = {};
@@ -105,6 +117,7 @@
 
   body.addEventListener('input', e => {
     if (e.target.tagName === 'INPUT') {
+      if (e.target.dataset.field === 'cover') updateCoverPreview(e.target);
       refreshDirty(e.target.closest('tr'));
       updateStatus();
     }
@@ -154,9 +167,21 @@
     const tr = document.createElement('tr');
     ROW_FIELDS.forEach(field => {
       const td = document.createElement('td');
+      if (field === 'cover') {
+        td.className = 'cover-cell';
+        const img = document.createElement('img');
+        img.className = 'cover-preview';
+        img.alt = '';
+        img.hidden = true;
+        td.appendChild(img);
+      }
       const input = document.createElement('input');
       input.type = 'text';
       input.dataset.field = field;
+      if (field === 'cover') {
+        input.className = 'cover-url';
+        input.placeholder = 'image URL';
+      }
       td.appendChild(input);
       tr.appendChild(td);
     });

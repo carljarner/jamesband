@@ -1,318 +1,397 @@
 [
   {
     "title": "9 to 5",
-    "artist": "Dolly Parton"
+    "artist": "Dolly Parton",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music/37/fa/d1/mzi.ecmonpil.jpg/600x600bb.jpg"
   },
   {
     "title": "All My Love",
-    "artist": "Rocazino"
+    "artist": "Rocazino",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music/ef/dc/cc/mzi.krikootg.jpg/600x600bb.jpg"
   },
   {
     "title": "American Boy",
-    "artist": "Estelle, Kanye West"
+    "artist": "Estelle, Kanye West",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/2d/db/65/2ddb6534-49b6-eced-53b2-cc3cf8662228/dj.rwftkuto.jpg/600x600bb.jpg"
   },
   {
     "title": "Antikommerciel Masseappel",
-    "artist": "Marvelous Mosell, Tue Track"
+    "artist": "Marvelous Mosell, Tue Track",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/35/d7/ee/35d7ee54-7cdd-ad1b-8ea3-cf6ce4c23c0b/886447824597.jpg/600x600bb.jpg"
   },
   {
     "title": "Blinding Lights",
-    "artist": "The Weeknd"
+    "artist": "The Weeknd",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/61/e7/3f/61e73f94-018d-5f50-50ec-8521952bc72e/20UM1IM11629.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Califonia Gurls",
-    "artist": "Katy Perry, Snoop Dogg"
+    "artist": "Katy Perry, Snoop Dogg",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/c8/d3/42/c8d342af-26d9-3ec2-c511-e1eaf860e299/13UABIM57787.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Chuck E's in Love",
-    "artist": "Rickie Lee Jones"
+    "artist": "Rickie Lee Jones",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/e4/4c/a5/e44ca5f3-90fe-60be-b926-5f8ee4768f31/75992738965_1.jpg/600x600bb.jpg"
   },
   {
     "title": "Dancing in the moonlight",
-    "artist": "Toploader"
+    "artist": "Toploader",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/cc/1d/c5/cc1dc5cf-5a13-ac9d-a8c9-0638545a82fc/mzi.onqmtgsq.jpg/600x600bb.jpg"
   },
   {
     "title": "Dark Horse",
-    "artist": "Katy Perry, Juicy J"
+    "artist": "Katy Perry, Juicy J",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/36/21/81/36218129-51b4-df22-cafb-8e9503b53147/13UAAIM70445.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "De f\u00f8rste k\u00e6rester p\u00e5 m\u00e5nen",
-    "artist": "TV-2"
+    "artist": "TV-2",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/94/36/73/94367338-d68d-2ef0-ae5a-a209c2b05b7c/197189347603.jpg/600x600bb.jpg"
   },
   {
     "title": "Den jeg elsker, elsker jeg",
-    "artist": "S\u00f8s Fenger, Thomas Helmig"
+    "artist": "S\u00f8s Fenger, Thomas Helmig",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/a0/82/bf/a082bf4b-cc8c-e0eb-7a3e-62921ff24e53/888880083159.jpg/600x600bb.jpg"
   },
   {
     "title": "Der g\u00e5r min klassel\u00e6rer",
-    "artist": "TV-2"
+    "artist": "TV-2",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/a0/1c/28/a01c284c-a40f-aa28-b33a-aa2beef7c95b/4447770017504.png/600x600bb.jpg"
   },
   {
     "title": "Don't Start Now",
-    "artist": "Dua Lipa"
+    "artist": "Dua Lipa",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/41/ee/66/41ee66fa-f8dd-7e82-155a-3a1b360dc562/190295322175.jpg/600x600bb.jpg"
   },
   {
     "title": "Don't Stop 'Til You Get Enough",
-    "artist": "Michael Jackson"
+    "artist": "Michael Jackson",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/0c/fe/a3/0cfea324-57c1-d530-5248-9bb591bbd7bf/074643574525.jpg/600x600bb.jpg"
   },
   {
     "title": "Drunk In The Morning",
-    "artist": "Lukas Graham"
+    "artist": "Lukas Graham",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music69/v4/1f/57/08/1f57082e-ee7e-dcb7-a73e-ba1f3468211d/093624920496.jpg/600x600bb.jpg"
   },
   {
     "title": "Dr\u00f8mmer Jeg",
-    "artist": "Johnny Deluxe, Anna Nordell"
+    "artist": "Johnny Deluxe, Anna Nordell",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/f9/9c/97/f99c975c-8b70-1037-b259-fc9cbf0b1fb0/05700771100033.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Du Er",
-    "artist": "News"
+    "artist": "News",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Features/86/a4/9d/dj.lhhaqhnz.jpg/600x600bb.jpg"
   },
   {
     "title": "Du ligner din mor",
-    "artist": "Benjamin Hav, Lukas Graham"
+    "artist": "Benjamin Hav, Lukas Graham",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/e4/a2/0e/e4a20e73-51d9-aa26-beae-645c36cf34b7/196872697094.jpg/600x600bb.jpg"
   },
   {
     "title": "Elsker dig for evigt",
-    "artist": "Lars H.U.G."
+    "artist": "Lars H.U.G.",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music1/v4/d9/a4/f3/d9a4f321-edf5-4d4e-6588-6c938ea5a4a1/886445388220.jpg/600x600bb.jpg"
   },
   {
     "title": "Fascination",
-    "artist": "Alphabeat"
+    "artist": "Alphabeat",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/1c/59/3f/1c593f1f-832d-cffd-ddb9-ec3a5b5f0a8f/05700771101085.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Feberdr\u00f8mmer Xx Dubai",
-    "artist": "Tobias Rahim"
+    "artist": "Tobias Rahim",
+    "cover": ""
   },
   {
     "title": "Finesse",
-    "artist": "Bruno Mars"
+    "artist": "Bruno Mars",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/e3/47/a0/e347a0cc-87ce-5d05-d560-176c7d48f66e/075679904119.jpg/600x600bb.jpg"
   },
   {
     "title": "For Evigt",
-    "artist": "Volbeat, Johan Olsen"
+    "artist": "Volbeat, Johan Olsen",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/19/3a/e1/193ae10b-1c73-e16e-4014-1b9118f3d624/00602547805737.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Gimme! Gimme! Gimme!",
-    "artist": "ABBA"
+    "artist": "ABBA",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/60/f8/a6/60f8a6bc-e875-238d-f2f8-f34a6034e6d2/14UMGIM07615.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Giv Lys Igen",
-    "artist": "Aksgl\u00e6de"
+    "artist": "Aksgl\u00e6de",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/df/a0/37/dfa037d2-b792-39d9-960d-93de80caf853/886448831549.jpg/600x600bb.jpg"
   },
   {
     "title": "Good 4 U",
-    "artist": "Olivia Rodrigo"
+    "artist": "Olivia Rodrigo",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/ae/a7/fe/aea7fe21-19ab-9568-8576-5b95a9df3a5b/Workout_Music_Summer_2021_-_The_Ultimate_Treino_Cardio_Fitness_Gym_Music_Playlist.jpg/600x600bb.jpg"
   },
   {
     "title": "Happy",
-    "artist": "Pharrell Williams"
+    "artist": "Pharrell Williams",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/76/ff/5e/76ff5ee0-7ab4-2ac2-2598-486a9ccc06e1/886444516877.jpg/600x600bb.jpg"
   },
   {
     "title": "hjem fra fabrikken",
-    "artist": "andreas odbjerg"
+    "artist": "andreas odbjerg",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/27/ed/b5/27edb504-7cf5-8a95-66bc-d06064c3dc5d/22UMGIM05630.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Hjertet Ser",
-    "artist": "Karen Busck, Erann DD"
+    "artist": "Karen Busck, Erann DD",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music/97/2e/b2/mzi.istfqnih.jpg/600x600bb.jpg"
   },
   {
     "title": "Hold the Line",
-    "artist": "TOTO"
+    "artist": "TOTO",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/a1/a9/ea/a1a9eaef-2d81-c2c6-9a03-82c3cbc9e598/074643531726.jpg/600x600bb.jpg"
   },
   {
     "title": "I Knew You Were Trouble",
-    "artist": "Taylor Swift"
+    "artist": "Taylor Swift",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/25/0d/7e/250d7e42-3a2f-19ac-f865-f1e04a4a1f97/12UMDIM01007.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "I Wanna Be Dancing",
-    "artist": "Drew Sycamore"
+    "artist": "Drew Sycamore",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/f3/70/a9/f370a901-e6de-356b-fe64-02b458ed79c2/0.jpg/600x600bb.jpg"
   },
   {
     "title": "I Wanna Be Your Lover",
-    "artist": "Prince"
+    "artist": "Prince",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/d9/cc/e3/d9cce3ca-0825-8688-6007-87e4d5e73a60/886448895817.jpg/600x600bb.jpg"
   },
   {
     "title": "I Wish",
-    "artist": "Stevie Wonder"
+    "artist": "Stevie Wonder",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/eb/1f/12/eb1f12ec-474c-63aa-43af-09282f423b9d/00602537004737.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "I'm Shipping Up To Boston",
-    "artist": "Dropkick Murphys"
+    "artist": "Dropkick Murphys",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/51/87/bd/5187bdfd-c95c-910f-cbd7-920886443c0d/0045778047260.png/600x600bb.jpg"
   },
   {
     "title": "If I Ain't Got You",
-    "artist": "Alicia Keys"
+    "artist": "Alicia Keys",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/c2/07/c6/c207c6ee-e3f1-cad2-1259-69a3ebd08b5c/828765571227.jpg/600x600bb.jpg"
   },
   {
     "title": "Isn't She Lovely",
-    "artist": "Stevie Wonder"
+    "artist": "Stevie Wonder",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/eb/1f/12/eb1f12ec-474c-63aa-43af-09282f423b9d/00602537004737.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Jeg Tager Imod",
-    "artist": "Thomas Helmig"
+    "artist": "Thomas Helmig",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/20/f1/c0/20f1c0b6-f7f5-807b-d18a-0fb7dc1fc20f/mzi.lfxqoaiq.jpg/600x600bb.jpg"
   },
   {
     "title": "Jeg vil i seng med de fleste",
-    "artist": "Det Brune Punktum"
+    "artist": "Det Brune Punktum",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music111/v4/de/22/45/de224544-41f9-d60d-c218-ca0ab0c3f79a/4447770017078.png/600x600bb.jpg"
   },
   {
     "title": "Jeg Vil La' Lyset Br\u00e6nde",
-    "artist": "Ray Dee Ohh"
+    "artist": "Ray Dee Ohh",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/c8/72/14/c87214e8-433a-acce-a9c4-afdc0bb2250f/743216189427.jpg/600x600bb.jpg"
   },
   {
     "title": "Juice",
-    "artist": "Bl\u00e6st"
+    "artist": "Bl\u00e6st",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/d9/ba/4b/d9ba4b34-e661-ec0c-375b-c37842689549/22UMGIM52503.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Kom Tilbage Nu",
-    "artist": "Danseorkesteret"
+    "artist": "Danseorkesteret",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/1d/97/cb/1d97cb8f-973a-e190-9190-d2d67e11d867/4447770017061.png/600x600bb.jpg"
   },
   {
     "title": "Kun for mig",
-    "artist": "Medina"
+    "artist": "Medina",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/c9/e9/69/c9e969f9-5641-6230-59d4-b59c0aeda566/12UMGIM45177.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Let's Groove",
-    "artist": "Earth, Wind & Fire"
+    "artist": "Earth, Wind & Fire",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/4a/f4/6e/4af46e98-d5ef-bfb9-e671-9b64311577c0/886447618448.jpg/600x600bb.jpg"
   },
   {
     "title": "Levitating",
-    "artist": "Dua Lipa, DaBaby"
+    "artist": "Dua Lipa, DaBaby",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/16/9c/e6/169ce699-5506-0e08-f514-81f08a9ed7f5/190295132651.jpg/600x600bb.jpg"
   },
   {
     "title": "Licence To Kill",
-    "artist": "Gladys Knight"
+    "artist": "Gladys Knight",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/3e/62/8b/3e628bad-454b-8371-df9d-ab01a97740da/00076732630723.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Lidt I Fem",
-    "artist": "Rasmus Seebach"
+    "artist": "Rasmus Seebach",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/b8/79/92/b87992fa-8889-5cd7-1111-c7c2c528b94f/00602567874072.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Malene",
-    "artist": "Sys Bjerre"
+    "artist": "Sys Bjerre",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/b3/ce/7f/b3ce7fc2-272f-1ab8-e0fc-e48b10640338/00602517761537.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Mamma Mia",
-    "artist": "ABBA"
+    "artist": "ABBA",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/8a/5d/a4/8a5da415-562c-c7f3-0801-2bd251947ac3/14UMGIM07609.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Maniac",
-    "artist": "Michael Sembello"
+    "artist": "Michael Sembello",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/40/97/5f/40975fe8-20e6-e617-7e1c-c8dc1dbc753a/06UMGIM29411.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Mine \u00d8jne De Skal Se",
-    "artist": "Lis S\u00f8rensen"
+    "artist": "Lis S\u00f8rensen",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/bb/4b/b0/bb4bb02d-6740-d90e-4ea0-35b3d1b5d4a0/mzi.vbrlzvlk.jpg/600x600bb.jpg"
   },
   {
     "title": "Move Your Feet",
-    "artist": "Junior Senior"
+    "artist": "Junior Senior",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/8e/a1/97/8ea1970d-f763-9298-bdef-54e4bad388df/193483236407.jpg/600x600bb.jpg"
   },
   {
     "title": "Mr. Swing King",
-    "artist": "Gnags"
+    "artist": "Gnags",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music/cc/4e/c7/mzi.dcvazvou.jpg/600x600bb.jpg"
   },
   {
     "title": "my future",
-    "artist": "Billie Eilish"
+    "artist": "Billie Eilish",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/2d/f3/c9/2df3c9fd-e0eb-257c-c035-b04f05a66580/21UMGIM36691.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "On A Long Lonely Night",
-    "artist": "Sko/Torp"
+    "artist": "Sko/Torp",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/e8/3d/54/e83d5459-4c95-988a-3398-30d2f6e758dd/00602557210538.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Purple Rain",
-    "artist": "Prince"
+    "artist": "Prince",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/c1/b6/79/c1b679f5-d59d-1b3e-62ab-514de20f06c6/093624912002.jpg/600x600bb.jpg"
   },
   {
     "title": "Rabalderstr\u00e6de",
-    "artist": "Gasolin"
+    "artist": "Gasolin",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music/fb/79/c0/mzi.zppvuwoj.jpg/600x600bb.jpg"
   },
   {
     "title": "Regndans",
-    "artist": "Danseorkesteret"
+    "artist": "Danseorkesteret",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/7c/46/ae/7c46aef6-5a96-54ff-5e4c-5998388c688a/00602547028532.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Runaway Baby",
-    "artist": "Bruno Mars"
+    "artist": "Bruno Mars",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/52/b1/45/52b1452b-229e-78db-231b-7b43fa0077cc/075679956491.jpg/600x600bb.jpg"
   },
   {
     "title": "She's A Bad Mama Jama",
-    "artist": "Carl Carlton"
+    "artist": "Carl Carlton",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/ca/7c/1c/ca7c1c70-b313-179f-f1da-41fd9da992d1/00602527038117.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Sig Du Ka' Li' Mig",
-    "artist": "T\u00f8sedrengene"
+    "artist": "T\u00f8sedrengene",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/0a/21/c5/0a21c511-5375-85bd-b9f2-1971fe12a2cf/00602537698868.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Sj\u00e6l I Flammer",
-    "artist": "Kasper Winding"
+    "artist": "Kasper Winding",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music/v4/99/67/31/996731cc-de16-0f2c-181a-8c0dbb9a261d/886443531536.jpg/600x600bb.jpg"
   },
   {
     "title": "Solhverv",
-    "artist": "Lord Siva"
+    "artist": "Lord Siva",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/c0/f9/ec/c0f9ec14-8c5a-f07a-a686-196cab15d368/886448579762.jpg/600x600bb.jpg"
   },
   {
     "title": "STOR MAND",
-    "artist": "Tobias Rahim, andreas odbjerg"
+    "artist": "Tobias Rahim, andreas odbjerg",
+    "cover": ""
   },
   {
     "title": "Sunny",
-    "artist": "Boney M."
+    "artist": "Boney M.",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/4b/31/26/4b312698-1511-c0a7-66dd-9808188850af/dj.rwsaogpu.jpg/600x600bb.jpg"
   },
   {
     "title": "The Girl From Ipanema",
-    "artist": "Stan Getz"
+    "artist": "Stan Getz",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/14/c5/97/14c597a3-22c8-d2a9-dc49-0f8b1496f776/14UMGIM16822.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "The Second You Sleep",
-    "artist": "Saybia"
+    "artist": "Saybia",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/f8/bd/18/f8bd183b-4c74-7d2f-000f-9cdeedc5890d/724353798550.jpg/600x600bb.jpg"
   },
   {
     "title": "Treasure",
-    "artist": "Bruno Mars"
+    "artist": "Bruno Mars",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/15/63/53/156353b8-d45b-a17d-f553-2d125aeb3cb3/075679957474.jpg/600x600bb.jpg"
   },
   {
     "title": "T\u00e6nder P\u00e5 Dig",
-    "artist": "Jakob Sveistrup"
+    "artist": "Jakob Sveistrup",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music111/v4/05/c5/44/05c544d1-2610-be6a-b457-68e2bc565b1d/4447770016989.png/600x600bb.jpg"
   },
   {
     "title": "Voulez Vous",
-    "artist": "ABBA"
+    "artist": "ABBA",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/60/f8/a6/60f8a6bc-e875-238d-f2f8-f34a6034e6d2/14UMGIM07615.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "V\u00e5gner i natten",
-    "artist": "Dodo & the Dodos"
+    "artist": "Dodo & the Dodos",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music5/v4/ec/a3/2e/eca32ea8-9a7b-061f-bcdb-ef3fae50f6a6/dj.zghjdaro.jpg/600x600bb.jpg"
   },
   {
     "title": "Wannabe",
-    "artist": "Spice Girls"
+    "artist": "Spice Girls",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/e1/92/8f/e1928fcb-0204-ca19-597a-6edaf8e6ebc8/21UMGIM16233.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "Watermelon Sugar",
-    "artist": "Harry Styles"
+    "artist": "Harry Styles",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/2b/c4/c9/2bc4c9d4-3bc6-ab13-3f71-df0b89b173de/886448022213.jpg/600x600bb.jpg"
   },
   {
     "title": "What A Life",
-    "artist": "Scarlett Pleasure"
+    "artist": "Scarlett Pleasure",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/07/35/27/0735277a-df09-9abf-ff05-1539e19303cd/10UMGIM03854.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "When You Say Nothing At All",
-    "artist": "Ronan Keating"
+    "artist": "Ronan Keating",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/33/7c/66/337c6647-f101-ff34-b589-9624ce856fb4/00602498684559.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "WHERE IS MY HUSBAND!",
-    "artist": "RAYE"
+    "artist": "RAYE",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/69/10/8a/69108a18-55ec-d774-a653-90b2242733db/199538765458.jpg/600x600bb.jpg"
   },
   {
     "title": "YMCA",
-    "artist": "Village People"
+    "artist": "Village People",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/ee/35/c0/ee35c038-1bc2-d04f-3dd9-6fc20a2ada7e/00602537831074.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "You Belong With Me",
-    "artist": "Taylor Swift"
+    "artist": "Taylor Swift",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/c3/d0/1c/c3d01c88-73e7-187e-fd62-e1744de979a6/21UMGIM09915.rgb.jpg/600x600bb.jpg"
   },
   {
     "title": "You Get Me So High",
-    "artist": "The Neighbourhood"
+    "artist": "The Neighbourhood",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/fc/d0/89/fcd0899c-2236-a726-9ce2-ebb110e2204d/886447414545.jpg/600x600bb.jpg"
   }
 ]
