@@ -125,7 +125,7 @@ section {
   justify-content: center;
   text-align: center;
   background: linear-gradient(180deg, rgba(11,12,15,0.55), rgba(11,12,15,0.85)),
-              url('../images/billede1.jpg') center / cover no-repeat;
+              url('../images/dsbs_1.jpg') center top / cover no-repeat;
 }
 
 .hero__title {
@@ -176,6 +176,34 @@ section {
 }
 
 /* ---------- Video ---------- */
+#video {
+  position: relative;
+  overflow: hidden;
+}
+
+#video::before {
+  content: "";
+  position: absolute;
+  inset: -20px;
+  background: url('../images/video-bg.png') center / cover no-repeat;
+  filter: blur(12px);
+  transform: scale(1.05);
+  z-index: 0;
+}
+
+#video::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(11,12,15,0.6);
+  z-index: 0;
+}
+
+#video .container {
+  position: relative;
+  z-index: 1;
+}
+
 .video-frame {
   position: relative;
   max-width: 800px;
@@ -183,7 +211,7 @@ section {
   aspect-ratio: 16 / 9;
   border-radius: var(--radius);
   overflow: hidden;
-  background: url('../images/billede2.jpg') center / cover no-repeat;
+  background: url('../images/video-bg.png') center / cover no-repeat;
 }
 
 .video-frame::after {
@@ -220,7 +248,8 @@ section {
 
 /* ---------- Koncept ---------- */
 .koncept {
-  background: var(--surface);
+  background: linear-gradient(180deg, rgba(22,24,29,0.88), rgba(22,24,29,0.92)),
+              url('../images/koncept-bg.png') center / cover no-repeat;
 }
 
 .koncept__grid {
@@ -271,93 +300,74 @@ section {
   list-style: none;
   margin: 0;
   padding: 0;
-  columns: 2;
+  columns: 3;
   column-gap: 2.5rem;
 }
 
 .repertoire__list li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   break-inside: avoid;
-  padding: 0.4rem 0;
+  padding: 0.5rem 0;
   border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.repertoire__art {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--surface-alt);
+}
+
+.repertoire__art--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+.repertoire__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.repertoire__title {
+  color: var(--text);
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repertoire__artist {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .repertoire__list li[hidden] { display: none; }
+
+@media (max-width: 900px) {
+  .repertoire__list { columns: 2; }
+}
 
 @media (max-width: 640px) {
   .repertoire__list { columns: 1; }
 }
 
-/* ---------- Galleri ---------- */
-.galleri__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.75rem;
-}
-
-.galleri__grid button {
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  border-radius: var(--radius);
-  overflow: hidden;
-  aspect-ratio: 4 / 3;
-}
-
-.galleri__grid img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.3s ease;
-}
-
-.galleri__grid button:hover img {
-  transform: scale(1.05);
-}
-
-.galleri__grid video {
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  display: block;
-  border-radius: var(--radius);
-  background: #000;
-}
-
-.lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: rgba(0,0,0,0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-}
-
-.lightbox[hidden] { display: none; }
-
-.lightbox img {
-  max-width: 100%;
-  max-height: 100%;
-  border-radius: var(--radius);
-}
-
-.lightbox__close {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-size: 2rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
 /* ---------- Kontakt ---------- */
+#kontakt {
+  background: linear-gradient(180deg, rgba(11,12,15,0.75), rgba(11,12,15,0.9)),
+              url('../images/kontakt-bg.png') center / cover no-repeat;
+}
+
 .kontakt__card {
   background: var(--surface);
   border-radius: var(--radius);

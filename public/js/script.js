@@ -41,7 +41,12 @@ fetch('repertoire.json')
   .then((songs) => {
     if (!repertoireList || !Array.isArray(songs)) return;
     repertoireList.innerHTML = songs
-      .map((s) => `<li>${s.title} – ${s.artist}</li>`)
+      .map((s) => {
+        const art = s.cover
+          ? `<img class="repertoire__art" src="${s.cover}" alt="" loading="lazy" />`
+          : `<span class="repertoire__art repertoire__art--placeholder">&#9834;</span>`;
+        return `<li>${art}<span class="repertoire__text"><span class="repertoire__title">${s.title}</span><span class="repertoire__artist">${s.artist}</span></span></li>`;
+      })
       .join('');
 
     const songItems = repertoireList.querySelectorAll('li');
@@ -52,55 +57,3 @@ fetch('repertoire.json')
       });
     });
   });
-
-// ---------- Gallery: fetch + lightbox ----------
-const galleryGrid = document.getElementById('galleri-grid');
-const lightbox = document.querySelector('.lightbox');
-const lightboxImg = lightbox?.querySelector('img');
-
-function openLightbox(src, alt) {
-  lightboxImg.src = src;
-  lightboxImg.alt = alt;
-  lightbox.hidden = false;
-}
-
-fetch('gallery/gallery.json')
-  .then((r) => (r.ok ? r.json() : []))
-  .catch(() => [])
-  .then((items) => {
-    if (!galleryGrid || !Array.isArray(items)) return;
-    items.forEach((item) => {
-      const src = `gallery/${item.filename}`;
-      if (item.kind === 'video') {
-        const video = document.createElement('video');
-        video.src = src;
-        video.controls = true;
-        video.muted = true;
-        galleryGrid.appendChild(video);
-      } else {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        const img = document.createElement('img');
-        img.src = src;
-        img.alt = 'James Band billede';
-        img.loading = 'lazy';
-        btn.appendChild(img);
-        btn.addEventListener('click', () => openLightbox(src, img.alt));
-        galleryGrid.appendChild(btn);
-      }
-    });
-  });
-
-lightbox?.addEventListener('click', (e) => {
-  if (e.target === lightbox || e.target.closest('.lightbox__close')) {
-    lightbox.hidden = true;
-    lightboxImg.src = '';
-  }
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && lightbox && !lightbox.hidden) {
-    lightbox.hidden = true;
-    lightboxImg.src = '';
-  }
-});

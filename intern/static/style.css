@@ -343,15 +343,36 @@ table.repertoire {
   font-size: 0.9rem;
 }
 
-table.repertoire th:nth-child(1), table.repertoire td:nth-child(1) { width: 23%; }
-table.repertoire th:nth-child(2), table.repertoire td:nth-child(2) { width: calc(19% - 20px); }
-table.repertoire th:nth-child(3), table.repertoire td:nth-child(3) { width: 6%; }
+table.repertoire th:nth-child(1), table.repertoire td:nth-child(1) { width: 15%; }
+table.repertoire th:nth-child(2), table.repertoire td:nth-child(2) { width: 20%; }
+table.repertoire th:nth-child(3), table.repertoire td:nth-child(3) { width: calc(17% - 20px); }
 table.repertoire th:nth-child(4), table.repertoire td:nth-child(4) { width: 6%; }
-table.repertoire th:nth-child(5), table.repertoire td:nth-child(5) { width: 11%; }
-table.repertoire th:nth-child(6), table.repertoire td:nth-child(6) { width: 11%; }
-table.repertoire th:nth-child(7), table.repertoire td:nth-child(7) { width: 9%; }
+table.repertoire th:nth-child(5), table.repertoire td:nth-child(5) { width: 6%; }
+table.repertoire th:nth-child(6), table.repertoire td:nth-child(6) { width: 10%; }
+table.repertoire th:nth-child(7), table.repertoire td:nth-child(7) { width: 10%; }
 table.repertoire th:nth-child(8), table.repertoire td:nth-child(8) { width: 8%; }
 table.repertoire th:nth-child(9), table.repertoire td:nth-child(9) { width: 7%; }
+table.repertoire th:nth-child(10), table.repertoire td:nth-child(10) { width: 7%; }
+
+.cover-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cover-preview {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--surface-alt);
+}
+
+.cover-url {
+  flex: 1 1 auto;
+  min-width: 0 !important;
+}
 
 table.repertoire th {
   text-align: left;
