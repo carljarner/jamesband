@@ -1,44 +1,26 @@
 [
   {
-    "id": "8439413c",
+    "id": "f28bcf55",
     "kind": "image",
-    "filename": "8439413c.jpg",
-    "uploaded_at": "2026-09-08T14:51:35.471003+00:00",
-    "published": true
+    "filename": "f28bcf55.png",
+    "uploaded_at": "2026-09-09T12:49:25.963214+00:00"
   },
   {
-    "id": "110bf5a1",
+    "id": "11b67c94",
     "kind": "image",
-    "filename": "110bf5a1.jpg",
-    "uploaded_at": "2026-09-08T14:51:35.468975+00:00",
-    "published": true
+    "filename": "11b67c94.png",
+    "uploaded_at": "2026-09-09T12:49:25.961621+00:00"
   },
   {
-    "id": "4185e6b4",
+    "id": "201cf888",
     "kind": "image",
-    "filename": "4185e6b4.jpg",
-    "uploaded_at": "2026-09-08T14:51:35.467888+00:00",
-    "published": true
+    "filename": "201cf888.jpg",
+    "uploaded_at": "2026-09-09T12:49:25.959750+00:00"
   },
   {
-    "id": "8005f5a2",
+    "id": "e767a1a1",
     "kind": "image",
-    "filename": "8005f5a2.jpg",
-    "uploaded_at": "2026-09-08T14:51:35.466544+00:00",
-    "published": true
-  },
-  {
-    "id": "e7c69b46",
-    "kind": "image",
-    "filename": "e7c69b46.jpg",
-    "uploaded_at": "2026-09-08T14:51:35.465725+00:00",
-    "published": true
-  },
-  {
-    "id": "d1b436f9",
-    "kind": "image",
-    "filename": "d1b436f9.jpg",
-    "uploaded_at": "2026-09-08T14:51:35.464348+00:00",
-    "published": true
+    "filename": "e767a1a1.png",
+    "uploaded_at": "2026-09-09T12:49:25.964862+00:00"
   }
 ]

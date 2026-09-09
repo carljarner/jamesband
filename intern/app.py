@@ -432,7 +432,15 @@ async def song_transpose(slug: str, semitones: str = Form(""), target_key: str =
 @app.get("/gallery", response_class=HTMLResponse)
 async def gallery_page(request: Request, error: str = None):
     return templates.TemplateResponse(
-        request, "gallery.html", {"items": gallery.list_items(), "error": error}
+        request,
+        "gallery.html",
+        {
+            "items": gallery.list_items(),
+            "background_slots": [
+                {"key": key, **slot} for key, slot in gallery.BACKGROUND_SLOTS.items()
+            ],
+            "error": error,
+        },
     )
 
 
@@ -446,13 +454,23 @@ async def gallery_upload(photo: UploadFile = File(...)):
     return RedirectResponse("/gallery", status_code=303)
 
 
-@app.post("/gallery/{item_id}/publish")
-async def gallery_publish(item_id: str, published: bool = Form(...)):
+@app.get("/gallery/background/{slot}")
+async def gallery_background(slot: str):
     try:
-        gallery.set_published(item_id, published)
+        path = gallery.background_path(slot)
     except gallery.GalleryError:
         raise HTTPException(status_code=404)
-    return Response(status_code=204)
+    if not path.exists():
+        raise HTTPException(status_code=404)
+    return FileResponse(path)
+
+
+@app.post("/gallery/background/{slot}")
+async def gallery_set_background(slot: str, item_id: str = Form(...)):
+    try:
+        return gallery.set_background(slot, item_id)
+    except gallery.GalleryError as exc:
+        return Response(content=str(exc), status_code=400)
 
 
 @app.post("/gallery/{item_id}/delete")

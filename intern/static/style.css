@@ -308,6 +308,125 @@ ul.songs li {
   font-size: 0.7rem;
 }
 
+.gallery-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.gallery-preview fieldset { position: sticky; top: 1rem; }
+
+.site-mock {
+  margin-top: 0.75rem;
+  background: var(--bg);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.site-mock__bar {
+  display: flex;
+  gap: 5px;
+  padding: 0.55rem 0.7rem;
+  background: var(--surface);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.site-mock__bar span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+}
+
+.site-mock__header {
+  padding: 1rem 0.9rem 0.25rem;
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.08em;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.preview-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 0.9rem 1rem;
+}
+
+.preview-slot {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface-alt);
+}
+
+.preview-slot:hover { border-color: var(--accent); }
+.preview-slot:hover .preview-slot__label { color: var(--accent); }
+
+.preview-slot img,
+.preview-slot video {
+  display: block;
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  background: #000;
+}
+
+.preview-slot__label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(11,12,15,0.35), rgba(11,12,15,0.55));
+  color: var(--text);
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 1.3rem;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+  transition: color 0.15s ease;
+}
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.6rem;
+}
+
+.picker-thumb {
+  padding: 0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface-alt);
+}
+
+.picker-thumb:hover { border-color: var(--accent-2); }
+
+.picker-thumb img,
+.picker-thumb video {
+  display: block;
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  background: #000;
+}
+
+.picker-empty { margin-top: 0.5rem; }
+
+@media (max-width: 900px) {
+  .gallery-layout { grid-template-columns: 1fr; }
+  .gallery-preview fieldset { position: static; }
+}
+
 /* ---------- Repertoire ---------- */
 .repertoire-toolbar {
   display: flex;
