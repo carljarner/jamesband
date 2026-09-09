@@ -33,8 +33,11 @@
       {% for song in songs %}
       <tr data-id="{{ song.id }}">
         <td class="cover-cell">
-          <img class="cover-preview" src="{{ song.cover }}" alt="" {{ "hidden" if not song.cover else "" }} />
-          <input type="text" class="cover-url" data-field="cover" value="{{ song.cover }}" placeholder="image URL" />
+          <button type="button" class="cover-edit" aria-label="Edit cover image">
+            <img class="cover-preview" src="{{ song.cover }}" alt="" {{ "hidden" if not song.cover else "" }} />
+            <span class="cover-preview-empty" {{ "hidden" if song.cover else "" }}>&#9834;</span>
+          </button>
+          <input type="hidden" class="cover-url" data-field="cover" value="{{ song.cover }}" />
         </td>
         <td><input type="text" data-field="title" value="{{ song.title }}" /></td>
         <td><input type="text" data-field="artist" value="{{ song.artist }}" /></td>
@@ -64,6 +67,16 @@
     </div>
   </div>
 </div>
+
+<div id="cover-modal" class="modal-overlay" hidden>
+  <div class="modal-box modal-box--centered modal-box--wide">
+    <p>Cover image URL</p>
+    <input type="url" id="cover-modal-input" placeholder="https://..." />
+    <div class="modal-actions">
+      <button type="button" id="cover-modal-save" class="primary">Save</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -86,10 +99,13 @@
   const ROW_FIELDS = ['cover', 'title', 'artist', 'year', 'key', 'signe', 'jonas', 'duet', 'indstilling'];
 
   function updateCoverPreview(input) {
-    const img = input.closest('td').querySelector('.cover-preview');
+    const td = input.closest('td');
+    const img = td.querySelector('.cover-preview');
+    const empty = td.querySelector('.cover-preview-empty');
     const url = input.value.trim();
     img.src = url;
     img.hidden = !url;
+    empty.hidden = !!url;
   }
 
   function currentFields(row) {
@@ -169,19 +185,30 @@
       const td = document.createElement('td');
       if (field === 'cover') {
         td.className = 'cover-cell';
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'cover-edit';
+        editBtn.setAttribute('aria-label', 'Edit cover image');
         const img = document.createElement('img');
         img.className = 'cover-preview';
         img.alt = '';
         img.hidden = true;
-        td.appendChild(img);
+        const empty = document.createElement('span');
+        empty.className = 'cover-preview-empty';
+        empty.innerHTML = '&#9834;';
+        editBtn.append(img, empty);
+        td.appendChild(editBtn);
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.className = 'cover-url';
+        input.dataset.field = field;
+        td.appendChild(input);
+        tr.appendChild(td);
+        return;
       }
       const input = document.createElement('input');
       input.type = 'text';
       input.dataset.field = field;
-      if (field === 'cover') {
-        input.className = 'cover-url';
-        input.placeholder = 'image URL';
-      }
       td.appendChild(input);
       tr.appendChild(td);
     });
@@ -265,6 +292,44 @@
     } else {
       alert('Failed to delete: ' + await resp.text());
     }
+  });
+
+  const coverModal = document.getElementById('cover-modal');
+  const coverModalInput = document.getElementById('cover-modal-input');
+  let coverModalRow = null;
+
+  function closeCoverModal() {
+    coverModal.hidden = true;
+    coverModalRow = null;
+  }
+
+  function saveCoverModal() {
+    if (!coverModalRow) return;
+    const hidden = coverModalRow.querySelector('input.cover-url');
+    hidden.value = coverModalInput.value.trim();
+    updateCoverPreview(hidden);
+    refreshDirty(coverModalRow);
+    updateStatus();
+    closeCoverModal();
+  }
+
+  body.addEventListener('click', e => {
+    const btn = e.target.closest('.cover-edit');
+    if (!btn) return;
+    coverModalRow = btn.closest('tr');
+    coverModalInput.value = coverModalRow.querySelector('input.cover-url').value;
+    coverModal.hidden = false;
+    coverModalInput.focus();
+  });
+
+  coverModal.addEventListener('click', e => {
+    if (e.target === coverModal) closeCoverModal();
+  });
+
+  document.getElementById('cover-modal-save').addEventListener('click', saveCoverModal);
+
+  coverModalInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); saveCoverModal(); }
   });
 
   document.getElementById('save-all').addEventListener('click', async () => {

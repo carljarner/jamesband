@@ -331,6 +331,7 @@ ul.songs li {
 
 .repertoire-wrap {
   overflow-x: auto;
+  overflow-y: hidden;
   margin-top: 0.75rem;
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: var(--radius);
@@ -343,7 +344,7 @@ table.repertoire {
   font-size: 0.9rem;
 }
 
-table.repertoire th:nth-child(1), table.repertoire td:nth-child(1) { width: 15%; }
+table.repertoire th:nth-child(1), table.repertoire td:nth-child(1) { width: 56px; }
 table.repertoire th:nth-child(2), table.repertoire td:nth-child(2) { width: 20%; }
 table.repertoire th:nth-child(3), table.repertoire td:nth-child(3) { width: calc(17% - 20px); }
 table.repertoire th:nth-child(4), table.repertoire td:nth-child(4) { width: 6%; }
@@ -355,23 +356,44 @@ table.repertoire th:nth-child(9), table.repertoire td:nth-child(9) { width: 7%; 
 table.repertoire th:nth-child(10), table.repertoire td:nth-child(10) { width: 7%; }
 
 .cover-cell {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  padding: 0.25rem !important;
+  text-align: center;
+}
+
+.cover-edit {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: var(--surface-alt);
+  cursor: pointer;
+  position: relative;
+}
+
+.cover-edit:hover {
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .cover-preview {
+  display: block;
   width: 28px;
   height: 28px;
   border-radius: 3px;
   object-fit: cover;
-  flex-shrink: 0;
   background: var(--surface-alt);
 }
 
-.cover-url {
-  flex: 1 1 auto;
-  min-width: 0 !important;
+.cover-preview-empty {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 0.75rem;
 }
 
 table.repertoire th {
@@ -483,7 +505,8 @@ table.repertoire button.row-delete:hover {
 .modal-box--centered { max-width: 380px; }
 .modal-box--centered p { text-align: center; font-weight: 600; }
 .modal-box--centered .modal-actions { justify-content: center; }
-.modal-box input[type="url"] { width: 100%; }
+.modal-box--wide { max-width: 540px; }
+.modal-box input[type="url"] { width: 100%; margin-bottom: 1.25rem; }
 .modal-box .save-status { display: block; }
 
 .modal-actions {
