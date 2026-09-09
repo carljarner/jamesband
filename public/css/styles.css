@@ -270,7 +270,7 @@ section {
 
 @media (max-width: 800px) {
   .koncept__grid { grid-template-columns: 1fr; }
-  .koncept img { order: -1; max-width: 160px; }
+  .koncept img { max-width: 160px; }
 }
 
 /* ---------- Repertoire ---------- */
@@ -385,7 +385,8 @@ section {
 
 .kontakt__email {
   display: inline-block;
-  font-size: 1.3rem;
+  font-size: 1rem;
+  font-weight: 600;
   margin: 0.5rem 0;
 }
 
@@ -403,6 +404,10 @@ footer a { color: var(--text-dim); }
 
 /* ---------- Mobile nav ---------- */
 @media (max-width: 780px) {
+  .nav { justify-content: flex-end; }
+
+  .nav__brand { display: none; }
+
   .nav__links {
     position: fixed;
     inset: 0;
