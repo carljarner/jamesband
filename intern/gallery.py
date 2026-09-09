@@ -1,19 +1,17 @@
-"""Gallery: photos/videos the band uploads and can choose to publish to the
-public site. Published items get copied to public/gallery/ and listed in
-public/gallery/gallery.json, which the public site fetches at runtime.
+"""Gallery: photos/videos the band uploads, and the fixed background photo
+behind each section of the public site's one-page scroll. Setting a section's
+background overwrites the exact file public/css/styles.css already points to
+(e.g. images/dsbs_1.jpg), so the public site needs no changes to pick it up.
 """
 
-import json
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 import data_store
 
 INDEX_PATH = "gallery/index.json"
 MEDIA_DIR = "gallery/media"
-
-PUBLIC_DIR = "gallery"
-PUBLIC_MANIFEST = "gallery.json"
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # keep clips small -- this all lives in a git repo
 
@@ -27,9 +25,17 @@ CONTENT_TYPES = {
     "video/quicktime": ("video", "mov"),
 }
 
+# Public site section -> the exact background file its CSS rule loads.
+BACKGROUND_SLOTS = {
+    "home": {"label": "Forside", "public_path": "images/dsbs_1.jpg"},
+    "video": {"label": "Video", "public_path": "images/video-bg.png"},
+    "koncept": {"label": "Koncept", "public_path": "images/koncept-bg.png"},
+    "kontakt": {"label": "Kontakt", "public_path": "images/kontakt-bg.png"},
+}
+
 
 class GalleryError(Exception):
-    """Raised for unsupported uploads or unknown items."""
+    """Raised for unsupported uploads or unknown items/slots."""
 
 
 def _kind_and_ext(content_type: str) -> tuple[str, str]:
@@ -46,38 +52,6 @@ def list_items() -> list[dict]:
 
 def _save(items: list[dict]) -> None:
     data_store.save_json(INDEX_PATH, items)
-
-
-def _public_dir():
-    return data_store.REPO_DIR / "public" / PUBLIC_DIR
-
-
-def sync_public() -> None:
-    """Mirror published items into public/gallery/ and (re)write the manifest
-    the public site fetches. Non-published/deleted items get their public
-    copy removed."""
-    items = list_items()
-    public_dir = _public_dir()
-    public_dir.mkdir(parents=True, exist_ok=True)
-
-    published = [item for item in items if item.get("published")]
-    keep_filenames = {item["filename"] for item in published}
-
-    for existing in public_dir.iterdir():
-        if existing.is_file() and existing.name != PUBLIC_MANIFEST and existing.name not in keep_filenames:
-            existing.unlink()
-
-    for item in published:
-        src = data_store.DATA_DIR / MEDIA_DIR / item["filename"]
-        dest = public_dir / item["filename"]
-        if src.exists():
-            dest.write_bytes(src.read_bytes())
-
-    manifest = [
-        {"id": item["id"], "kind": item["kind"], "filename": item["filename"]}
-        for item in published
-    ]
-    (public_dir / PUBLIC_MANIFEST).write_text(json.dumps(manifest, indent=2))
 
 
 def add_item(file_bytes: bytes, content_type: str) -> dict:
@@ -99,28 +73,12 @@ def add_item(file_bytes: bytes, content_type: str) -> dict:
         "kind": kind,
         "filename": filename,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
-        "published": False,
     }
     items = list_items()
     items.append(item)
     _save(items)
-    sync_public()
     data_store.commit_and_push(f"Add gallery {kind} {item_id}")
     return item
-
-
-def set_published(item_id: str, published: bool) -> dict:
-    items = list_items()
-    for item in items:
-        if item["id"] == item_id:
-            item["published"] = published
-            _save(items)
-            sync_public()
-            data_store.commit_and_push(
-                f"{'Publish' if published else 'Unpublish'} gallery item {item_id}"
-            )
-            return item
-    raise GalleryError(f"Unknown gallery item '{item_id}'.")
 
 
 def delete_item(item_id: str) -> None:
@@ -131,11 +89,10 @@ def delete_item(item_id: str) -> None:
     removed = next(item for item in items if item["id"] == item_id)
 
     _save(remaining)
-    sync_public()
 
-    media_path = data_store.DATA_DIR / MEDIA_DIR / removed["filename"]
-    if media_path.exists():
-        media_path.unlink()
+    path = data_store.DATA_DIR / MEDIA_DIR / removed["filename"]
+    if path.exists():
+        path.unlink()
 
     data_store.commit_and_push(f"Remove gallery item {item_id}")
 
@@ -146,3 +103,23 @@ def media_path(item_id: str):
             path = data_store.DATA_DIR / MEDIA_DIR / item["filename"]
             return path if path.exists() else None
     return None
+
+
+def background_path(slot: str) -> Path:
+    if slot not in BACKGROUND_SLOTS:
+        raise GalleryError(f"Unknown background slot '{slot}'.")
+    return data_store.REPO_DIR / "public" / BACKGROUND_SLOTS[slot]["public_path"]
+
+
+def set_background(slot: str, item_id: str) -> dict:
+    item = next((i for i in list_items() if i["id"] == item_id), None)
+    if item is None:
+        raise GalleryError(f"Unknown gallery item '{item_id}'.")
+    if item["kind"] != "image":
+        raise GalleryError("Only photos can be used as a background.")
+
+    src = data_store.DATA_DIR / MEDIA_DIR / item["filename"]
+    background_path(slot).write_bytes(src.read_bytes())
+
+    data_store.commit_and_push(f"Set {BACKGROUND_SLOTS[slot]['label']} background to {item_id}")
+    return {"slot": slot, "item": item}

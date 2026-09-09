@@ -1,59 +1,82 @@
 {% extends "base.html" %}
 {% block title %}Gallery{% endblock %}
+{% block container_class %}container--full{% endblock %}
 {% block content %}
 <h1>Gallery</h1>
-<p class="muted">Upload photos or short video clips, then choose which ones show up on the public site.</p>
+<p class="muted">Upload photos or short video clips, then use them as the background photo behind each section of the public site.</p>
 
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
 
-<fieldset>
-  <legend>Upload</legend>
-  <form class="upload" method="post" action="/gallery" enctype="multipart/form-data">
-    <input type="file" name="photo" accept="image/*,video/*" required />
-    <button type="submit">Upload</button>
-  </form>
-</fieldset>
+<div class="gallery-layout">
+  <div class="gallery-main">
+    <fieldset>
+      <legend>Upload</legend>
+      <form class="upload" method="post" action="/gallery" enctype="multipart/form-data">
+        <input type="file" name="photo" accept="image/*,video/*" required />
+        <button type="submit">Upload</button>
+      </form>
+    </fieldset>
 
-<fieldset>
-  <legend>Media &mdash; {{ items|selectattr("published")|list|length }}/{{ items|length }} published</legend>
-  {% if items %}
-  <div class="gallery-grid">
-    {% for item in items %}
-    <div class="gallery-item" data-id="{{ item.id }}">
-      {% if item.kind == "image" %}
-      <img src="/gallery/media/{{ item.id }}" alt="" />
-      {% else %}
-      <video src="/gallery/media/{{ item.id }}" controls muted></video>
-      {% endif %}
-      <div class="gallery-item__controls">
-        <label class="toggle">
-          <input type="checkbox" class="publish-toggle" {{ "checked" if item.published }} />
-          On public site
-        </label>
-        <button type="button" class="gallery-delete">Delete</button>
+    <fieldset>
+      <legend>Media &mdash; {{ items|length }} uploaded</legend>
+      {% if items %}
+      <div class="gallery-grid">
+        {% for item in items %}
+        <div class="gallery-item" data-id="{{ item.id }}" data-kind="{{ item.kind }}">
+          {% if item.kind == "image" %}
+          <img src="/gallery/media/{{ item.id }}" alt="" />
+          {% else %}
+          <video src="/gallery/media/{{ item.id }}" controls muted></video>
+          {% endif %}
+          <div class="gallery-item__controls">
+            <button type="button" class="gallery-delete">Delete</button>
+          </div>
+        </div>
+        {% endfor %}
       </div>
-    </div>
-    {% endfor %}
+      {% else %}
+      <p class="muted">No uploads yet.</p>
+      {% endif %}
+    </fieldset>
   </div>
-  {% else %}
-  <p class="muted">No uploads yet.</p>
-  {% endif %}
-</fieldset>
+
+  <div class="gallery-preview">
+    <fieldset>
+      <legend>Public site</legend>
+      <div class="site-mock">
+        <div class="site-mock__bar"><span></span><span></span><span></span></div>
+        <div class="site-mock__header">JAMES BAND</div>
+        <div class="preview-column">
+          {% for slot in background_slots %}
+          <button type="button" class="preview-slot" data-slot="{{ slot.key }}">
+            <img src="/gallery/background/{{ slot.key }}?v={{ loop.index }}" alt="" />
+            <span class="preview-slot__label">{{ slot.label }}</span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </fieldset>
+  </div>
+</div>
+
+<div id="picker-modal" class="modal-overlay" hidden>
+  <div class="modal-box modal-box--wide">
+    <p>Choose a photo for this section</p>
+    <div class="picker-grid" id="picker-grid"></div>
+    <p class="muted picker-empty" id="picker-empty" hidden>No photos uploaded yet &mdash; upload one first.</p>
+    <div class="modal-actions">
+      <button type="button" id="picker-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  document.querySelectorAll('.publish-toggle').forEach(checkbox => {
-    checkbox.addEventListener('change', async () => {
-      const id = checkbox.closest('.gallery-item').dataset.id;
-      const body = new URLSearchParams({ published: checkbox.checked });
-      const resp = await fetch(`/gallery/${id}/publish`, { method: 'POST', body });
-      if (!resp.ok) {
-        alert('Failed to update: ' + await resp.text());
-        checkbox.checked = !checkbox.checked;
-      }
-    });
-  });
+  const pickerModal = document.getElementById('picker-modal');
+  const pickerGrid = document.getElementById('picker-grid');
+  const pickerEmpty = document.getElementById('picker-empty');
+  let pickerSlotBtn = null;
 
   document.querySelectorAll('.gallery-delete').forEach(button => {
     button.addEventListener('click', async () => {
@@ -67,5 +90,48 @@
       }
     });
   });
+
+  function closePicker() {
+    pickerModal.hidden = true;
+    pickerSlotBtn = null;
+  }
+
+  function openPicker(slotBtn) {
+    pickerSlotBtn = slotBtn;
+    pickerGrid.innerHTML = '';
+    const photos = Array.from(document.querySelectorAll('.gallery-item[data-kind="image"]'));
+    pickerEmpty.hidden = photos.length > 0;
+    photos.forEach(row => {
+      const thumb = document.createElement('button');
+      thumb.type = 'button';
+      thumb.className = 'picker-thumb';
+      thumb.appendChild(row.querySelector('img').cloneNode());
+      thumb.addEventListener('click', () => chooseForSlot(row.dataset.id));
+      pickerGrid.appendChild(thumb);
+    });
+    pickerModal.hidden = false;
+  }
+
+  async function chooseForSlot(itemId) {
+    if (!pickerSlotBtn) return;
+    const slot = pickerSlotBtn.dataset.slot;
+    const body = new URLSearchParams({ item_id: itemId });
+    const resp = await fetch(`/gallery/background/${slot}`, { method: 'POST', body });
+    if (!resp.ok) {
+      alert('Failed to update: ' + await resp.text());
+      return;
+    }
+    pickerSlotBtn.querySelector('img').src = `/gallery/background/${slot}?v=${Date.now()}`;
+    closePicker();
+  }
+
+  document.querySelectorAll('.preview-slot').forEach(btn => {
+    btn.addEventListener('click', () => openPicker(btn));
+  });
+
+  pickerModal.addEventListener('click', e => {
+    if (e.target === pickerModal) closePicker();
+  });
+  document.getElementById('picker-cancel').addEventListener('click', closePicker);
 </script>
 {% endblock %}
