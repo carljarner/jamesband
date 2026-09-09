@@ -35,6 +35,9 @@ sections.forEach((section) => observer.observe(section));
 const repertoireList = document.getElementById('repertoire-list');
 const search = document.querySelector('.repertoire__search');
 
+const COLLAPSE_LIMIT = 30;
+const singleColumnQuery = window.matchMedia('(max-width: 640px)');
+
 fetch('repertoire.json')
   .then((r) => (r.ok ? r.json() : []))
   .catch(() => [])
@@ -49,11 +52,39 @@ fetch('repertoire.json')
       })
       .join('');
 
-    const songItems = repertoireList.querySelectorAll('li');
-    search?.addEventListener('input', () => {
-      const query = search.value.trim().toLowerCase();
-      songItems.forEach((item) => {
-        item.hidden = !item.textContent.toLowerCase().includes(query);
+    const songItems = Array.from(repertoireList.querySelectorAll('li'));
+    let expanded = false;
+
+    const moreBtn = document.createElement('button');
+    moreBtn.type = 'button';
+    moreBtn.className = 'repertoire__more';
+    repertoireList.insertAdjacentElement('afterend', moreBtn);
+
+    const updateVisibility = () => {
+      const query = search?.value.trim().toLowerCase() ?? '';
+      const searching = query.length > 0;
+      const shouldCollapse =
+        !searching && !expanded && singleColumnQuery.matches && songItems.length > COLLAPSE_LIMIT;
+
+      songItems.forEach((item, i) => {
+        item.hidden = searching
+          ? !item.textContent.toLowerCase().includes(query)
+          : shouldCollapse && i >= COLLAPSE_LIMIT;
       });
+
+      moreBtn.hidden = !shouldCollapse;
+      if (shouldCollapse) {
+        moreBtn.textContent = `Vis alle (${songItems.length})`;
+      }
+    };
+
+    moreBtn.addEventListener('click', () => {
+      expanded = true;
+      updateVisibility();
     });
+
+    search?.addEventListener('input', updateVisibility);
+    singleColumnQuery.addEventListener('change', updateVisibility);
+
+    updateVisibility();
   });

@@ -354,6 +354,28 @@ section {
 
 .repertoire__list li[hidden] { display: none; }
 
+.repertoire__more {
+  display: block;
+  margin: 2rem auto 0;
+  padding: 0.7rem 2rem;
+  border-radius: 100px;
+  border: 2px solid var(--accent);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.repertoire__more[hidden] { display: none; }
+
+.repertoire__more:hover {
+  background: var(--accent);
+  color: #12130f;
+}
+
 @media (max-width: 900px) {
   .repertoire__list { columns: 2; }
 }
@@ -423,6 +445,12 @@ footer a { color: var(--text-dim); }
   .nav__links a { font-size: 1.4rem; }
 
   .nav.menu-open .nav__links { transform: translateY(0); }
+
+  /* backdrop-filter makes .nav a containing block for its fixed .nav__links
+     child, shrinking the overlay to the nav bar's own box instead of the
+     full screen — drop it while the menu is open so the overlay stays
+     full-viewport. */
+  .nav.menu-open.scrolled { backdrop-filter: none; }
 
   .nav__toggle { display: flex; }
 }
