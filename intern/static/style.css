@@ -519,8 +519,8 @@ img#preview {
   width: 280px;
 }
 
+.login-card { text-align: center; }
 .login-card h1 { margin-top: 0; font-size: 1.6rem; text-align: center; }
-.login-card .login-subtitle { margin-top: -0.5rem; text-align: center; color: var(--text-dim); font-weight: 400; }
 .login-card form { gap: 0.75rem; }
 
 /* ---------- Page tabs ---------- */
