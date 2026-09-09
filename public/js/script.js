@@ -58,13 +58,20 @@ fetch('repertoire.json')
     const moreBtn = document.createElement('button');
     moreBtn.type = 'button';
     moreBtn.className = 'repertoire__more';
+    moreBtn.textContent = 'Vis alle';
     repertoireList.insertAdjacentElement('afterend', moreBtn);
+
+    const lessBtn = document.createElement('button');
+    lessBtn.type = 'button';
+    lessBtn.className = 'repertoire__more';
+    lessBtn.textContent = 'Vis færre';
+    moreBtn.insertAdjacentElement('afterend', lessBtn);
 
     const updateVisibility = () => {
       const query = search?.value.trim().toLowerCase() ?? '';
       const searching = query.length > 0;
-      const shouldCollapse =
-        !searching && !expanded && singleColumnQuery.matches && songItems.length > COLLAPSE_LIMIT;
+      const canCollapse = !searching && singleColumnQuery.matches && songItems.length > COLLAPSE_LIMIT;
+      const shouldCollapse = canCollapse && !expanded;
 
       songItems.forEach((item, i) => {
         item.hidden = searching
@@ -73,13 +80,16 @@ fetch('repertoire.json')
       });
 
       moreBtn.hidden = !shouldCollapse;
-      if (shouldCollapse) {
-        moreBtn.textContent = `Vis alle (${songItems.length})`;
-      }
+      lessBtn.hidden = !(canCollapse && expanded);
     };
 
     moreBtn.addEventListener('click', () => {
       expanded = true;
+      updateVisibility();
+    });
+
+    lessBtn.addEventListener('click', () => {
+      expanded = false;
       updateVisibility();
     });
 

@@ -448,9 +448,11 @@ footer a { color: var(--text-dim); }
 
   /* backdrop-filter makes .nav a containing block for its fixed .nav__links
      child, shrinking the overlay to the nav bar's own box instead of the
-     full screen — drop it while the menu is open so the overlay stays
-     full-viewport. */
-  .nav.menu-open.scrolled { backdrop-filter: none; }
+     full screen, which lets the (closed) menu's links overflow into view
+     near the top of the page. Drop it whenever scrolled on mobile, not
+     just while the menu is open, so .nav__links always sizes off the
+     viewport. */
+  .nav.scrolled { backdrop-filter: none; }
 
   .nav__toggle { display: flex; }
 }
