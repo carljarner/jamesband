@@ -1,89 +1,135 @@
 {% extends "base.html" %}
 {% block title %}Lead Sheets{% endblock %}
+{% block container_class %}container--full{% endblock %}
 {% block content %}
-<p><a class="back" href="/chords">&larr; Chord library</a></p>
-<h1>Lead Sheets</h1>
+<div class="setlists-toolbar">
+  <h1>Lead Sheets</h1>
+  <div class="leadsheets-toolbar-actions">
+    <label class="button-link" for="import-file">Import JSON</label>
+    <input type="file" id="import-file" accept="application/json" hidden />
+    <button type="button" id="new-sheet-btn" class="button-link">+ Sheet</button>
+  </div>
+</div>
 
-<fieldset>
-  <legend>Quick scan cleanup</legend>
-  <p class="muted">Photo of a handwritten pencil chart in, clean print-ready PDF out. Doesn't save anything.</p>
-
-  {% if scan_error %}<p class="error">{{ scan_error }}</p>{% endif %}
-
-  <form method="post" action="/scan/clean" enctype="multipart/form-data" id="scan-form">
-    <input type="file" name="photo" accept="image/*" capture="environment" required id="photo-input" />
-    <img id="preview" alt="Preview" />
-    <button class="primary" type="submit" id="submit-btn">Clean up &amp; download PDF</button>
-  </form>
-</fieldset>
-
-<fieldset>
-  <legend>Add a song</legend>
-  {% if error %}<p class="error">{{ error }}</p>{% endif %}
-  <form class="add-song" method="post" action="/songs" enctype="multipart/form-data">
-    <input type="text" name="title" placeholder="Song title" required />
-    <input type="text" name="key" placeholder="Key (e.g. Am)" required />
-    <input type="file" name="photo" accept="image/*" capture="environment" required />
-    <button type="submit">Upload &amp; tag</button>
-  </form>
-</fieldset>
-
-<fieldset>
-  <legend>Song library</legend>
-  {% if songs %}
-  <ul class="songs">
-    {% for song in songs %}
-    <li>
-      <div class="song-title">{{ song.song }}</div>
-      <div class="song-meta">Key: {{ song.key }} &middot; {{ "Tagged" if song.tagged else "Not tagged yet" }}</div>
-      {% if song.tagged %}
-      <div class="transpose-row">
-        <form method="post" action="/songs/{{ song.slug }}/transpose">
-          <input type="number" name="semitones" placeholder="semitones" required />
-          <button type="submit">Transpose</button>
-        </form>
-        <form method="post" action="/songs/{{ song.slug }}/transpose">
-          <input type="text" name="target_key" placeholder="target key" required />
-          <button type="submit">Transpose to key</button>
-        </form>
-        <a href="/songs/{{ song.slug }}/tag">Edit tags</a>
+{% if sheets %}
+<ul class="setlist-cards">
+  {% for sheet in sheets %}
+  <li class="setlist-card leadsheet-card">
+    <a href="/leadsheets/{{ sheet.id }}" class="leadsheet-card__link">
+      <div class="setlist-card__header">
+        <span>{{ sheet.title }}</span>
+        {% if sheet.key %}<span class="setlist-card__date">{{ sheet.key }}</span>{% endif %}
       </div>
-      {% else %}
-      <a href="/songs/{{ song.slug }}/tag">Finish tagging &rarr;</a>
-      {% endif %}
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p class="muted">No songs yet.</p>
-  {% endif %}
-</fieldset>
+    </a>
+    <button type="button" class="leadsheet-card__delete" data-id="{{ sheet.id }}" data-title="{{ sheet.title }}" title="Delete">&times;</button>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No lead sheets yet &mdash; add one to get started.</p>
+{% endif %}
+
+<div id="new-sheet-modal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <p>New lead sheet</p>
+    <div class="field">
+      <span>Title</span>
+      <input type="text" id="new-sheet-title" placeholder="Song title" />
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="new-sheet-cancel">Cancel</button>
+      <button type="button" id="new-sheet-create" class="primary">Create</button>
+    </div>
+  </div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <p>Delete &ldquo;<span id="confirm-title"></span>&rdquo;?</p>
+    <div class="modal-actions">
+      <button type="button" id="confirm-cancel">Cancel</button>
+      <button type="button" id="confirm-ok" class="danger">Delete</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  const input = document.getElementById('photo-input');
-  const preview = document.getElementById('preview');
-  const form = document.getElementById('scan-form');
-  const submitBtn = document.getElementById('submit-btn');
+  const newSheetModal = document.getElementById('new-sheet-modal');
+  const newSheetBtn = document.getElementById('new-sheet-btn');
+  const newSheetTitle = document.getElementById('new-sheet-title');
 
-  input.addEventListener('change', () => {
-    const file = input.files[0];
-    if (!file) {
-      preview.style.display = 'none';
-      return;
-    }
-    preview.src = URL.createObjectURL(file);
-    preview.style.display = 'block';
+  newSheetBtn.addEventListener('click', () => {
+    newSheetTitle.value = '';
+    newSheetModal.hidden = false;
+    newSheetTitle.focus();
+  });
+  document.getElementById('new-sheet-cancel').addEventListener('click', () => { newSheetModal.hidden = true; });
+  newSheetModal.addEventListener('click', e => { if (e.target === newSheetModal) newSheetModal.hidden = true; });
+
+  async function createSheet() {
+    const title = newSheetTitle.value.trim();
+    if (!title) { newSheetTitle.focus(); return; }
+    const resp = await fetch('/leadsheets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    });
+    if (!resp.ok) { alert('Failed to create sheet: ' + await resp.text()); return; }
+    const sheet = await resp.json();
+    location.href = `/leadsheets/${sheet.id}`;
+  }
+
+  newSheetTitle.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); createSheet(); } });
+  document.getElementById('new-sheet-create').addEventListener('click', createSheet);
+
+  const importFile = document.getElementById('import-file');
+  importFile.addEventListener('change', () => {
+    const file = importFile.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      let doc;
+      try {
+        doc = JSON.parse(reader.result);
+      } catch (err) {
+        alert('That file is not valid JSON.');
+        return;
+      }
+      const resp = await fetch('/leadsheets/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(doc),
+      });
+      if (!resp.ok) { alert('Failed to import: ' + await resp.text()); return; }
+      const sheet = await resp.json();
+      location.href = `/leadsheets/${sheet.id}`;
+    };
+    reader.readAsText(file);
+    importFile.value = '';
   });
 
-  form.addEventListener('submit', () => {
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Cleaning up…';
-    setTimeout(() => {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Clean up & download PDF';
-    }, 15000); // safety reset in case the download doesn't navigate away
+  const confirmModal = document.getElementById('confirm-modal');
+  const confirmTitle = document.getElementById('confirm-title');
+  let pendingDeleteId = null;
+
+  document.querySelectorAll('.leadsheet-card__delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pendingDeleteId = btn.dataset.id;
+      confirmTitle.textContent = btn.dataset.title;
+      confirmModal.hidden = false;
+    });
+  });
+  document.getElementById('confirm-cancel').addEventListener('click', () => { confirmModal.hidden = true; });
+  confirmModal.addEventListener('click', e => { if (e.target === confirmModal) confirmModal.hidden = true; });
+
+  document.getElementById('confirm-ok').addEventListener('click', async () => {
+    if (!pendingDeleteId) return;
+    confirmModal.hidden = true;
+    const resp = await fetch(`/leadsheets/${pendingDeleteId}/delete`, { method: 'POST' });
+    if (resp.ok) location.reload();
+    else alert('Failed to delete: ' + await resp.text());
   });
 </script>
 {% endblock %}
