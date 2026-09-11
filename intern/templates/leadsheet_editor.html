@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}{{ sheet.title }} &middot; Lead Sheet{% endblock %}
+{% block container_class %}container--full{% endblock %}
+{% block content %}
+<p class="no-print"><a class="back" href="/leadsheets">&larr; Lead Sheets</a></p>
+
+<div class="editor-toolbar no-print">
+  <div class="editor-toolbar__fields">
+    <input type="text" id="sheet-title" class="editor-title-input" placeholder="Song title" />
+    <input type="text" id="sheet-key" class="editor-key-input" placeholder="Key" />
+  </div>
+  <div class="editor-toolbar__actions">
+    <span id="save-status" class="save-status">Saved</span>
+    <button type="button" id="export-btn">Export</button>
+    <button type="button" id="print-btn">Print</button>
+    <button type="button" id="delete-btn" class="danger">Delete</button>
+    <button type="button" id="save-btn" class="primary">Save</button>
+  </div>
+</div>
+<p class="editor-hint-static no-print">Drag an element from either side onto the page. Click text to edit it; drag anywhere else on an element to move it. Hover an element for its &times; to delete it, or its corner handle to resize it.</p>
+
+<div class="editor-layout">
+  <div class="editor-palette editor-palette--side no-print">
+    <div class="palette-tile" draggable="true" data-type="title" title="Title box">
+      <span class="tile-title-box">Title</span>
+    </div>
+    <div class="palette-tile" draggable="true" data-type="row" title="Bars">
+      <svg class="tile-svg" width="60" height="24" viewBox="0 0 60 24">
+        <line x1="2" y1="2" x2="2" y2="22" stroke-width="1" />
+        <line x1="16" y1="2" x2="16" y2="22" stroke-width="1" />
+        <line x1="30" y1="2" x2="30" y2="22" stroke-width="1" />
+        <line x1="44" y1="2" x2="44" y2="22" stroke-width="1" />
+        <line x1="58" y1="2" x2="58" y2="22" stroke-width="1" />
+      </svg>
+    </div>
+    <div class="palette-tile" draggable="true" data-type="chordText" title="Chord text">
+      <span class="tile-chord-text">Am</span>
+    </div>
+    <div class="palette-tile" draggable="true" data-type="text" title="Text">
+      <span class="tile-text-text">Note</span>
+    </div>
+    <div class="palette-tile" draggable="true" data-type="repeat-start" title="Repeat start">
+      <svg class="tile-svg" width="16" height="24" viewBox="0 0 18 28">
+        <line x1="2" y1="1" x2="2" y2="27" stroke-width="3" />
+        <line x1="6" y1="1" x2="6" y2="27" stroke-width="1" />
+        <circle cx="11" cy="9" r="2" />
+        <circle cx="11" cy="19" r="2" />
+      </svg>
+    </div>
+    <div class="palette-tile" draggable="true" data-type="repeat-end" title="Repeat end">
+      <svg class="tile-svg" width="16" height="24" viewBox="0 0 18 28">
+        <circle cx="3" cy="9" r="2" />
+        <circle cx="3" cy="19" r="2" />
+        <line x1="8" y1="1" x2="8" y2="27" stroke-width="1" />
+        <line x1="12" y1="1" x2="12" y2="27" stroke-width="3" />
+      </svg>
+    </div>
+    <div class="palette-tile" draggable="true" data-type="arrow" title="Arrow">
+      <svg class="tile-svg" width="42" height="24" viewBox="0 0 46 28">
+        <defs>
+          <marker id="tile-arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" style="fill:#1a1815" />
+          </marker>
+        </defs>
+        <path d="M2 25 L40 3" fill="none" stroke-width="1.5" marker-end="url(#tile-arrowhead)" />
+      </svg>
+    </div>
+    <div class="palette-tile palette-tile--glyph" draggable="true" data-type="glyph" data-code="&#xE500;" title="Repeat previous bar (%)">&#xE500;</div>
+  </div>
+
+  <div id="page-wrap" class="page-wrap">
+    <svg id="sheet-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div id="glyph-palette" class="editor-palette editor-palette--side no-print">
+    <div class="rhythm-builder">
+      <div class="rhythm-builder-timesig">
+        <label>Time signature
+          <input type="number" id="rhythm-time-num" min="1" max="32" value="4" />
+          /
+          <input type="number" id="rhythm-time-den" min="1" max="32" value="4" />
+        </label>
+      </div>
+      <svg id="rhythm-builder-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="rhythm-builder-controls">
+        <span id="rhythm-builder-drag" class="rhythm-builder-drag" draggable="true" title="Drag this rhythm bar onto the page">&#10021; drag to page</span>
+        <button type="button" id="rhythm-builder-reset">Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay no-print" hidden>
+  <div class="modal-box">
+    <p>Delete this lead sheet?</p>
+    <div class="modal-actions">
+      <button type="button" id="confirm-cancel">Cancel</button>
+      <button type="button" id="confirm-ok" class="danger">Delete</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const initialSheet = {{ sheet_json|safe }};
+  const leadsheetId = "{{ sheet.id }}";
+</script>
+<script src="/static/leadsheet-editor.js"></script>
+{% endblock %}

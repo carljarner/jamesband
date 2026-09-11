@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Lead sheets unavailable{% endblock %}
+{% block content %}
+<p><a class="back" href="/gigs/{{ gig_id }}">&larr; Back to gig</a></p>
+<h1>Lead sheet bundle unavailable</h1>
+<p class="muted">
+  The automatic combined-PDF lead sheet bundle isn't wired up yet for the new
+  browser-based lead sheet builder. For now, open each song under
+  <a href="/leadsheets">Lead Sheets</a> and use its Print button to save a PDF,
+  then combine them by hand.
+</p>
+{% endblock %}

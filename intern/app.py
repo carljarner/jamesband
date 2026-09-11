@@ -10,11 +10,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-import chords
 import gallery
 import gig_bundle
+import leadsheets
 import repertoire
-import scan_cleanup
 import setlist
 import setlists
 
@@ -276,16 +275,19 @@ async def gigs_delete(gig_id: str):
     return RedirectResponse("/gigs", status_code=303)
 
 
-@app.get("/gigs/{gig_id}/leadsheets")
-async def gigs_leadsheets(gig_id: str):
+@app.get("/gigs/{gig_id}/leadsheets", response_class=HTMLResponse)
+async def gigs_leadsheets(request: Request, gig_id: str):
+    # Intentionally deferred: this used to render a combined PDF via
+    # chords.get_song()/transpose_song(), which were removed when lead
+    # sheets moved to the browser-based builder (see leadsheets.py). No
+    # server-side renderer exists yet for the new sheet model -- print each
+    # song from its own editor (Print button) and combine by hand for now.
     try:
-        pdf_bytes, _missing = gig_bundle.build_leadsheets_bundle(gig_id)
+        setlists.get_setlist(gig_id)
     except KeyError:
         raise HTTPException(status_code=404)
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": 'attachment; filename="lead-sheets.pdf"'},
+    return templates.TemplateResponse(
+        request, "leadsheets_bundle_unavailable.html", {"gig_id": gig_id}
     )
 
 
@@ -303,130 +305,64 @@ async def gigs_lyrics(gig_id: str):
 
 
 @app.get("/leadsheets", response_class=HTMLResponse)
-async def leadsheets_page(request: Request, error: str = None, scan_error: str = None):
+async def leadsheets_page(request: Request):
     return templates.TemplateResponse(
-        request,
-        "leadsheets.html",
-        {"songs": chords.list_songs(), "error": error, "scan_error": scan_error},
+        request, "leadsheets.html", {"sheets": leadsheets.list_leadsheets()}
     )
 
 
-@app.post("/scan/clean")
-async def scan_clean(photo: UploadFile = File(...)):
+@app.post("/leadsheets")
+async def leadsheets_create(request: Request):
+    body = await request.json()
     try:
-        image_bytes = await photo.read()
-        pdf_bytes = scan_cleanup.clean_scan(image_bytes)
-    except scan_cleanup.CleanupError as exc:
-        return RedirectResponse(f"/leadsheets?scan_error={quote(str(exc))}", status_code=303)
-
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": 'attachment; filename="chart.pdf"'},
-    )
+        sheet = leadsheets.add_leadsheet(body.get("title", ""))
+    except ValueError as exc:
+        return Response(content=str(exc), status_code=400)
+    return sheet
 
 
-@app.get("/chords", response_class=HTMLResponse)
-async def chords_page(request: Request, error: str = None):
-    return templates.TemplateResponse(
-        request, "chords.html", {"status": chords.library_status(), "error": error}
-    )
-
-
-@app.get("/chords/sheet")
-async def chords_sheet():
-    pdf_bytes = chords.generate_recording_sheet()
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": 'attachment; filename="chord-recording-sheet.pdf"'},
-    )
-
-
-@app.post("/chords/import")
-async def chords_import(kind: str = Form(...), photo: UploadFile = File(...)):
+@app.post("/leadsheets/import")
+async def leadsheets_import(request: Request):
+    body = await request.json()
     try:
-        image_bytes = await photo.read()
-        chords.import_library_sheet(image_bytes, kind)
-    except chords.ChordError as exc:
-        return RedirectResponse(f"/chords?error={quote(str(exc))}", status_code=303)
-    return RedirectResponse("/chords", status_code=303)
+        sheet = leadsheets.import_leadsheet(body)
+    except ValueError as exc:
+        return Response(content=str(exc), status_code=400)
+    return sheet
 
 
-@app.get("/chords/image/{kind}/{name}")
-async def chord_image(kind: str, name: str):
-    path = chords.library_image_path(kind, name)
-    if not path or not path.exists():
-        raise HTTPException(status_code=404)
-    return FileResponse(path, media_type="image/png")
-
-
-@app.post("/songs")
-async def songs_create(title: str = Form(...), key: str = Form(...), photo: UploadFile = File(...)):
+@app.get("/leadsheets/{leadsheet_id}", response_class=HTMLResponse)
+async def leadsheet_editor_page(request: Request, leadsheet_id: str):
     try:
-        image_bytes = await photo.read()
-        slug = chords.create_song_draft(title, key, image_bytes)
-    except (chords.ChordError, scan_cleanup.CleanupError) as exc:
-        return RedirectResponse(f"/leadsheets?error={quote(str(exc))}", status_code=303)
-    return RedirectResponse(f"/songs/{slug}/tag", status_code=303)
-
-
-@app.get("/songs/{slug}/tag", response_class=HTMLResponse)
-async def song_tag_page(request: Request, slug: str):
-    song = chords.get_song(slug)
-    if not song:
+        sheet = leadsheets.get_leadsheet(leadsheet_id)
+    except KeyError:
         raise HTTPException(status_code=404)
     return templates.TemplateResponse(
         request,
-        "tag.html",
-        {
-            "slug": slug,
-            "song": song,
-            "chord_names": chords.CHORD_LABELS,
-            "tags_json": json.dumps(song.get("chords", [])),
-        },
+        "leadsheet_editor.html",
+        {"sheet": sheet, "sheet_json": json.dumps(sheet)},
     )
 
 
-@app.post("/songs/{slug}/tag")
-async def song_tag_save(slug: str, request: Request):
+@app.post("/leadsheets/{leadsheet_id}")
+async def leadsheet_save(leadsheet_id: str, request: Request):
     try:
         body = await request.json()
-        chords.save_song_tags(slug, body.get("chords", []))
-    except (chords.ChordError, ValueError, TypeError) as exc:
+        leadsheets.update_leadsheet(leadsheet_id, body)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    except (ValueError, TypeError) as exc:
         return Response(content=str(exc), status_code=400)
     return Response(status_code=204)
 
 
-@app.get("/songs/{slug}/image/{which}")
-async def song_image(slug: str, which: str):
-    path = chords.song_image_path(slug, which)
-    if not path:
-        raise HTTPException(status_code=404)
-    return FileResponse(path, media_type="image/png")
-
-
-@app.post("/songs/{slug}/transpose")
-async def song_transpose(slug: str, semitones: str = Form(""), target_key: str = Form("")):
+@app.post("/leadsheets/{leadsheet_id}/delete")
+async def leadsheet_delete(leadsheet_id: str):
     try:
-        song = chords.get_song(slug)
-        if not song:
-            raise chords.ChordError(f"Unknown song '{slug}'.")
-        if target_key.strip():
-            n = chords.semitones_for_target_key(song["key"], target_key.strip())
-        elif semitones.strip():
-            n = int(semitones)
-        else:
-            raise chords.ChordError("Enter a semitone shift or a target key.")
-        pdf_bytes = chords.transpose_song(slug, n)
-    except (chords.ChordError, ValueError) as exc:
-        return RedirectResponse(f"/leadsheets?error={quote(str(exc))}", status_code=303)
-
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{slug}-transposed.pdf"'},
-    )
+        leadsheets.delete_leadsheet(leadsheet_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    return RedirectResponse("/leadsheets", status_code=303)
 
 
 @app.get("/gallery", response_class=HTMLResponse)

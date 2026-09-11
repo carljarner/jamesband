@@ -1390,6 +1390,402 @@ table.gig-songs-table tr.setlist-break-row > td { padding: 0; border-bottom: non
 table.gig-songs-table .singer-toggle { max-width: 160px; }
 table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 
+/* ---------- Lead sheets library ---------- */
+.leadsheets-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.leadsheet-card {
+  position: relative;
+}
+
+.leadsheet-card__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.leadsheet-card__delete {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--text-dim);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.leadsheet-card:hover .leadsheet-card__delete { opacity: 1; }
+.leadsheet-card__delete:hover { background: var(--accent); border-color: var(--accent); color: #12130f; }
+
+/* ---------- Lead sheet editor ---------- */
+@font-face {
+  font-family: 'MuseJazzText';
+  src: url('/static/fonts/MuseJazzText.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MuseJazz';
+  src: url('/static/fonts/MuseJazz.otf') format('opentype');
+  font-display: swap;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.editor-toolbar__fields {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.editor-title-input { width: 260px; }
+.editor-key-input { width: 90px; }
+
+.editor-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+}
+
+.editor-layout {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.editor-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.editor-palette--side {
+  flex: 0 0 auto;
+  flex-direction: column;
+  width: 64px;
+}
+
+/* The right-side (rhythm) palette is wider than the left, to fit the
+   rhythm bar builder at a legible size. */
+#glyph-palette { width: 270px; }
+
+/* Palette tiles are deliberately NOT styled like the app's buttons -- each
+   one is a small literal preview of the element it drags onto the page, so
+   it looks like the paper-page content, not the dark app chrome. */
+.palette-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 1.9rem;
+  padding: 0 0.4rem;
+  background: #fbfaf6;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 3px;
+  cursor: grab;
+  color: #1a1815;
+}
+
+.palette-tile:active { cursor: grabbing; }
+
+.editor-palette--side .palette-tile { width: 100%; }
+
+.rhythm-builder {
+  background: #16181d;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+/* Fixed height regardless of content -- height:auto would otherwise
+   scale the whole SVG (viewBox included) to preserve its aspect ratio,
+   so fewer beats (a narrower viewBox) made the box visibly taller. */
+#rhythm-builder-svg {
+  display: block;
+  width: 100%;
+  height: 68px;
+  background: #fbfaf6;
+  border-radius: 3px;
+}
+
+.rhythm-builder-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.rhythm-builder-drag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background: #fbfaf6;
+  color: #1a1815;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 3px;
+  font-size: 0.68rem;
+  cursor: grab;
+}
+
+.rhythm-builder-drag:active { cursor: grabbing; }
+
+#rhythm-builder-reset {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.68rem;
+}
+
+.rhythm-builder-timesig {
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.rhythm-builder-timesig label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.rhythm-builder-timesig input[type="number"] {
+  width: 2.6rem;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.72rem;
+}
+
+.tile-title-box {
+  border: 1.5px solid #1a1815;
+  background: #fff;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-family: 'MuseJazzText', cursive;
+  font-size: 0.75rem;
+}
+
+.tile-chord-text { font-family: 'MuseJazzText', cursive; font-size: 0.9rem; }
+.tile-text-text { font-family: 'MuseJazzText', cursive; font-size: 0.8rem; color: #55504a; }
+
+.tile-svg { display: block; overflow: visible; }
+.tile-svg line, .tile-svg path { stroke: #1a1815; }
+.tile-svg circle { fill: #1a1815; }
+
+.palette-tile--glyph {
+  font-family: 'MuseJazz', serif;
+  font-size: 1.2rem;
+}
+
+.editor-hint-static {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  margin: 0 0 1.25rem;
+}
+
+.page-wrap {
+  width: 794px;
+  max-width: 100%;
+  flex: 0 1 auto;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  border-radius: 2px;
+  transition: box-shadow 0.15s;
+}
+
+.page-wrap.drag-over { box-shadow: 0 0 0 3px var(--accent), 0 10px 40px rgba(0,0,0,0.5); }
+
+#sheet-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 794 / 1123;
+}
+
+.text-edit-input {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--accent);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-family: 'Inter', sans-serif;
+  color: #1a1815;
+  background: #fff;
+  z-index: 50;
+}
+
+.text-edit-input:focus { outline: none; }
+
+.rhythm-menu {
+  position: fixed;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  padding: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.3rem;
+  max-width: 260px;
+}
+
+.rhythm-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.4rem 0.3rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--surface-alt);
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.rhythm-menu-item:hover { border-color: var(--accent-2); background: rgba(79,215,209,0.12); }
+
+.rhythm-menu-glyph {
+  font-family: 'MuseJazz', serif;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.rhythm-menu-label {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.15;
+}
+
+@media (max-width: 1000px) {
+  .editor-layout { flex-direction: column; align-items: center; }
+  .editor-palette--side, #glyph-palette { flex-direction: row; flex-wrap: wrap; width: auto; justify-content: center; }
+  .editor-palette--side .palette-tile { width: auto; }
+  .rhythm-builder { width: 100%; max-width: 300px; }
+  .page-wrap { width: 100%; order: -1; }
+}
+
+/* SVG page + element styling. The page always renders as light "paper"
+   regardless of the app's dark theme, since it doubles as the print output.
+   Lettering uses MuseJazzText (the same face MuseScore's "Jazz" chord-symbol
+   style uses); notation glyphs (notes/rests/accidentals) use the companion
+   MuseJazz music font via standard SMuFL codepoints. */
+.page-bg { fill: #fbfaf6; stroke: rgba(0,0,0,0.12); stroke-width: 1; }
+.page-title-text { fill: #1a1815; font-family: 'MuseJazzText', cursive; letter-spacing: 0.01em; }
+.page-key-text { fill: #55504a; font-family: 'MuseJazzText', cursive; }
+
+.el-title-box-fill { fill: #fff; stroke: none; }
+.el-title-box-stroke { fill: none; stroke: #1a1815; stroke-width: 1.5; stroke-linecap: round; }
+.el-title-text { fill: #1a1815; font-family: 'MuseJazzText', cursive; }
+.el-chord-text { fill: #1a1815; font-family: 'MuseJazzText', cursive; }
+.el-text-text { fill: #55504a; font-family: 'MuseJazzText', cursive; }
+.el-text-hit { fill: transparent; cursor: pointer; }
+.el-text-hit:hover { fill: rgba(0,0,0,0.04); }
+
+.el-resize-handle { fill: #fff; stroke: #1a1815; stroke-width: 1.5; cursor: nwse-resize; opacity: 0; }
+.el-group:hover .el-resize-handle { opacity: 0.85; }
+.el-resize-handle:hover { opacity: 1; }
+
+/* Bars are just barlines -- no enclosing box, no top/bottom edge, and
+   nothing is typed directly into them; chord/text elements are dragged on
+   top instead. Each barline is a gently bowed path (not a straight line)
+   for a slightly hand-drawn feel. */
+.el-row-divider { stroke: #1a1815; stroke-width: 1.1; fill: none; stroke-linecap: round; }
+.el-row-hit { fill: transparent; cursor: grab; }
+
+.el-repeat-hit { fill: transparent; cursor: grab; }
+.el-repeat-thick { stroke: #1a1815; stroke-width: 3; }
+.el-repeat-thin { stroke: #1a1815; stroke-width: 1; }
+.el-repeat-dot { fill: #1a1815; }
+
+.el-arrow-path { stroke: #1a1815; stroke-width: 1.5; fill: none; }
+.el-arrow-hit { stroke: transparent; stroke-width: 14; fill: none; cursor: grab; }
+.el-arrow-handle { fill: #fff; stroke: #1a1815; stroke-width: 1.5; cursor: grab; opacity: 0.55; }
+.el-arrow-bow-handle { fill: #d9d4c8; stroke: #1a1815; stroke-width: 1; cursor: ns-resize; opacity: 0.4; }
+.el-group:hover .el-arrow-handle,
+.el-group:hover .el-arrow-bow-handle { opacity: 1; }
+.el-arrowhead-fill { fill: #1a1815; }
+
+/* Every glyph/lettering text sits on top of its own invisible hit-rect
+   (drawn first, underneath). Without this, hovering the visible ink of the
+   text itself would hit the <text> node instead of the hit-rect beneath
+   it, showing the browser's text-selection cursor instead of the pointer
+   and eating the click -- so these all pass events straight through. */
+.el-glyph-text,
+.page-title-text,
+.page-key-text,
+.el-title-text,
+.el-chord-text,
+.el-text-text {
+  pointer-events: none;
+  user-select: none;
+}
+
+.el-glyph-text { fill: #1a1815; font-family: 'MuseJazz', serif; }
+.el-glyph-hit { fill: transparent; cursor: pointer; }
+.el-glyph-hit:hover { fill: rgba(0,0,0,0.04); }
+
+.el-rhythm-cell-hit { fill: transparent; cursor: pointer; }
+.el-rhythm-cell-hit:hover { fill: rgba(0,0,0,0.04); }
+
+.el-notegroup-stem { stroke: #1a1815; stroke-width: 1.5; }
+.el-notegroup-beam { stroke: #1a1815; }
+.el-notehead-slash { stroke: #1a1815; stroke-linecap: round; }
+
+.el-delete {
+  fill: #b0392e;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+}
+.el-group:hover .el-delete { opacity: 0.85; }
+.el-delete:hover { opacity: 1; }
+
+.el-row-addbar, .el-row-removebar {
+  fill: #55504a;
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0;
+}
+.el-group:hover .el-row-addbar,
+.el-group:hover .el-row-removebar { opacity: 0.85; }
+.el-row-addbar:hover, .el-row-removebar:hover { fill: #1a1815; opacity: 1; }
+
+/* ---------- Print ---------- */
+@media print {
+  .no-print { display: none !important; }
+  .topbar, .main-nav { display: none !important; }
+  body { background: #fff; }
+  .page-wrap { box-shadow: none; width: 100%; }
+  .el-delete, .el-row-addbar, .el-row-removebar, .el-resize-handle,
+  .el-arrow-handle, .el-arrow-bow-handle { display: none; }
+  /* The on-screen page/title-box tones are a warm off-white "paper" look;
+     on paper that would just waste toner on a tinted fill, so print pure
+     white for both instead. */
+  .page-bg, .el-title-box-fill { fill: #fff; }
+  @page { size: A4 portrait; margin: 0; }
+}
+
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;

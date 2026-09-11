@@ -1,0 +1,273 @@
+[
+  {
+    "id": "test",
+    "title": "Kom Tilbage Nu",
+    "key": "Am",
+    "updated_at": "2026-09-10T13:37:19.004507+00:00",
+    "elements": [
+      {
+        "id": "el-mtu3ca15-2",
+        "type": "row",
+        "x": 51,
+        "y": 134.4765625,
+        "w": 349.8888888888889,
+        "h": 28,
+        "barCount": 4
+      },
+      {
+        "id": "el-mtu3cmip-4",
+        "type": "chordText",
+        "x": 61,
+        "y": 136.4765625,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mtu3curh-5",
+        "type": "title",
+        "x": 42,
+        "y": 72.4765625,
+        "text": "Vers",
+        "fontSize": 19
+      },
+      {
+        "id": "el-mtu3l2kk-1",
+        "type": "text",
+        "x": 466,
+        "y": 94.4765625,
+        "text": "1. Guitarer",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mtu4dvuc-0",
+        "type": "glyph",
+        "x": 169,
+        "y": 149.8671875,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-mtu4etnf-3",
+        "type": "repeat",
+        "x": 49,
+        "y": 134.8671875,
+        "w": 16,
+        "h": 29,
+        "kind": "start"
+      },
+      {
+        "id": "el-mtu4h47s-5",
+        "type": "repeat",
+        "x": 391,
+        "y": 132.8671875,
+        "w": 14,
+        "h": 30,
+        "kind": "end"
+      },
+      {
+        "id": "el-mtu4h9ov-6",
+        "type": "glyph",
+        "x": 260,
+        "y": 148.8671875,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-mtu4hnrt-7",
+        "type": "glyph",
+        "x": 344,
+        "y": 148.8671875,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-mtvjz5ds-1",
+        "type": "row",
+        "x": 364,
+        "y": 397.8671875,
+        "w": 329,
+        "h": 30,
+        "barCount": 4
+      },
+      {
+        "id": "el-mtvjzkb1-3",
+        "type": "rhythmbar",
+        "x": 372,
+        "y": 415.8671875,
+        "w": 71,
+        "h": 24,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter"
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-mtvjzsr9-4",
+        "type": "rhythmbar",
+        "x": 458,
+        "y": 416.8671875,
+        "w": 63,
+        "h": 25,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter"
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-mtvk040c-5",
+        "type": "rhythmbar",
+        "x": 535,
+        "y": 416.8671875,
+        "w": 71,
+        "h": 26,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter"
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-mtvk1xdk-6",
+        "type": "rhythmbar",
+        "x": 621,
+        "y": 416.8671875,
+        "w": 71,
+        "h": 21,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter"
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-mtvk70yb-7",
+        "type": "rhythmbar",
+        "x": 277,
+        "y": 288.8671875,
+        "w": 336,
+        "h": 28,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          }
+        ]
+      }
+    ]
+  }
+]
