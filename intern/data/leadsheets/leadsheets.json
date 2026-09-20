@@ -3,104 +3,311 @@
     "id": "test",
     "title": "Kom Tilbage Nu",
     "key": "Am",
-    "updated_at": "2026-09-10T13:37:19.004507+00:00",
+    "updated_at": "2026-09-20T20:51:23.414716+00:00",
     "elements": [
       {
-        "id": "el-mtu3ca15-2",
-        "type": "row",
-        "x": 51,
-        "y": 134.4765625,
-        "w": 349.8888888888889,
-        "h": 28,
-        "barCount": 4
+        "id": "el-mtu3curh-5",
+        "type": "title",
+        "x": 24,
+        "y": 74.4765625,
+        "text": "Intro",
+        "fontSize": 19
       },
       {
-        "id": "el-mtu3cmip-4",
+        "id": "el-mua8yupt-0",
+        "type": "text",
+        "x": 286,
+        "y": 91.8828125,
+        "text": "+ trommer, guitar",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mua8z2mz-1",
+        "type": "text",
+        "x": 520,
+        "y": 93.8828125,
+        "text": "+ synth",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mua90eh4-2",
+        "type": "title",
+        "x": 24,
+        "y": 157.8828125,
+        "text": "Vers",
+        "fontSize": 18
+      },
+      {
+        "id": "el-mua91g8h-0",
+        "type": "row",
+        "x": 51,
+        "y": 201.8828125,
+        "w": 657,
+        "h": 31,
+        "barCount": 8,
+        "repeatStart": true,
+        "repeatEnd": true
+      },
+      {
+        "id": "el-mua91vr8-1",
         "type": "chordText",
-        "x": 61,
-        "y": 136.4765625,
+        "x": 62,
+        "y": 205.8828125,
         "text": "Am",
         "fontSize": 14
       },
       {
-        "id": "el-mtu3curh-5",
-        "type": "title",
-        "x": 42,
-        "y": 72.4765625,
-        "text": "Vers",
-        "fontSize": 19
+        "id": "el-mua9215p-2",
+        "type": "glyph",
+        "x": 168,
+        "y": 215.8828125,
+        "code": "\ue500",
+        "fontSize": 28
       },
       {
-        "id": "el-mtu3l2kk-1",
-        "type": "text",
-        "x": 466,
-        "y": 94.4765625,
-        "text": "1. Guitarer",
+        "id": "el-mua9310w-0",
+        "type": "chordText",
+        "x": 224,
+        "y": 202.8828125,
+        "text": "F",
         "fontSize": 14
       },
       {
-        "id": "el-mtu4dvuc-0",
+        "id": "el-mua93ak0-1",
+        "type": "chordText",
+        "x": 386,
+        "y": 203.8828125,
+        "text": "G",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua93fff-2",
         "type": "glyph",
-        "x": 169,
-        "y": 149.8671875,
+        "x": 329,
+        "y": 217.8828125,
         "code": "\ue500",
         "fontSize": 28
       },
       {
-        "id": "el-mtu4etnf-3",
-        "type": "repeat",
-        "x": 49,
-        "y": 134.8671875,
-        "w": 16,
-        "h": 29,
-        "kind": "start"
-      },
-      {
-        "id": "el-mtu4h47s-5",
-        "type": "repeat",
-        "x": 391,
-        "y": 132.8671875,
-        "w": 14,
-        "h": 30,
-        "kind": "end"
-      },
-      {
-        "id": "el-mtu4h9ov-6",
+        "id": "el-mua93i00-3",
         "type": "glyph",
-        "x": 260,
-        "y": 148.8671875,
+        "x": 493,
+        "y": 219.8828125,
         "code": "\ue500",
         "fontSize": 28
       },
       {
-        "id": "el-mtu4hnrt-7",
-        "type": "glyph",
-        "x": 344,
-        "y": 148.8671875,
-        "code": "\ue500",
-        "fontSize": 28
+        "id": "el-mua93pt2-4",
+        "type": "chordText",
+        "x": 547,
+        "y": 202.8828125,
+        "text": "Am",
+        "fontSize": 14
       },
       {
-        "id": "el-mtvjz5ds-1",
+        "id": "el-mua93y96-5",
+        "type": "chordText",
+        "x": 624,
+        "y": 203.8828125,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua94kvl-6",
+        "type": "chordText",
+        "x": 660,
+        "y": 204.8828125,
+        "text": "F",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua94q32-7",
+        "type": "chordText",
+        "x": 672,
+        "y": 204.8828125,
+        "text": "G",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua96a1g-8",
         "type": "row",
-        "x": 364,
-        "y": 397.8671875,
-        "w": 329,
+        "x": 626,
+        "y": 258.8828125,
+        "w": 74,
+        "h": 29,
+        "barCount": 1
+      },
+      {
+        "id": "el-mua96j9f-9",
+        "type": "chordText",
+        "x": 626,
+        "y": 259.8828125,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua96ub3-a",
+        "type": "text",
+        "x": 684,
+        "y": 173.8828125,
+        "text": "x2",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mua98fel-3",
+        "type": "volta",
+        "x": 624,
+        "y": 180.8828125,
+        "w": 39,
+        "h": 14,
+        "text": "1.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mua99ffe-5",
+        "type": "volta",
+        "x": 626,
+        "y": 239.8828125,
+        "w": 33,
+        "h": 14,
+        "text": "2.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mua9a1ep-7",
+        "type": "title",
+        "x": 25,
+        "y": 278.8828125,
+        "text": "Bro",
+        "fontSize": 18
+      },
+      {
+        "id": "el-mua9agsu-b",
+        "type": "row",
+        "x": 51,
+        "y": 327.8828125,
+        "w": 656,
+        "h": 30,
+        "barCount": 8
+      },
+      {
+        "id": "el-mua9b0xr-d",
+        "type": "chordText",
+        "x": 55,
+        "y": 328.8828125,
+        "text": "Am7",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9b51g-f",
+        "type": "glyph",
+        "x": 164,
+        "y": 343.8828125,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-mua9bafx-j",
+        "type": "glyph",
+        "x": 493,
+        "y": 341.8828125,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-mua9bcm5-l",
+        "type": "glyph",
+        "x": 655,
+        "y": 342.8828125,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-mua9bffj-n",
+        "type": "chordText",
+        "x": 219,
+        "y": 328.8828125,
+        "text": "B",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9bk4j-p",
+        "type": "chordText",
+        "x": 382,
+        "y": 327.8828125,
+        "text": "B/d#",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9bppx-r",
+        "type": "chordText",
+        "x": 546,
+        "y": 327.8828125,
+        "text": "E7",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9djn5-1",
+        "type": "title",
+        "x": 23,
+        "y": 377.8828125,
+        "text": "1/2 Vers + Breaks",
+        "fontSize": 16
+      },
+      {
+        "id": "el-mua9dvh0-3",
+        "type": "text",
+        "x": 46,
+        "y": 425.8828125,
+        "text": "(8 takter)",
+        "fontSize": 22
+      },
+      {
+        "id": "el-mua9e9ev-5",
+        "type": "arrow",
+        "x1": 152,
+        "y1": 442.8828125,
+        "x2": 203,
+        "y2": 441.8828125,
+        "bow": {
+          "dx": 0,
+          "dy": 0
+        }
+      },
+      {
+        "id": "el-mua9ek6v-7",
+        "type": "row",
+        "x": 237,
+        "y": 427.8828125,
+        "w": 328,
         "h": 30,
         "barCount": 4
       },
       {
-        "id": "el-mtvjzkb1-3",
+        "id": "el-mua9es2m-9",
+        "type": "chordText",
+        "x": 230,
+        "y": 397.8828125,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9f33x-b",
         "type": "rhythmbar",
-        "x": 372,
-        "y": 415.8671875,
-        "w": 71,
-        "h": 24,
+        "x": 245,
+        "y": 445.8828125,
+        "w": 66,
+        "h": 23,
+        "numerator": 4,
+        "denominator": 4,
         "cells": [
           {
             "type": "note",
             "duration": 8,
-            "label": "Quarter"
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
           },
           {
             "type": "rest",
@@ -115,17 +322,22 @@
         ]
       },
       {
-        "id": "el-mtvjzsr9-4",
+        "id": "el-mua9fgq5-d",
         "type": "rhythmbar",
-        "x": 458,
-        "y": 416.8671875,
-        "w": 63,
-        "h": 25,
+        "x": 329,
+        "y": 445.8828125,
+        "w": 65,
+        "h": 22,
+        "numerator": 4,
+        "denominator": 4,
         "cells": [
           {
             "type": "note",
             "duration": 8,
-            "label": "Quarter"
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
           },
           {
             "type": "rest",
@@ -140,17 +352,22 @@
         ]
       },
       {
-        "id": "el-mtvk040c-5",
+        "id": "el-mua9frhp-f",
         "type": "rhythmbar",
-        "x": 535,
-        "y": 416.8671875,
-        "w": 71,
-        "h": 26,
+        "x": 405,
+        "y": 446.8828125,
+        "w": 79,
+        "h": 23,
+        "numerator": 4,
+        "denominator": 4,
         "cells": [
           {
             "type": "note",
             "duration": 8,
-            "label": "Quarter"
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
           },
           {
             "type": "rest",
@@ -165,27 +382,38 @@
         ]
       },
       {
-        "id": "el-mtvk1xdk-6",
+        "id": "el-mua9g8n8-h",
         "type": "rhythmbar",
-        "x": 621,
-        "y": 416.8671875,
+        "x": 487,
+        "y": 446.8828125,
         "w": 71,
         "h": 21,
+        "numerator": 4,
+        "denominator": 4,
         "cells": [
           {
             "type": "note",
             "duration": 4,
-            "label": "8th"
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
           },
           {
             "type": "note",
             "duration": 4,
-            "label": "8th"
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
           },
           {
             "type": "note",
             "duration": 8,
-            "label": "Quarter"
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
           },
           {
             "type": "rest",
@@ -195,78 +423,834 @@
         ]
       },
       {
-        "id": "el-mtvk70yb-7",
-        "type": "rhythmbar",
-        "x": 277,
-        "y": 288.8671875,
-        "w": 336,
+        "id": "el-mua9if63-j",
+        "type": "title",
+        "x": 24,
+        "y": 471.8828125,
+        "text": "Omkv\u00e6d",
+        "fontSize": 16
+      },
+      {
+        "id": "el-mua9j2js-l",
+        "type": "row",
+        "x": 51,
+        "y": 511.8828125,
+        "w": 650,
         "h": 28,
+        "barCount": 8
+      },
+      {
+        "id": "el-mua9je4x-n",
+        "type": "chordText",
+        "x": 50,
+        "y": 511.8828125,
+        "text": "Dm7",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9jlkj-r",
+        "type": "chordText",
+        "x": 135,
+        "y": 511.8828125,
+        "text": "G",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9jurz-t",
+        "type": "chordText",
+        "x": 215,
+        "y": 509.8828125,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9jyli-v",
+        "type": "glyph",
+        "x": 323,
+        "y": 524.8828125,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-mua9k2ge-x",
+        "type": "chordText",
+        "x": 378,
+        "y": 511.8828125,
+        "text": "Dm7",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9k6o9-z",
+        "type": "chordText",
+        "x": 459,
+        "y": 511.8828125,
+        "text": "G",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9ke64-11",
+        "type": "chordText",
+        "x": 540,
+        "y": 511.8828125,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mua9kn90-13",
+        "type": "glyph",
+        "x": 647,
+        "y": 526.8828125,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-mua9ksr3-15",
+        "type": "text",
+        "x": 577,
+        "y": 484.8828125,
+        "text": "(Intro-grove)",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mua9ldcd-17",
+        "type": "title",
+        "x": 26,
+        "y": 550.8828125,
+        "text": "Vers",
+        "fontSize": 19
+      },
+      {
+        "id": "el-mua9llbe-19",
+        "type": "title",
+        "x": 27,
+        "y": 600.8828125,
+        "text": "Bro",
+        "fontSize": 18
+      },
+      {
+        "id": "el-mua9lww2-1b",
+        "type": "title",
+        "x": 26,
+        "y": 651.8828125,
+        "text": "1/2 Vers + Breaks",
+        "fontSize": 16
+      },
+      {
+        "id": "el-mua9mvz2-1d",
+        "type": "title",
+        "x": 26,
+        "y": 698.8828125,
+        "text": "1/2 Omkv + Breaks",
+        "fontSize": 16
+      },
+      {
+        "id": "el-mua9qo6b-1i",
+        "type": "title",
+        "x": 29,
+        "y": 793.8828125,
+        "text": "2x Omkv",
+        "fontSize": 15
+      },
+      {
+        "id": "el-mua9r6y8-1k",
+        "type": "title",
+        "x": 29,
+        "y": 843.8828125,
+        "text": "Super-break",
+        "fontSize": 16
+      },
+      {
+        "id": "el-mua9s4ft-1o",
+        "type": "row",
+        "x": 45,
+        "y": 904.8828125,
+        "w": 384,
+        "h": 23,
+        "barCount": 4
+      },
+      {
+        "id": "el-mua9sgfc-1q",
+        "type": "rhythmbar",
+        "x": 50,
+        "y": 921.8828125,
+        "w": 89,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-mua9si1n-1s",
+        "type": "rhythmbar",
+        "x": 146,
+        "y": 920.8828125,
+        "w": 87,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 6,
+            "label": "Dotted 8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "note",
+            "duration": 2,
+            "label": "16th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-mua9sjgk-1u",
+        "type": "rhythmbar",
+        "x": 242,
+        "y": 919.8828125,
+        "w": 81,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "note",
+            "duration": 2,
+            "label": "16th"
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "note",
+            "duration": 2,
+            "label": "16th"
+          }
+        ]
+      },
+      {
+        "id": "el-mua9skpy-1w",
+        "type": "rhythmbar",
+        "x": 341,
+        "y": 919.8828125,
+        "w": 89,
+        "h": 21,
+        "numerator": 4,
+        "denominator": 4,
         "cells": [
           {
             "type": "rest",
             "duration": 2
           },
           {
-            "type": "rest",
-            "duration": 2
+            "type": "note",
+            "duration": 2,
+            "label": "16th"
           },
           {
             "type": "rest",
-            "duration": 2
+            "duration": 4,
+            "label": "8th rest"
           },
           {
             "type": "rest",
-            "duration": 2
+            "duration": 8,
+            "label": "Quarter rest"
           },
           {
             "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
-          },
-          {
-            "type": "rest",
-            "duration": 2
+            "duration": 16,
+            "label": "Half rest"
           }
         ]
+      },
+      {
+        "id": "el-mua9xe2b-1y",
+        "type": "title",
+        "x": 33,
+        "y": 949.8828125,
+        "text": "Outro",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mua9xzc5-20",
+        "type": "chordText",
+        "x": 42,
+        "y": 878.8828125,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaa0bqy-0",
+        "type": "row",
+        "x": 44,
+        "y": 1006.8828125,
+        "w": 384,
+        "h": 23,
+        "barCount": 4
+      },
+      {
+        "id": "el-muaa0bqy-1",
+        "type": "rhythmbar",
+        "x": 49,
+        "y": 1023.8828125,
+        "w": 89,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-muaa0bqy-2",
+        "type": "rhythmbar",
+        "x": 145,
+        "y": 1022.8828125,
+        "w": 87,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "note",
+            "duration": 2,
+            "label": "16th"
+          },
+          {
+            "type": "note",
+            "duration": 2,
+            "label": "16th"
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-muaa0bqy-3",
+        "type": "rhythmbar",
+        "x": 241,
+        "y": 1021.8828125,
+        "w": 81,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "note",
+            "duration": 2,
+            "label": "16th"
+          },
+          {
+            "type": "note",
+            "duration": 2,
+            "label": "16th"
+          },
+          {
+            "type": "note",
+            "duration": 2,
+            "label": "16th"
+          }
+        ]
+      },
+      {
+        "id": "el-muaa0bqy-4",
+        "type": "rhythmbar",
+        "x": 340,
+        "y": 1021.8828125,
+        "w": 89,
+        "h": 21,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 2
+          },
+          {
+            "type": "note",
+            "duration": 2,
+            "label": "16th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-muaa0bqy-5",
+        "type": "chordText",
+        "x": 41,
+        "y": 980.8828125,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaa1itf-7",
+        "type": "chordText",
+        "x": 40,
+        "y": 744.8828125,
+        "text": "Dm7",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaa1itf-8",
+        "type": "chordText",
+        "x": 125,
+        "y": 744.8828125,
+        "text": "G",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaa1itf-9",
+        "type": "chordText",
+        "x": 205,
+        "y": 742.8828125,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaa1itf-a",
+        "type": "glyph",
+        "x": 313,
+        "y": 757.8828125,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-muaa2dt7-g",
+        "type": "chordText",
+        "x": 367,
+        "y": 715.8828125,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaa2dt7-h",
+        "type": "rhythmbar",
+        "x": 377,
+        "y": 760.8828125,
+        "w": 66,
+        "h": 23,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-muaa2dt7-i",
+        "type": "rhythmbar",
+        "x": 462,
+        "y": 760.8828125,
+        "w": 65,
+        "h": 22,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-muaa2dt7-j",
+        "type": "rhythmbar",
+        "x": 538,
+        "y": 759.8828125,
+        "w": 79,
+        "h": 23,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 8,
+            "label": "Quarter rest"
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-muaa2dt7-k",
+        "type": "rhythmbar",
+        "x": 620,
+        "y": 759.8828125,
+        "w": 71,
+        "h": 21,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 16,
+            "label": "Half rest"
+          }
+        ]
+      },
+      {
+        "id": "el-muaa2y5o-m",
+        "type": "row",
+        "x": 40,
+        "y": 743.8984375,
+        "w": 656,
+        "h": 26,
+        "barCount": 8
+      },
+      {
+        "id": "el-muaa44st-o",
+        "type": "text",
+        "x": 499,
+        "y": 714.8984375,
+        "text": "(Guitar)",
+        "fontSize": 12
+      },
+      {
+        "id": "el-muaa9ysr-1",
+        "type": "chordText",
+        "x": 333,
+        "y": 328.3984375,
+        "text": "B7",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaagisw-1",
+        "type": "row",
+        "x": 50,
+        "y": 120.3984375,
+        "w": 708,
+        "h": 24,
+        "barCount": 12
+      },
+      {
+        "id": "el-muaagt62-3",
+        "type": "chordText",
+        "x": 52,
+        "y": 119.3984375,
+        "text": "Am5",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaah0hf-5",
+        "type": "glyph",
+        "x": 127,
+        "y": 133.3984375,
+        "code": "\ue500",
+        "fontSize": 26
+      },
+      {
+        "id": "el-muaah3r1-7",
+        "type": "glyph",
+        "x": 187,
+        "y": 131.3984375,
+        "code": "\ue500",
+        "fontSize": 26
+      },
+      {
+        "id": "el-muaah759-9",
+        "type": "glyph",
+        "x": 244,
+        "y": 132.3984375,
+        "code": "\ue500",
+        "fontSize": 26
+      },
+      {
+        "id": "el-muaaharu-b",
+        "type": "chordText",
+        "x": 287,
+        "y": 118.3984375,
+        "text": "Am11",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaahhkr-d",
+        "type": "chordText",
+        "x": 582,
+        "y": 118.3984375,
+        "text": "F/a",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaahmxb-f",
+        "type": "chordText",
+        "x": 525,
+        "y": 117.3984375,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaahx4h-h",
+        "type": "chordText",
+        "x": 640,
+        "y": 118.3984375,
+        "text": "Am",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaahz8t-j",
+        "type": "chordText",
+        "x": 698,
+        "y": 119.3984375,
+        "text": "F/a",
+        "fontSize": 14
+      },
+      {
+        "id": "el-muaai8zs-l",
+        "type": "glyph",
+        "x": 364,
+        "y": 130.3984375,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-muaaibed-n",
+        "type": "glyph",
+        "x": 423,
+        "y": 132.3984375,
+        "code": "\ue500",
+        "fontSize": 28
+      },
+      {
+        "id": "el-muaaidq4-p",
+        "type": "glyph",
+        "x": 482,
+        "y": 131.3984375,
+        "code": "\ue500",
+        "fontSize": 28
       }
     ]
   }

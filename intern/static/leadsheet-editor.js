@@ -9,8 +9,13 @@
   const PAGE_W = 794, PAGE_H = 1123; // A4 portrait @ 96dpi
   const PAGE_MARGIN = 28;
   const BAR_UNIT = (PAGE_W - 2 * PAGE_MARGIN) / 9; // 9 bars exactly fill the page width (=82)
+  // A row can hold up to 12 bars; past 9 the bars get narrower so the row
+  // still fits within the page margins.
+  const ROW_MAX_BARS = 12;
+  const ROW_MAX_W = PAGE_W - 2 * PAGE_MARGIN;
   const BAR_H = 30; // calibrated against a hand-finished 8-bar row on a real sheet
   const REPEAT_MARK_W = 14;
+  const VOLTA_H = 22, VOLTA_FONT_SIZE = 13;
 
   // Codepoints verified directly against fonts/MuseJazz.otf's cmap (this
   // font implements SMuFL's Rests range at the standard codepoints, but not
@@ -24,6 +29,30 @@
   const REST_CODES = {
     whole: '\uE4E3', half: '\uE4E4', quarter: '\uE4E5', '8th': '\uE4E6', '16th': '\uE4E7',
   };
+
+  // Note staff glyphs: unlike the rhythm-only notation above, these are the
+  // font's real individual SMuFL glyphs (clefs, accidentals, noteheads,
+  // flags) at their standard codepoints -- verified directly against the
+  // font's outlines, not just its cmap.
+  const CLEF_CODES = { treble: '\uE050', bass: '\uE062' };
+  const ACCIDENTAL_CODES = { sharp: '\uE262', flat: '\uE260', natural: '\uE261' };
+  const FLAG_CODES = { '8th-up': '\uE240', '8th-down': '\uE241', '16th-up': '\uE242', '16th-down': '\uE243' };
+  // Half of each notehead glyph's advance width in em (the glyphs have no
+  // side bearing, so that's also their ink half-width), measured from
+  // fonts/MuseJazz.otf. Where a stem has to sit to actually touch the head.
+  const NOTEHEAD_HALF_W_EM = { black: 0.1645, half: 0.182, whole: 0.2275 };
+  function noteheadHalfW(duration, size) {
+    if (duration >= 32) return NOTEHEAD_HALF_W_EM.whole * size;
+    if (duration >= 16) return NOTEHEAD_HALF_W_EM.half * size;
+    return NOTEHEAD_HALF_W_EM.black * size;
+  }
+  // Kept in step with `.el-notegroup-stem { stroke-width }` in style.css.
+  const NOTESTAFF_STEM_W = 1.5;
+  function noteheadCode(duration) {
+    if (duration === 32 || duration === 48) return '\uE0A2'; // noteheadWhole
+    if (duration === 16 || duration === 24) return '\uE0A3'; // noteheadHalf
+    return '\uE0A4'; // noteheadBlack
+  }
 
   // Rhythm bar: one bar, internally gridded at 32nd-note resolution -- even
   // though the finest user-selectable value is a 16th (2 units), the extra
@@ -159,6 +188,121 @@
     }
   }
 
+  /* ---------- Articulations (staccato / accent / fermata) ---------- */
+  // Stored per note cell as `articulations: ['staccato', 'accent', 'fermata']`
+  // (any subset). Hand-drawn like the rhythm notes, so no font glyphs needed.
+  const ARTICULATION_KINDS = [
+    { value: 'fermata', label: 'Fermata' },
+    { value: 'accent', label: 'Accent' },
+    { value: 'staccato', label: 'Staccato' },
+  ];
+  function cellHasArticulation(cell, kind) {
+    return !!(cell.articulations && cell.articulations.includes(kind));
+  }
+  function toggleCellArticulation(cell, kind) {
+    const list = (cell.articulations || []).filter(k => k !== kind);
+    if (list.length === (cell.articulations || []).length) list.push(kind);
+    if (list.length) cell.articulations = list;
+    else delete cell.articulations;
+  }
+  // Draws a note's articulations relative to its own ink. A fermata goes above
+  // the note; staccato and accent go below it (staccato closest, accent under
+  // that). `anchor` is `{ aboveX, aboveY, belowX, belowY }`: the x to center
+  // the glyphs on above/below, and the highest / lowest ink of the note itself
+  // (stem tip or beam, notehead, ...). `unit` is a size reference (roughly the
+  // note's staff/bar height).
+  function drawArticulations(container, anchor, articulations, unit) {
+    if (!articulations || !articulations.length) return;
+    const gap = unit * 0.08;
+    const margin = unit * 0.1;
+    const stroke = Math.max(1.1, unit * 0.045);
+
+    let y = anchor.belowY + margin; // top edge of the next glyph below; moves downward
+    if (articulations.includes('staccato')) {
+      const r = Math.max(1.4, unit * 0.055);
+      container.appendChild(svgCircle(anchor.belowX, y + r, r, { cls: 'el-artic-dot' }));
+      y += 2 * r + gap;
+    }
+    if (articulations.includes('accent')) {
+      const w = unit * 0.34, hh = unit * 0.12;
+      const cy = y + hh;
+      container.appendChild(svgPath(`M ${anchor.belowX - w / 2} ${cy - hh} L ${anchor.belowX + w / 2} ${cy} L ${anchor.belowX - w / 2} ${cy + hh}`,
+        { cls: 'el-artic-line', 'stroke-width': stroke }));
+    }
+    if (articulations.includes('fermata')) { // an arc with a dot under its middle
+      const cx = anchor.aboveX, base = anchor.aboveY - margin;
+      const w = unit * 0.6, rise = unit * 0.3;
+      container.appendChild(svgPath(
+        `M ${cx - w / 2} ${base} C ${cx - w / 2} ${base - rise * 1.35}, ${cx + w / 2} ${base - rise * 1.35}, ${cx + w / 2} ${base}`,
+        { cls: 'el-artic-line', 'stroke-width': stroke }));
+      container.appendChild(svgCircle(cx, base - rise * 0.22, Math.max(1.3, unit * 0.05), { cls: 'el-artic-dot' }));
+    }
+  }
+
+  /* ---------- Note staff (pitched notation) ---------- */
+  // A staff position is a clef-independent integer step: 0 = bottom line, 1
+  // = space above it, 2 = next line, ... 8 = top line (even = line, odd =
+  // space); negative/>8 extend onto ledger lines. Changing an element's clef
+  // never touches its notes' stored positions -- the same step sounding a
+  // different pitch under a different clef is correct notation behavior,
+  // not something to "fix."
+  const STAFF_PITCH_MIN = -6, STAFF_PITCH_MAX = 14, STAFF_DEFAULT_PITCH = 4;
+  const STAFF_LETTER_CYCLE = ['E', 'F', 'G', 'A', 'B', 'C', 'D'];
+  const STAFF_CLEF_BASE_INDEX = { treble: 0, bass: 2 }; // each clef's bottom-line letter's cycle index
+  function staffLetterForPosition(position, clef) {
+    const idx = ((STAFF_CLEF_BASE_INDEX[clef] + position) % 7 + 7) % 7;
+    return STAFF_LETTER_CYCLE[idx];
+  }
+  // Ledger positions needed to reach `position`: every even step strictly
+  // between the staff and the note (inclusive of the note's own position if
+  // it itself sits on a line), so a note in a ledger space gets the line(s)
+  // below/above it but nothing drawn through its own notehead.
+  function ledgerStepsFor(position) {
+    const steps = [];
+    if (position <= -2) {
+      for (let s = -2; s >= Math.ceil(position / 2) * 2; s -= 2) steps.push(s);
+    } else if (position >= 10) {
+      for (let s = 10; s <= Math.floor(position / 2) * 2; s += 2) steps.push(s);
+    }
+    return steps;
+  }
+
+  // Key signature: a signed sharp/flat count, own to each note-staff bar
+  // (independent of the sheet's free-text Key field). The circle-of-fifths
+  // orders below double as both "which letters are altered" and, combined
+  // with a fixed per-clef glyph-position table, "where the signature is
+  // drawn" -- the latter is a fixed engraving convention, not derived from
+  // the former.
+  const KEYSIG_SHARP_ORDER = ['F', 'C', 'G', 'D', 'A', 'E', 'B'];
+  const KEYSIG_FLAT_ORDER = ['B', 'E', 'A', 'D', 'G', 'C', 'F'];
+  function alteredLettersForKeySignature(k) {
+    if (k > 0) return new Set(KEYSIG_SHARP_ORDER.slice(0, k));
+    if (k < 0) return new Set(KEYSIG_FLAT_ORDER.slice(0, -k));
+    return new Set();
+  }
+  function impliedAccidentalForPosition(position, clef, keySignature) {
+    if (!keySignature) return null;
+    if (!alteredLettersForKeySignature(keySignature).has(staffLetterForPosition(position, clef))) return null;
+    return keySignature > 0 ? 'sharp' : 'flat';
+  }
+  const KEYSIG_GLYPH_POSITIONS = {
+    treble: { sharp: [8, 5, 9, 6, 3, 7, 4], flat: [4, 7, 3, 6, 2, 5, 1] },
+    bass: { sharp: [6, 3, 7, 4, 1, 5, 2], flat: [2, 5, 1, 4, 0, 3, -1] },
+  };
+  const KEYSIG_GLYPH_STEP_PX = 9;
+  const NOTESTAFF_CLEF_W = 24;
+  function notestaffKeySigWidth(keySignature) {
+    return keySignature ? Math.abs(keySignature) * KEYSIG_GLYPH_STEP_PX + 6 : 0;
+  }
+  function notestaffLeadWidth(el) {
+    return NOTESTAFF_CLEF_W + notestaffKeySigWidth(el.keySignature) + 10;
+  }
+  // Bottom line = step 0, top line = step 8, so the full 5-line staff spans
+  // el.h; el.h/8 is one staff step in pixels.
+  function pitchToY(position, el) {
+    return el.y + el.h - position * (el.h / 8);
+  }
+
   let model = JSON.parse(JSON.stringify(initialSheet));
   model.elements = model.elements || [];
 
@@ -166,6 +310,11 @@
   let uidCounter = 0;
   function uid(prefix) { return `${prefix}-${Date.now().toString(36)}-${(uidCounter++).toString(36)}`; }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  // Transient UI state (never saved): the elements picked up by the
+  // marquee, and the marquee box itself while it's being drawn (SVG units).
+  const selectedIds = new Set();
+  let marquee = null;
 
   /* ---------- small SVG helpers ---------- */
   function svgEl(tag, attrs = {}) {
@@ -278,11 +427,17 @@
   }
 
   /* ---------- coordinate conversion ---------- */
-  function svgMetrics() {
-    const svg = document.getElementById('sheet-svg');
+  // General form: scale is that SVG's own CSS-pixel-per-user-unit ratio
+  // (its rendered width over its own viewBox width, falling back to PAGE_W
+  // for the main page SVG, which has no explicit viewBox width otherwise).
+  // Needed because the page isn't the only SVG a drag can happen in -- the
+  // note staff builder's small preview SVG has its own, different scale.
+  function svgMetricsFor(svg) {
     const rect = svg.getBoundingClientRect();
-    return { rect, scale: rect.width / PAGE_W };
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    return { rect, scale: rect.width / (vb && vb.width ? vb.width : PAGE_W) };
   }
+  function svgMetrics() { return svgMetricsFor(document.getElementById('sheet-svg')); }
   function clientToSvg(clientX, clientY) {
     const { rect, scale } = svgMetrics();
     return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
@@ -292,19 +447,153 @@
     return { left: rect.left + x * scale, top: rect.top + y * scale, width: w * scale, height: h * scale };
   }
 
+  /* ---------- marquee selection ---------- */
+  // Approximate on-page footprint of an element, used only to decide what a
+  // marquee "touches" and to outline the selection -- so the padding on the
+  // notation types (stems, beams, ledger lines) needn't be exact.
+  function elementBounds(el) {
+    switch (el.type) {
+      case 'title': case 'chordText': case 'text': {
+        const { w, h } = textBoxSize(el.text, el.fontSize);
+        return { x: el.x, y: el.y, w, h };
+      }
+      case 'row': case 'repeat': case 'volta':
+        return { x: el.x, y: el.y, w: el.w, h: el.h };
+      case 'glyph': {
+        const w = Math.max(20, measureTextWidth(el.code, el.fontSize, 'MuseJazz'));
+        return { x: el.x, y: el.y - el.fontSize * 0.75, w, h: el.fontSize };
+      }
+      case 'arrow': {
+        const { cx, cy } = arrowControlPoint(el);
+        const x0 = Math.min(el.x1, el.x2, cx), x1 = Math.max(el.x1, el.x2, cx);
+        const y0 = Math.min(el.y1, el.y2, cy), y1 = Math.max(el.y1, el.y2, cy);
+        return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+      }
+      case 'rhythmbar': {
+        const pad = el.h * 0.9;
+        return { x: el.x, y: el.y - pad, w: el.w, h: el.h + pad };
+      }
+      case 'notestaff': {
+        const pad = el.h * 0.4;
+        const leadW = notestaffLeadWidth(el);
+        return { x: el.x - 8, y: el.y - pad, w: leadW + el.w + 8, h: el.h + 2 * pad };
+      }
+      default:
+        return { x: el.x || 0, y: el.y || 0, w: 0, h: 0 };
+    }
+  }
+
+  function snapshotPos(el) {
+    return el.type === 'arrow'
+      ? { x1: el.x1, y1: el.y1, x2: el.x2, y2: el.y2 }
+      : { x: el.x, y: el.y };
+  }
+  function applyOffset(el, snap, dx, dy) {
+    if (el.type === 'arrow') {
+      el.x1 = snap.x1 + dx; el.y1 = snap.y1 + dy; el.x2 = snap.x2 + dx; el.y2 = snap.y2 + dy;
+    } else {
+      el.x = snap.x + dx; el.y = snap.y + dy;
+    }
+  }
+
+  // Drops the selection outline nodes straight from the DOM. Used when a
+  // gesture on an unselected element starts: a full re-render inside
+  // mousedown would detach the very node being pressed.
+  function clearSelection() {
+    if (!selectedIds.size) return;
+    selectedIds.clear();
+    document.querySelectorAll('#sheet-svg .el-selection').forEach(n => n.remove());
+  }
+
+  function drawSelectionOverlay(svg) {
+    model.elements.forEach(el => {
+      if (!selectedIds.has(el.id)) return;
+      const b = elementBounds(el);
+      svg.appendChild(svgRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6, { cls: 'el-selection', rx: 3 }));
+    });
+    if (marquee) {
+      const x = Math.min(marquee.x1, marquee.x2), y = Math.min(marquee.y1, marquee.y2);
+      svg.appendChild(svgRect(x, y, Math.abs(marquee.x2 - marquee.x1), Math.abs(marquee.y2 - marquee.y1), { cls: 'el-marquee' }));
+    }
+  }
+
+  // Only empty page space ever lets a mousedown bubble up to the SVG (every
+  // element's own handler stops propagation), so this is the "draw a box"
+  // gesture; a press-and-release without dragging just deselects.
+  function wireMarquee() {
+    document.getElementById('sheet-svg').addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const start = clientToSvg(e.clientX, e.clientY);
+      const startClientX = e.clientX, startClientY = e.clientY;
+      let dragging = false;
+      function onMove(ev) {
+        if (!dragging) {
+          if (Math.abs(ev.clientX - startClientX) < 3 && Math.abs(ev.clientY - startClientY) < 3) return;
+          dragging = true;
+        }
+        const p = clientToSvg(ev.clientX, ev.clientY);
+        marquee = { x1: start.x, y1: start.y, x2: p.x, y2: p.y };
+        const bx0 = Math.min(marquee.x1, marquee.x2), bx1 = Math.max(marquee.x1, marquee.x2);
+        const by0 = Math.min(marquee.y1, marquee.y2), by1 = Math.max(marquee.y1, marquee.y2);
+        selectedIds.clear();
+        model.elements.forEach(el => {
+          const b = elementBounds(el);
+          if (b.x <= bx1 && b.x + b.w >= bx0 && b.y <= by1 && b.y + b.h >= by0) selectedIds.add(el.id);
+        });
+        renderSvg();
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        if (!dragging) { clearSelection(); return; }
+        marquee = null;
+        renderSvg();
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
   /* ---------- drag-vs-click ---------- */
-  function wireDragAndClick(hitEl, onDrag, onClick) {
+  // `moveEl` is passed only by gestures that move a whole element (not
+  // resize/bow/re-pitch handles): if it belongs to a multi-element selection,
+  // the drag moves every selected element by the same offset instead of
+  // calling `onDrag`; otherwise any existing selection is dropped.
+  function wireDragAndClick(hitEl, onDrag, onClick, moveEl) {
     hitEl.addEventListener('mousedown', e => {
       e.preventDefault();
       e.stopPropagation();
+      let groupDrag = null;
+      if (moveEl) {
+        if (selectedIds.has(moveEl.id) && selectedIds.size > 1) {
+          const snaps = model.elements
+            .filter(el => selectedIds.has(el.id))
+            .map(el => ({ el, snap: snapshotPos(el) }));
+          groupDrag = (ddx, ddy) => {
+            snaps.forEach(({ el, snap }) => applyOffset(el, snap, ddx, ddy));
+            markDirty(); renderSvg();
+          };
+        } else {
+          clearSelection();
+        }
+      }
+      // Captured now, while hitEl is still attached -- onDrag re-renders the
+      // whole SVG on every move (detaching hitEl itself), but the SVG
+      // container it lived in is never recreated, so this stays valid for
+      // the rest of the gesture.
+      const ownerSvg = hitEl.ownerSVGElement || document.getElementById('sheet-svg');
       const startX = e.clientX, startY = e.clientY;
       let moved = false;
       function onMove(ev) {
-        const { scale } = svgMetrics();
+        const { scale } = svgMetricsFor(ownerSvg);
         const ddx = (ev.clientX - startX) / scale;
         const ddy = (ev.clientY - startY) / scale;
         if (Math.abs(ddx) > 3 || Math.abs(ddy) > 3) moved = true;
-        if (moved && onDrag) onDrag(ddx, ddy);
+        if (moved) {
+          if (groupDrag) groupDrag(ddx, ddy);
+          else if (onDrag) onDrag(ddx, ddy);
+        }
       }
       function onUp(ev) {
         document.removeEventListener('mousemove', onMove);
@@ -323,39 +612,74 @@
     g.appendChild(handle);
   }
 
+  // Same shape as the resize handle, but moves the whole element instead of
+  // scaling it -- used where the element's own body is already claimed by a
+  // different drag gesture (a note staff's noteheads drag to re-pitch, so
+  // the bar needs its own dedicated way to move).
+  function addMoveHandle(g, x, y, onDrag, moveEl) {
+    const handle = svgRect(x - 5, y - 5, 10, 10, { cls: 'el-move-handle' });
+    wireDragAndClick(handle, onDrag, null, moveEl);
+    g.appendChild(handle);
+  }
+
   /* ---------- inline text-edit overlay ---------- */
   let activeOverlay = null;
+  // Id of the element whose text is currently being typed into. Its own SVG
+  // text is skipped in renderTextEl while the (transparent) overlay input is
+  // showing the same text, so it isn't drawn twice.
+  let editingId = null;
   function closeOverlay(commit) {
     if (!activeOverlay) return;
-    const { input, onCommit } = activeOverlay;
+    const { input, onCommit, onCancel } = activeOverlay;
     const val = input.value;
-    input.remove();
+    // Clear state before removing the input: removing a focused input fires
+    // its blur handler synchronously, which would re-enter closeOverlay.
     activeOverlay = null;
+    editingId = null;
+    input.remove();
     if (commit) onCommit(val);
-    else renderSvg();
+    else { if (onCancel) onCancel(); renderSvg(); }
   }
   document.addEventListener('mousedown', e => {
     if (activeOverlay && e.target !== activeOverlay.input) closeOverlay(true);
   }, true);
 
-  function openTextOverlay({ initialValue, rect, fontSize, onCommit }) {
+  // The input is transparent (see .text-edit-input), so it reads as typing
+  // directly on the page. `getRect` is re-evaluated on every keystroke so the
+  // field tracks the element's auto-fitting box as the text grows; `onInput`
+  // lets the caller update the element live; `onCancel` undoes that on Escape.
+  function openTextOverlay({ elementId, initialValue, getRect, fontSize, color, align, padX, onInput, onCommit, onCancel }) {
     closeOverlay(true);
     const wrap = document.getElementById('page-wrap');
-    const wrapRect = wrap.getBoundingClientRect();
     const { scale } = svgMetrics();
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'text-edit-input';
     input.value = initialValue;
-    input.style.left = `${rect.left - wrapRect.left}px`;
-    input.style.top = `${rect.top - wrapRect.top}px`;
-    input.style.width = `${rect.width}px`;
-    input.style.height = `${rect.height}px`;
     input.style.fontSize = `${fontSize * scale}px`;
+    input.style.color = color;
+    input.style.caretColor = color;
+    input.style.textAlign = align;
+    input.style.paddingLeft = input.style.paddingRight = `${padX * scale}px`;
+    const place = () => {
+      const wrapRect = wrap.getBoundingClientRect();
+      const rect = getRect(input.value);
+      input.style.left = `${rect.left - wrapRect.left}px`;
+      input.style.top = `${rect.top - wrapRect.top}px`;
+      input.style.width = `${rect.width}px`;
+      input.style.height = `${rect.height}px`;
+    };
+    place();
     wrap.appendChild(input);
+    editingId = elementId;
+    activeOverlay = { input, onCommit, onCancel };
+    input.addEventListener('input', () => {
+      onInput(input.value);
+      renderSvg();
+      place();
+    });
     input.focus();
     input.select();
-    activeOverlay = { input, onCommit };
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); closeOverlay(true); }
       else if (e.key === 'Escape') { e.preventDefault(); closeOverlay(false); }
@@ -382,10 +706,61 @@
     if (e.key === 'Escape' && activeRhythmMenu) closeRhythmMenu();
   });
 
-  function openRhythmMenu(clientX, clientY, cells, idx, onApply) {
+  // A row of toggle buttons under a small heading, appended after the
+  // duration grid. `items` are `{ glyph (string or node), label, isOn(), onClick() }`;
+  // each click applies immediately and re-syncs the pressed states, and the
+  // menu stays open so several can be set in one visit.
+  function addMenuToggleSection(menu, title, cols, items) {
+    const heading = document.createElement('div');
+    heading.className = 'rhythm-menu-heading';
+    heading.textContent = title;
+    const row = document.createElement('div');
+    row.className = 'rhythm-menu-row';
+    row.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    const sync = () => items.forEach(it => it.btn.classList.toggle('rhythm-menu-item--on', it.isOn()));
+    items.forEach(it => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'rhythm-menu-item';
+      const glyph = document.createElement('span');
+      glyph.className = 'rhythm-menu-glyph';
+      if (typeof it.glyph === 'string') glyph.textContent = it.glyph;
+      else glyph.appendChild(it.glyph);
+      const label = document.createElement('span');
+      label.className = 'rhythm-menu-label';
+      label.textContent = it.label;
+      btn.appendChild(glyph);
+      btn.appendChild(label);
+      btn.addEventListener('click', () => { it.onClick(); sync(); });
+      it.btn = btn;
+      row.appendChild(btn);
+    });
+    sync();
+    menu.appendChild(heading);
+    menu.appendChild(row);
+  }
+  function articulationIcon(kind) {
+    const svg = svgEl('svg', { width: 28, height: 16, viewBox: '0 0 28 16', class: 'rhythm-menu-icon' });
+    drawArticulations(svg, { aboveX: 14, aboveY: 15, belowX: 14, belowY: 0 }, [kind], 34);
+    return svg;
+  }
+
+  const ACCIDENTAL_MENU_OPTIONS = [
+    { value: null, code: '', label: 'Key default' },
+    { value: 'sharp', code: ACCIDENTAL_CODES.sharp, label: 'Sharp' },
+    { value: 'flat', code: ACCIDENTAL_CODES.flat, label: 'Flat' },
+    { value: 'natural', code: ACCIDENTAL_CODES.natural, label: 'Natural' },
+  ];
+
+  // `opts.onChange()` is called after an in-place change to the cell
+  // (articulation / accidental) so the caller can mark dirty and re-render;
+  // `opts.accidentals` adds the accidental section (note staff only). Both
+  // sections apply to notes only -- a rest just gets the duration grid.
+  function openRhythmMenu(clientX, clientY, cells, idx, onApply, opts = {}) {
     closeRhythmMenu();
     const menu = document.createElement('div');
     menu.className = 'rhythm-menu';
+    const prior = cells[idx];
     rhythmMenuOptionsFor(cells, idx).forEach(opt => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -399,18 +774,66 @@
       btn.appendChild(glyph);
       btn.appendChild(label);
       btn.addEventListener('click', () => {
-        onApply(rebuildRhythmCells(cells, idx, opt));
+        const next = rebuildRhythmCells(cells, idx, opt);
+        // Changing one note to another keeps its articulations; a rest has none.
+        if (opt.type === 'note' && prior.type === 'note' && prior.articulations) {
+          next[idx].articulations = [...prior.articulations];
+        }
+        onApply(next);
         closeRhythmMenu();
       });
       menu.appendChild(btn);
     });
+    const changed = () => { if (opts.onChange) opts.onChange(); };
+    if (prior.type === 'note') {
+      addMenuToggleSection(menu, 'Articulation', 3, ARTICULATION_KINDS.map(k => ({
+        glyph: articulationIcon(k.value),
+        label: k.label,
+        isOn: () => cellHasArticulation(prior, k.value),
+        onClick: () => { toggleCellArticulation(prior, k.value); changed(); },
+      })));
+      if (opts.accidentals) {
+        addMenuToggleSection(menu, 'Accidental', 4, ACCIDENTAL_MENU_OPTIONS.map(a => ({
+          glyph: a.code,
+          label: a.label,
+          isOn: () => (prior.accidental || null) === a.value,
+          onClick: () => { prior.accidental = a.value; changed(); },
+        })));
+      }
+    }
     document.body.appendChild(menu);
+    // Opens to the right of the click (flipping to the left near the window's
+    // right edge) so the note being edited stays visible next to it.
     const mw = menu.offsetWidth, mh = menu.offsetHeight;
-    const left = clamp(clientX, 4, window.innerWidth - mw - 4);
-    const top = clamp(clientY, 4, window.innerHeight - mh - 4);
+    const offset = 36;
+    let left = clientX + offset;
+    if (left + mw > window.innerWidth - 4) left = clientX - offset - mw;
+    left = clamp(left, 4, window.innerWidth - mw - 4);
+    const top = clamp(clientY - 24, 4, window.innerHeight - mh - 4);
     menu.style.left = `${left}px`;
     menu.style.top = `${top}px`;
     activeRhythmMenu = menu;
+  }
+
+  // Wraps the rhythm menu so a note-staff cell picks up pitch/accidental the
+  // same way the machinery already handles duration: a fresh placement (cell
+  // had no pitch yet, i.e. it was a rest) defaults to the middle line with no
+  // accidental; changing an existing note's duration keeps its pitch and
+  // accidental (and, via openRhythmMenu, its articulations) as-is. Clicking or
+  // right-clicking a placed note opens this (see renderStaffCells).
+  function openStaffMenu(clientX, clientY, cells, idx, onApply, onChange) {
+    const prior = cells[idx];
+    openRhythmMenu(clientX, clientY, cells, idx, newCells => {
+      // Read at pick time, not menu-open time: the accidental toggle in the
+      // same menu edits `prior` in place before a duration is chosen.
+      const priorPitch = prior.pitch, priorAccidental = prior.accidental;
+      const nc = newCells[idx];
+      if (nc.type === 'note') {
+        nc.pitch = priorPitch != null ? priorPitch : STAFF_DEFAULT_PITCH;
+        nc.accidental = priorPitch != null ? (priorAccidental != null ? priorAccidental : null) : null;
+      }
+      onApply(newCells);
+    }, { onChange, accidentals: true });
   }
 
   function textBoxSize(text, fontSize) {
@@ -419,16 +842,34 @@
     return { w, h };
   }
 
+  // The clickable/editable number area of a volta bracket, just inside its
+  // left hook; grows with the text so longer labels like "1, 2." still fit.
+  function voltaTextPad(el) { return el.fontSize * 0.6; }
+  function voltaLabelBox(el, text) {
+    return { x: el.x, y: el.y, w: Math.max(el.fontSize * 2.3, measureTextWidth(text, el.fontSize) + 2 * voltaTextPad(el)), h: el.h };
+  }
+
   function startTextEdit(elementId) {
     const el = model.elements.find(e => e.id === elementId);
     if (!el) return;
     const fontSize = el.fontSize;
-    const { w, h } = textBoxSize(el.text, fontSize);
+    const original = el.text || '';
+    const boxed = el.type === 'title';
+    const isVolta = el.type === 'volta';
     openTextOverlay({
-      initialValue: el.text || '',
-      rect: svgRectToScreen(el.x, el.y, w, h),
+      elementId: el.id,
+      initialValue: original,
+      getRect: val => {
+        const { x, y, w, h } = isVolta ? voltaLabelBox(el, val) : { x: el.x, y: el.y, ...textBoxSize(val, fontSize) };
+        return svgRectToScreen(x, y, w, h);
+      },
       fontSize,
+      color: el.type === 'text' ? '#55504a' : '#1a1815',
+      align: boxed ? 'center' : 'left',
+      padX: boxed ? 0 : (isVolta ? voltaTextPad(el) : 8), // renderTextEl starts unboxed text 8px in from the left edge
+      onInput: val => { el.text = val; },
       onCommit: val => { el.text = val; markDirty(); renderSvg(); },
+      onCancel: () => { el.text = original; },
     });
   }
 
@@ -446,28 +887,61 @@
     return null;
   }
 
-  function addElement(type, x, y) {
-    let el;
+  // Builds (but doesn't add) the element a palette/builder drag of `type`
+  // creates, with its origin at (x, y) -- the point that lands under the
+  // cursor on drop. `opts` is the drag payload (bar count, cells, ...).
+  // Shared by addElement and by the drag preview, so what you see while
+  // dragging is exactly what gets placed.
+  function buildElement(type, x, y, opts = {}) {
     if (type === 'title') {
-      el = { id: uid('el'), type: 'title', x, y, text: 'Section', fontSize: 12 };
+      return { id: uid('el'), type: 'title', x, y, text: 'Section', fontSize: 12 };
     } else if (type === 'row') {
-      const n = clamp(parseInt(prompt('How many bars?', '4'), 10) || 4, 1, 9);
-      el = { id: uid('el'), type: 'row', x, y, w: n * BAR_UNIT, h: BAR_H, barCount: n };
+      const n = clamp(parseInt(opts.barCount, 10) || 4, 1, ROW_MAX_BARS);
+      const el = { id: uid('el'), type: 'row', x, y, w: Math.min(n * BAR_UNIT, ROW_MAX_W), h: BAR_H, barCount: n };
+      if (opts.repeatStart) el.repeatStart = true;
+      if (opts.repeatEnd) el.repeatEnd = true;
+      return el;
     } else if (type === 'chordText') {
-      el = { id: uid('el'), type: 'chordText', x, y, text: 'Am', fontSize: 14 };
+      return { id: uid('el'), type: 'chordText', x, y, text: 'Am', fontSize: 14 };
     } else if (type === 'text') {
-      el = { id: uid('el'), type: 'text', x, y, text: 'Note', fontSize: 12 };
+      return { id: uid('el'), type: 'text', x, y, text: 'Note', fontSize: 12 };
     } else if (type === 'repeat-start') {
-      el = { id: uid('el'), type: 'repeat', x, y, w: REPEAT_MARK_W, h: BAR_H, kind: 'start' };
+      return { id: uid('el'), type: 'repeat', x, y, w: REPEAT_MARK_W, h: BAR_H, kind: 'start' };
     } else if (type === 'repeat-end') {
-      el = { id: uid('el'), type: 'repeat', x, y, w: REPEAT_MARK_W, h: BAR_H, kind: 'end' };
+      return { id: uid('el'), type: 'repeat', x, y, w: REPEAT_MARK_W, h: BAR_H, kind: 'end' };
+    } else if (type === 'volta') {
+      return { id: uid('el'), type: 'volta', x, y, w: BAR_UNIT * 2, h: VOLTA_H, text: '1.', fontSize: VOLTA_FONT_SIZE };
     } else if (type === 'arrow') {
-      el = { id: uid('el'), type: 'arrow', x1: x, y1: y, x2: x + 70, y2: y - 40, bow: { dx: 0, dy: 0 } };
+      return { id: uid('el'), type: 'arrow', x1: x, y1: y, x2: x + 70, y2: y - 40, bow: { dx: 0, dy: 0 } };
     } else if (type === 'glyph') {
-      return addGlyph(x, y);
-    } else {
-      return;
+      return { id: uid('el'), type: 'glyph', x, y, code: opts.code || SIMILE_MARK, fontSize: 28 };
+    } else if (type === 'rhythmbar') {
+      const totalUnits = opts.cells.reduce((s, c) => s + c.duration, 0);
+      return {
+        id: uid('el'), type: 'rhythmbar', x, y,
+        w: totalUnits * 10.5, h: 28, // 10.5px/unit matches the old 16-slot/336px default look
+        numerator: opts.numerator || 4, denominator: opts.denominator || 4,
+        cells: JSON.parse(JSON.stringify(opts.cells)),
+      };
+    } else if (type === 'notestaff') {
+      const totalUnits = opts.cells.reduce((s, c) => s + c.duration, 0);
+      return {
+        id: uid('el'), type: 'notestaff', x, y,
+        w: totalUnits * 10.5, h: 40,
+        numerator: opts.numerator || 4, denominator: opts.denominator || 4,
+        clef: opts.clef || 'treble', keySignature: opts.keySignature || 0,
+        cells: JSON.parse(JSON.stringify(opts.cells)),
+      };
     }
+    return null;
+  }
+
+  function addElement(type, x, y, opts) {
+    const el = buildElement(type, x, y, opts);
+    if (!el) return;
+    // A dropped row is kept within the page margins (a full-width row can
+    // only sit at the left margin).
+    if (el.type === 'row') el.x = clamp(el.x, PAGE_MARGIN, PAGE_W - PAGE_MARGIN - el.w);
     model.elements.push(el);
     markDirty();
     render();
@@ -476,28 +950,27 @@
     }
   }
 
-  function addGlyph(x, y, code) {
-    const el = { id: uid('el'), type: 'glyph', x, y, code: code || SIMILE_MARK, fontSize: 28 };
-    model.elements.push(el);
-    markDirty();
-    render();
-  }
-
-  function addRhythmBar(x, y, cells, numerator, denominator) {
-    const totalUnits = cells.reduce((s, c) => s + c.duration, 0);
-    const el = {
-      id: uid('el'), type: 'rhythmbar', x, y,
-      w: totalUnits * 10.5, h: 28, // 10.5px/unit matches the old 16-slot/336px default look
-      numerator: numerator || 4, denominator: denominator || 4,
-      cells: JSON.parse(JSON.stringify(cells)),
-    };
-    model.elements.push(el);
-    markDirty();
-    render();
+  // Copies everything currently marked, a little down and to the right of the
+  // originals, and marks the copies instead -- so the next drag (or another
+  // duplicate) acts on them and the originals stay put.
+  const DUPLICATE_OFFSET = 20;
+  function duplicateSelection() {
+    const copies = model.elements.filter(el => selectedIds.has(el.id)).map(el => {
+      const copy = JSON.parse(JSON.stringify(el));
+      copy.id = uid('el');
+      applyOffset(copy, snapshotPos(copy), DUPLICATE_OFFSET, DUPLICATE_OFFSET);
+      return copy;
+    });
+    if (!copies.length) return;
+    model.elements.push(...copies);
+    selectedIds.clear();
+    copies.forEach(c => selectedIds.add(c.id));
+    markDirty(); render();
   }
 
   function removeElement(id) {
     model.elements = model.elements.filter(e => e.id !== id);
+    selectedIds.delete(id);
     markDirty(); render();
   }
 
@@ -527,15 +1000,17 @@
       g.appendChild(interactiveEl);
     }
 
-    const textX = opts.boxed ? el.x + w / 2 : el.x + 8;
-    g.appendChild(svgText(el.text || '', textX, el.y + h / 2 + fontSize * 0.35, {
-      cls: opts.textCls, anchor: opts.boxed ? 'middle' : 'start', size: fontSize,
-    }));
+    if (el.id !== editingId) {
+      const textX = opts.boxed ? el.x + w / 2 : el.x + 8;
+      g.appendChild(svgText(el.text || '', textX, el.y + h / 2 + fontSize * 0.35, {
+        cls: opts.textCls, anchor: opts.boxed ? 'middle' : 'start', size: fontSize,
+      }));
+    }
 
     const startX = el.x, startY = el.y;
     wireDragAndClick(interactiveEl,
       (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); },
-      () => startTextEdit(el.id));
+      () => startTextEdit(el.id), el);
 
     const startSize = fontSize;
     addResizeHandle(g, el.x + w, el.y + h, (ddx) => {
@@ -555,7 +1030,7 @@
     const hit = svgRect(el.x, el.y, w, h, { cls: 'el-row-hit' });
     g.appendChild(hit);
     const startX = el.x, startY = el.y;
-    wireDragAndClick(hit, (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); }, null);
+    wireDragAndClick(hit, (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); }, null, el);
 
     for (let i = 0; i <= n; i++) {
       if (i === 0 && el.repeatStart) continue; // a repeat mark replaces the plain barline at that edge
@@ -592,7 +1067,7 @@
     addBtn.addEventListener('mousedown', e => e.stopPropagation());
     addBtn.addEventListener('click', e => {
       e.stopPropagation();
-      if (el.barCount < 9) { el.barCount += 1; markDirty(); renderSvg(); }
+      if (el.barCount < ROW_MAX_BARS) { el.barCount += 1; markDirty(); renderSvg(); }
     });
     g.appendChild(addBtn);
 
@@ -634,7 +1109,7 @@
     const startX = el.x, startY = el.y;
     wireDragAndClick(hit,
       (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); },
-      () => { el.kind = el.kind === 'start' ? 'end' : 'start'; markDirty(); renderSvg(); });
+      () => { el.kind = el.kind === 'start' ? 'end' : 'start'; markDirty(); renderSvg(); }, el);
 
     const startW = w, startH = h;
     addResizeHandle(g, el.x + w, el.y + h, (ddx, ddy) => {
@@ -644,6 +1119,43 @@
     });
 
     addDeleteButton(g, el, el.x, el.y, w);
+    svg.appendChild(g);
+  }
+
+  // A volta ("1st/2nd ending") bracket: a line along the top with a hook down
+  // at the left, open at the right, and an editable number tucked under the
+  // line. Only the bracket line and the number are grabbable, so the empty
+  // space inside stays clear for whatever sits beneath it.
+  function renderVoltaEl(svg, el) {
+    const { w, h } = el;
+    const g = svgGroup({ cls: 'el-group' });
+    const d = `M ${el.x} ${el.y + h} L ${el.x} ${el.y} L ${el.x + w} ${el.y}`;
+    g.appendChild(svgPath(d, { cls: 'el-volta-line' }));
+
+    const startX = el.x, startY = el.y;
+    const moveTo = (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); };
+    wireDragAndClick(g.appendChild(svgPath(d, { cls: 'el-arrow-hit' })), moveTo, null, el);
+
+    const box = voltaLabelBox(el, el.text);
+    const label = g.appendChild(svgRect(box.x, box.y, box.w, box.h, { cls: 'el-text-hit' }));
+    wireDragAndClick(label, moveTo, () => startTextEdit(el.id), el);
+    if (el.id !== editingId) {
+      g.appendChild(svgText(el.text || '', el.x + voltaTextPad(el), el.y + h / 2 + el.fontSize * 0.35 + 1, {
+        cls: 'el-volta-text', size: el.fontSize,
+      }));
+    }
+
+    const startW = w, startH = h;
+    addResizeHandle(g, el.x + w, el.y + h, (ddx, ddy) => {
+      el.w = clamp(startW + ddx, 16, PAGE_W);
+      el.h = clamp(startH + ddy, 10, 60);
+      // The number scales with the bracket's height, so shrinking the corner
+      // shrinks the whole volta rather than cramping a full-size number.
+      el.fontSize = clamp(Math.round(el.h * VOLTA_FONT_SIZE / VOLTA_H), 6, 32);
+      markDirty(); renderSvg();
+    });
+
+    addDeleteButton(g, el, el.x, el.y - 6, w);
     svg.appendChild(g);
   }
 
@@ -669,7 +1181,7 @@
     wireDragAndClick(bodyHit, (ddx, ddy) => {
       el.x1 = sx1 + ddx; el.y1 = sy1 + ddy; el.x2 = sx2 + ddx; el.y2 = sy2 + ddy;
       markDirty(); renderSvg();
-    }, null);
+    }, null, el);
 
     const h1 = svgCircle(el.x1, el.y1, 5, { cls: 'el-arrow-handle' });
     wireDragAndClick(h1, (ddx, ddy) => { el.x1 = sx1 + ddx; el.y1 = sy1 + ddy; markDirty(); renderSvg(); }, null);
@@ -703,7 +1215,7 @@
     g.appendChild(hit);
     g.appendChild(svgText(el.code, el.x, el.y, { cls: 'el-glyph-text', size }));
     const startX = el.x, startY = el.y;
-    wireDragAndClick(hit, (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); }, null);
+    wireDragAndClick(hit, (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); }, null, el);
 
     const startSize = size;
     addResizeHandle(g, el.x + w, el.y + h * 0.25, (ddx) => {
@@ -747,7 +1259,14 @@
     if (cell.duration === 6 || cell.duration === 12 || cell.duration === 24 || cell.duration === 48) {
       container.appendChild(svgText(AUG_DOT, stemX + h * 0.08, y, { cls: 'el-glyph-text', size: h }));
     }
-    if (cell.duration === 32 || cell.duration === 48) return; // whole notes: no stem
+    const wholeNote = cell.duration === 32 || cell.duration === 48;
+    drawArticulations(container, {
+      aboveX: wholeNote ? nx + headW / 2 : stemX,
+      aboveY: wholeNote ? y - headW * 0.38 - h * 0.05 : y - stemLen,
+      belowX: nx + headW / 2,
+      belowY: y + headW * 0.38 + h * 0.05,
+    }, cell.articulations, h * 1.2);
+    if (wholeNote) return; // whole notes: no stem
     const stemTopY = y - stemLen;
     container.appendChild(svgLine(stemX, stemY, stemX, stemTopY, { cls: 'el-notegroup-stem' }));
     if (cell.duration === 2 || cell.duration === 4 || cell.duration === 6) {
@@ -760,6 +1279,33 @@
         container.appendChild(flag);
       }
     }
+  }
+
+  // Groups indices of `cells` into beam runs: consecutive beam-eligible
+  // notes (per BEAM_ELIGIBLE_DURATIONS) that don't cross a beat boundary
+  // (beatUnits 32nds, per the bar's time signature). Shared by the rhythm
+  // tool's rhythm-only beaming and the note staff's pitched beaming.
+  // Dotted-8th notes beam together with 8ths/16ths too -- the classic
+  // "dotted-eighth + sixteenth" pattern is always beamed in standard
+  // notation. Beams never cross from one beat into the next, even if the
+  // notes on either side would otherwise be beam-eligible and adjacent -- so
+  // a run also breaks at every beat boundary, not just at rests/long notes.
+  function computeBeamRuns(cells, positions, beatUnits) {
+    const runs = [];
+    let runStart = null;
+    for (let i = 0; i < cells.length; i++) {
+      const eligible = cells[i].type === 'note' && BEAM_ELIGIBLE_DURATIONS.has(cells[i].duration);
+      const crossedBeat = runStart !== null && Math.floor(positions[i] / beatUnits) !== Math.floor(positions[i - 1] / beatUnits);
+      if (runStart !== null && (!eligible || crossedBeat)) {
+        runs.push({ start: runStart, end: i - 1 });
+        runStart = null;
+      }
+      if (eligible && runStart === null) runStart = i;
+    }
+    if (runStart !== null) runs.push({ start: runStart, end: cells.length - 1 });
+    const runOf = new Map();
+    runs.forEach(r => { for (let i = r.start; i <= r.end; i++) runOf.set(i, r); });
+    return { runs, runOf };
   }
 
   // Draws a whole rhythm bar's worth of cells into `container` (either the
@@ -776,7 +1322,7 @@
   // note size) -- the two are independent so an on-page bar can be
   // stretched wider without its notes getting bigger, or taller without
   // spacing the units out.
-  function renderRhythmCells(container, cells, x, y, w, h, onCellClick, onCellDrag, beatUnits) {
+  function renderRhythmCells(container, cells, x, y, w, h, onCellClick, onCellDrag, beatUnits, moveEl) {
     const totalUnits = cells.reduce((s, c) => s + c.duration, 0);
     const avgUnitW = w / totalUnits;
     const cellWidths = allocateCellWidths(cells, w);
@@ -793,37 +1339,18 @@
 
     let cursor = 0;
     const positions = cells.map(c => { const p = cursor; cursor += c.duration; return p; });
-
-    // Dotted-8th notes beam together with 8ths/16ths too -- the classic
-    // "dotted-eighth + sixteenth" pattern is always beamed in standard
-    // notation, with the 16th getting a partial second beam back toward
-    // the dotted note (handled below, since only plain 16ths count toward
-    // the secondary-beam connections). Beams never cross from one beat
-    // into the next (one beat = beatUnits 32nds, per the bar's time
-    // signature), even if the notes on either side would otherwise be
-    // beam-eligible and adjacent -- so a run also breaks at every beat
-    // boundary, not just at rests/long notes.
-    const runs = [];
-    let runStart = null;
-    for (let i = 0; i < cells.length; i++) {
-      const eligible = cells[i].type === 'note' && BEAM_ELIGIBLE_DURATIONS.has(cells[i].duration);
-      const crossedBeat = runStart !== null && Math.floor(positions[i] / beatUnits) !== Math.floor(positions[i - 1] / beatUnits);
-      if (runStart !== null && (!eligible || crossedBeat)) {
-        runs.push({ start: runStart, end: i - 1 });
-        runStart = null;
-      }
-      if (eligible && runStart === null) runStart = i;
-    }
-    if (runStart !== null) runs.push({ start: runStart, end: cells.length - 1 });
-    const runOf = new Map();
-    runs.forEach(r => { for (let i = r.start; i <= r.end; i++) runOf.set(i, r); });
+    // The 16th's partial second beam back toward a dotted-8th neighbor is
+    // handled below (only plain 16ths count toward the secondary-beam
+    // connections); which cells beam together at all comes from the shared
+    // beat-boundary-aware grouping in computeBeamRuns.
+    const { runOf } = computeBeamRuns(cells, positions, beatUnits);
 
     cells.forEach((cell, i) => {
       const cellX = x + positionsPx[i];
       const cellW = cellWidths[i];
       const hit = svgRect(cellX, beamY - beamThick - 4, cellW, (y - beamY) + beamThick + h * 0.9, { cls: 'el-rhythm-cell-hit' });
       container.appendChild(hit);
-      if (onCellDrag) wireDragAndClick(hit, onCellDrag, (clientX, clientY) => onCellClick(i, clientX, clientY));
+      if (onCellDrag) wireDragAndClick(hit, onCellDrag, (clientX, clientY) => onCellClick(i, clientX, clientY), moveEl);
       else hit.addEventListener('click', e => onCellClick(i, e.clientX, e.clientY));
 
       const run = runOf.get(i);
@@ -844,6 +1371,10 @@
             }
             stemXs.push(stemX);
             container.appendChild(svgLine(stemX, stemY, stemX, beamY, { cls: 'el-notegroup-stem' }));
+            drawArticulations(container, {
+              aboveX: stemX, aboveY: beamY - beamThick / 2,
+              belowX: nx + headW / 2, belowY: noteY + headW * 0.38 + h * 0.05,
+            }, cells[k].articulations, h * 1.2);
           }
           // Primary beam always spans the whole run. A secondary beam only
           // applies where 16th notes need it: a full second stroke between
@@ -911,9 +1442,9 @@
     const { topY, bottomY } = renderRhythmCells(g, el.cells, el.x, el.y, el.w, el.h,
       (idx, clientX, clientY) => openRhythmMenu(clientX, clientY, el.cells, idx, newCells => {
         el.cells = newCells; markDirty(); renderSvg();
-      }),
+      }, { onChange: () => { markDirty(); renderSvg(); } }),
       (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); },
-      barBeatUnits(el.denominator || 4));
+      barBeatUnits(el.denominator || 4), el);
 
     // Width and height are independent -- dragging sideways spaces the 16
     // units out without changing note size; dragging up/down scales the
@@ -929,15 +1460,291 @@
     svg.appendChild(g);
   }
 
+  /* ---------- note staff (pitched notation) rendering ---------- */
+  function drawStaffLines(container, el) {
+    const lineGap = el.h / 4;
+    const fullW = notestaffLeadWidth(el) + el.w;
+    for (let i = 0; i < 5; i++) {
+      const ly = el.y + i * lineGap;
+      container.appendChild(svgLine(el.x, ly, el.x + fullW, ly, { cls: 'el-staff-line' }));
+    }
+  }
+
+  // 1 em == the staff's full height, but neither clef anchors on the bottom
+  // line in this font: the treble clef's coil is designed to wrap the G
+  // line (step 2, 2nd from bottom), and the bass clef's two dots straddle
+  // the F line (step 6, 2nd from top) -- anchoring either on the bottom
+  // line instead pulls the whole glyph down past where it belongs.
+  // Verified empirically against the font's own glyph metrics, not just by
+  // convention (this font's clefs don't follow the common bottom-line-anchor
+  // convention other SMuFL fonts use).
+  const CLEF_ANCHOR_POSITION = { treble: 2, bass: 6 };
+  function drawClef(container, el) {
+    container.appendChild(svgText(CLEF_CODES[el.clef], el.x + NOTESTAFF_CLEF_W / 2, pitchToY(CLEF_ANCHOR_POSITION[el.clef], el), {
+      cls: 'el-notestaff-clef', anchor: 'middle', size: el.h,
+    }));
+  }
+
+  function drawKeySignature(container, el) {
+    const k = el.keySignature;
+    if (!k) return;
+    const kind = k > 0 ? 'sharp' : 'flat';
+    const positions = KEYSIG_GLYPH_POSITIONS[el.clef][kind].slice(0, Math.abs(k));
+    const startX = el.x + NOTESTAFF_CLEF_W;
+    positions.forEach((pos, i) => {
+      container.appendChild(svgText(ACCIDENTAL_CODES[kind], startX + i * KEYSIG_GLYPH_STEP_PX, pitchToY(pos, el), {
+        cls: 'el-notestaff-keysig', anchor: 'middle', size: el.h * 0.65,
+      }));
+    });
+  }
+
+  function drawLedgerLines(container, el, cx, position, halfLen) {
+    ledgerStepsFor(position).forEach(s => {
+      container.appendChild(svgLine(cx - halfLen, pitchToY(s, el), cx + halfLen, pitchToY(s, el), { cls: 'el-ledger-line' }));
+    });
+  }
+
+  // Sibling of renderRhythmCells: real pitched noteheads (the font's actual
+  // notehead/clef/accidental glyphs, not the rhythm tool's hand-drawn slash)
+  // positioned per-cell by pitch (staff step) rather than one fixed
+  // baseline. Cell x-layout/width/duration mechanics (allocateCellWidths,
+  // beat-boundary beam runs) are identical to the rhythm tool -- only what's
+  // drawn at each cell, and its vertical position, differ.
+  //
+  // Like the rhythm tool, a note is anchored at the start of its cell, not
+  // centered in it, so it never shifts when its own or a neighbor's duration
+  // changes: it sits at the centre of a 16th-sized slot, which is exactly
+  // where a 16th rest in that cell is drawn. (Rests are picked fresh from the
+  // menu, never resized in place, so they stay centered in their span.)
+  //
+  // Only a note's head is grabbable (not its whole column), and the staff
+  // itself is grabbable anywhere else -- lines, clef, rests -- to move it.
+  // `callbacks` is `{ onCellMenu(idx,clientX,clientY),
+  // onNoteDrag(idx, ddy, startPitch), onMove(ddx, ddy) }` -- onMove is
+  // optional (the sidebar builder preview has nothing to move). A rest fires
+  // onCellMenu on a plain click and moves the staff on a drag; a note fires
+  // onCellMenu on a plain click or right-click (duration, accidental and
+  // articulation, preserving pitch -- see openStaffMenu) and onNoteDrag while
+  // dragging (re-pitch, snapped to the staff-step grid).
+  function renderStaffCells(container, cells, x, y, w, el, callbacks) {
+    const totalUnits = cells.reduce((s, c) => s + c.duration, 0);
+    const cellWidths = allocateCellWidths(cells, w);
+    let cursorPx = 0;
+    const positionsPx = cellWidths.map(cw => { const p = cursorPx; cursorPx += cw; return p; });
+    let cursor = 0;
+    const positions = cells.map(c => { const p = cursor; cursor += c.duration; return p; });
+    const { runOf } = computeBeamRuns(cells, positions, barBeatUnits(el.denominator || 4));
+
+    const noteSize = el.h * 0.65;
+    const stemLen = el.h * 0.68;
+    const beamThick = el.h * 0.12;
+    const beamGap = el.h * 0.16;
+    const midlineY = pitchToY(4, el);
+    const stemHalf = NOTESTAFF_STEM_W / 2;
+
+    const slotW = 2 * w / totalUnits;
+    const noteCx = k => x + positionsPx[k] + Math.min(cellWidths[k], slotW) / 2;
+    const restCx = k => x + positionsPx[k] + cellWidths[k] / 2;
+    const pitchOf = k => (cells[k].pitch != null ? cells[k].pitch : STAFF_DEFAULT_PITCH);
+    const halfWOf = k => noteheadHalfW(cells[k].duration, noteSize);
+    // The stem sits on the head's right edge going up, left edge going down
+    // (pulled in by half its own width so it overlaps the head instead of
+    // leaving a hairline gap), and starts slightly off-center like a real
+    // engraved stem does.
+    const stemXOf = (k, up) => noteCx(k) + (up ? 1 : -1) * (halfWOf(k) - stemHalf);
+    const stemStartYOf = (k, up) => pitchToY(pitchOf(k), el) + (up ? -1 : 1) * noteSize * 0.04;
+
+    if (callbacks.onMove) {
+      const body = svgRect(el.x, el.y - el.h * 0.35, x + w - el.x, el.h * 1.7, { cls: 'el-row-hit' });
+      container.appendChild(body);
+      wireDragAndClick(body, callbacks.onMove, null, el);
+    }
+
+    cells.forEach((cell, i) => {
+      if (cell.type === 'rest') {
+        const hit = svgRect(x + positionsPx[i], el.y - el.h * 0.25, cellWidths[i], el.h * 1.5, { cls: 'el-rhythm-cell-hit' });
+        container.appendChild(hit);
+        const pick = (clientX, clientY) => callbacks.onCellMenu(i, clientX, clientY);
+        if (callbacks.onMove) wireDragAndClick(hit, callbacks.onMove, pick, el);
+        else hit.addEventListener('click', e => pick(e.clientX, e.clientY));
+        return;
+      }
+      const hitW = Math.max(halfWOf(i) * 2 * 1.6, 12), hitH = el.h * 0.35;
+      const hit = svgRect(noteCx(i) - hitW / 2, pitchToY(pitchOf(i), el) - hitH / 2, hitW, hitH, { cls: 'el-note-hit' });
+      container.appendChild(hit);
+      hit.addEventListener('contextmenu', e => { e.preventDefault(); callbacks.onCellMenu(i, e.clientX, e.clientY); });
+      // Captured once per render (i.e. once per gesture -- a drag's own
+      // mousemove/mouseup listeners outlive the re-renders it triggers, so
+      // this closure, not any later one, is what actually keeps firing).
+      // onNoteDrag must apply ddy against this fixed value, never against
+      // the cell's current (already-mutated-mid-drag) pitch, or each tick
+      // would compound on top of the last instead of tracking the cursor.
+      const dragStartPitch = pitchOf(i);
+      wireDragAndClick(hit,
+        (ddx, ddy) => callbacks.onNoteDrag(i, ddy, dragStartPitch),
+        (clientX, clientY) => callbacks.onCellMenu(i, clientX, clientY));
+    });
+
+    const handledRunStarts = new Set();
+    // Where each note's articulations go (see drawArticulations): its highest
+    // and lowest ink -- the stem tip / beam on whichever side the stem points,
+    // else the notehead -- and the x to center on at each end.
+    const articulationAnchor = new Map();
+    const headTopY = k => pitchToY(pitchOf(k), el) - el.h / 8;
+    const headBottomY = k => pitchToY(pitchOf(k), el) + el.h / 8;
+    cells.forEach((cell, i) => {
+      if (cell.type === 'rest') {
+        container.appendChild(svgText(rhythmCellGlyph(cell), restCx(i), midlineY, { cls: 'el-glyph-text', anchor: 'middle', size: el.h * 0.75 }));
+        return;
+      }
+      const cx = noteCx(i), halfW = halfWOf(i);
+      const pitch = pitchOf(i);
+      const noteY = pitchToY(pitch, el);
+      drawLedgerLines(container, el, cx, pitch, halfW + noteSize * 0.1);
+
+      if (cell.accidental) {
+        container.appendChild(svgText(ACCIDENTAL_CODES[cell.accidental], cx - halfW - noteSize * 0.14, noteY, {
+          cls: 'el-notestaff-accidental', anchor: 'end', size: noteSize,
+        }));
+      }
+      container.appendChild(svgText(noteheadCode(cell.duration), cx, noteY, {
+        cls: `el-notehead-oval ${cell.duration >= 16 ? 'el-notehead-oval-open' : 'el-notehead-oval-filled'}`,
+        anchor: 'middle', size: noteSize,
+      }));
+      if (cell.duration === 6 || cell.duration === 12 || cell.duration === 24 || cell.duration === 48) {
+        // A note on a line gets its dot in the space above, like engraved
+        // music, not struck through by the line.
+        const dotY = pitch % 2 === 0 ? noteY - el.h / 8 : noteY;
+        container.appendChild(svgText(AUG_DOT, cx + halfW + noteSize * 0.1, dotY, { cls: 'el-glyph-text', size: noteSize }));
+      }
+      if (cell.duration === 32 || cell.duration === 48) { // whole notes: no stem
+        articulationAnchor.set(i, { aboveX: cx, aboveY: headTopY(i), belowX: cx, belowY: headBottomY(i) });
+        return;
+      }
+
+      const run = runOf.get(i);
+      if (run && run.end > run.start) {
+        if (handledRunStarts.has(run.start)) return;
+        handledRunStarts.add(run.start);
+        const runCells = cells.slice(run.start, run.end + 1);
+        const avgPitch = runCells.reduce((s, c, k) => s + pitchOf(run.start + k), 0) / runCells.length;
+        const stemUp = avgPitch < 4;
+        const extremePitch = stemUp
+          ? Math.max(...runCells.map((c, k) => pitchOf(run.start + k)))
+          : Math.min(...runCells.map((c, k) => pitchOf(run.start + k)));
+        const beamY = pitchToY(extremePitch, el) + (stemUp ? -stemLen : stemLen);
+        const stemXs = [];
+        for (let k = run.start; k <= run.end; k++) {
+          const stemX = stemXOf(k, stemUp);
+          stemXs.push(stemX);
+          container.appendChild(svgLine(stemX, stemStartYOf(k, stemUp), stemX, beamY, { cls: 'el-notegroup-stem' }));
+          articulationAnchor.set(k, stemUp
+            ? { aboveX: stemX, aboveY: beamY - beamThick / 2, belowX: noteCx(k), belowY: headBottomY(k) }
+            : { aboveX: noteCx(k), aboveY: headTopY(k), belowX: stemX, belowY: beamY + beamThick / 2 });
+        }
+        // Beams run out to the stems' outer edges so they cover the stem ends.
+        const primary = svgLine(stemXs[0] - stemHalf, beamY, stemXs[stemXs.length - 1] + stemHalf, beamY, { cls: 'el-notegroup-beam' });
+        primary.setAttribute('stroke-width', beamThick);
+        container.appendChild(primary);
+
+        const beam2Y = beamY + (stemUp ? beamGap : -beamGap);
+        const stubLen = (cellWidths[run.start] || 8) * 0.6;
+        let sStart = null;
+        const stretches = [];
+        for (let k = 0; k <= runCells.length; k++) {
+          const is16 = k < runCells.length && runCells[k].duration === 2;
+          if (is16) { if (sStart === null) sStart = k; }
+          else if (sStart !== null) { stretches.push({ start: sStart, end: k - 1 }); sStart = null; }
+        }
+        stretches.forEach(sr => {
+          if (sr.end > sr.start) {
+            const seg = svgLine(stemXs[sr.start] - stemHalf, beam2Y, stemXs[sr.end] + stemHalf, beam2Y, { cls: 'el-notegroup-beam' });
+            seg.setAttribute('stroke-width', beamThick);
+            container.appendChild(seg);
+          } else {
+            const dir = sr.start < runCells.length - 1 ? 1 : -1;
+            const stub = svgLine(stemXs[sr.start] - dir * stemHalf, beam2Y, stemXs[sr.start] + dir * stubLen, beam2Y, { cls: 'el-notegroup-beam' });
+            stub.setAttribute('stroke-width', beamThick);
+            container.appendChild(stub);
+          }
+        });
+      } else {
+        const stemUp = pitch < 4;
+        const stemX = stemXOf(i, stemUp);
+        const stemTipY = stemUp ? noteY - stemLen : noteY + stemLen;
+        container.appendChild(svgLine(stemX, stemStartYOf(i, stemUp), stemX, stemTipY, { cls: 'el-notegroup-stem' }));
+        articulationAnchor.set(i, stemUp
+          ? { aboveX: stemX, aboveY: stemTipY, belowX: cx, belowY: headBottomY(i) }
+          : { aboveX: cx, aboveY: headTopY(i), belowX: stemX, belowY: stemTipY });
+        if (cell.duration === 2 || cell.duration === 4 || cell.duration === 6) {
+          const flagCode = cell.duration === 2
+            ? (stemUp ? FLAG_CODES['16th-up'] : FLAG_CODES['16th-down'])
+            : (stemUp ? FLAG_CODES['8th-up'] : FLAG_CODES['8th-down']);
+          container.appendChild(svgText(flagCode, stemX - stemHalf, stemTipY, { cls: 'el-notestaff-flag', anchor: 'start', size: noteSize }));
+        }
+      }
+    });
+
+    articulationAnchor.forEach((a, i) => {
+      drawArticulations(container, a, cells[i].articulations, el.h * 0.85);
+    });
+
+    return {
+      topY: pitchToY(STAFF_PITCH_MAX, el) - el.h * 0.3,
+      bottomY: pitchToY(STAFF_PITCH_MIN, el) + el.h * 0.3,
+    };
+  }
+
+  function renderNoteStaffEl(svg, el) {
+    const g = svgGroup({ cls: 'el-group' });
+    const startX = el.x, startY = el.y;
+    const startW = el.w, startH = el.h;
+    const leadW = notestaffLeadWidth(el);
+    const moveTo = (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); };
+
+    drawStaffLines(g, el);
+    drawClef(g, el);
+    drawKeySignature(g, el);
+
+    const { topY, bottomY } = renderStaffCells(g, el.cells, el.x + leadW, el.y, el.w, el, {
+      onCellMenu: (idx, clientX, clientY) => {
+        openStaffMenu(clientX, clientY, el.cells, idx,
+          newCells => { el.cells = newCells; markDirty(); renderSvg(); },
+          () => { markDirty(); renderSvg(); });
+      },
+      onNoteDrag: (idx, ddy, startPitch) => {
+        const deltaSteps = Math.round(-ddy / (el.h / 8));
+        el.cells[idx].pitch = clamp(startPitch + deltaSteps, STAFF_PITCH_MIN, STAFF_PITCH_MAX);
+        markDirty(); renderSvg();
+      },
+      onMove: moveTo,
+    });
+
+    addMoveHandle(g, el.x - 8, el.y + el.h / 2, moveTo, el);
+
+    // Width and height are independent, same as the rhythm bar's resize
+    // handle -- width re-spaces cells, height rescales note/staff size.
+    addResizeHandle(g, el.x + leadW + el.w, bottomY, (ddx, ddy) => {
+      el.w = clamp(startW + ddx, rhythmBarMinWidth(el.cells), PAGE_W - leadW);
+      el.h = clamp(startH + ddy, 24, 160);
+      markDirty(); renderSvg();
+    });
+
+    addDeleteButton(g, el, el.x, topY, leadW + el.w);
+    svg.appendChild(g);
+  }
+
   function renderElement(svg, el) {
     if (el.type === 'title') renderTextEl(svg, el, { boxed: true, textCls: 'el-title-text' });
     else if (el.type === 'chordText') renderTextEl(svg, el, { boxed: false, textCls: 'el-chord-text' });
     else if (el.type === 'text') renderTextEl(svg, el, { boxed: false, textCls: 'el-text-text' });
     else if (el.type === 'row') renderRowEl(svg, el);
     else if (el.type === 'repeat') renderRepeatEl(svg, el);
+    else if (el.type === 'volta') renderVoltaEl(svg, el);
     else if (el.type === 'arrow') renderArrowEl(svg, el);
     else if (el.type === 'glyph') renderGlyphEl(svg, el);
     else if (el.type === 'rhythmbar') renderRhythmBarEl(svg, el);
+    else if (el.type === 'notestaff') renderNoteStaffEl(svg, el);
   }
 
   function renderSvg() {
@@ -955,6 +1762,7 @@
     }
 
     model.elements.forEach(el => renderElement(svg, el));
+    drawSelectionOverlay(svg);
   }
 
   function render() {
@@ -972,13 +1780,54 @@
   }
 
   /* ---------- palette ---------- */
+  // Starts a drag of `payload` (what the page's drop handler reads). The drag
+  // image is the element rendered exactly as it will look once placed -- same
+  // renderer, same on-screen size as on the page -- with the cursor on the
+  // point that becomes its origin, so it's easy to line up before dropping.
+  function startPlacementDrag(e, payload) {
+    e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+    e.dataTransfer.effectAllowed = 'copy';
+    const el = buildElement(payload.type, 0, 0, payload);
+    if (!el) return;
+    const { scale } = svgMetrics();
+    const svg = svgEl('svg', { xmlns: SVG_NS, width: 1, height: 1 });
+    svg.style.cssText = 'position:fixed;left:-10000px;top:0;overflow:visible;pointer-events:none';
+    const root = svgGroup();
+    svg.appendChild(root);
+    renderElement(root, el);
+    document.body.appendChild(svg);
+    try {
+      const bb = root.getBBox();
+      const pad = 3;
+      const vx = bb.x - pad, vy = bb.y - pad, vw = bb.width + 2 * pad, vh = bb.height + 2 * pad;
+      svg.setAttribute('viewBox', `${vx} ${vy} ${vw} ${vh}`);
+      svg.setAttribute('width', vw * scale);
+      svg.setAttribute('height', vh * scale);
+      e.dataTransfer.setDragImage(svg, -vx * scale, -vy * scale);
+    } finally {
+      setTimeout(() => svg.remove(), 0);
+    }
+  }
+
   function wirePaletteDrag(tile) {
     tile.addEventListener('dragstart', e => {
-      e.dataTransfer.setData('text/plain', JSON.stringify({ type: tile.dataset.type, code: tile.dataset.code || null }));
-      e.dataTransfer.effectAllowed = 'copy';
+      startPlacementDrag(e, { type: tile.dataset.type, code: tile.dataset.code || null });
     });
   }
   document.querySelectorAll('.palette-tile').forEach(wirePaletteDrag);
+
+  wireMarquee();
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && selectedIds.size) { selectedIds.clear(); renderSvg(); }
+    // Cmd/Ctrl+D duplicates the marked elements (and keeps the browser from
+    // bookmarking the page). Left alone while typing in any field.
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd' && selectedIds.size) {
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+      e.preventDefault();
+      duplicateSelection();
+    }
+  });
 
   const pageWrap = document.getElementById('page-wrap');
   pageWrap.addEventListener('dragover', e => { e.preventDefault(); pageWrap.classList.add('drag-over'); });
@@ -990,8 +1839,6 @@
     try { payload = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (err) { return; }
     if (!payload || !payload.type) return;
     const { x, y } = clientToSvg(e.clientX, e.clientY);
-    if (payload.type === 'glyph') { addGlyph(x, y, payload.code); return; }
-    if (payload.type === 'rhythmbar') { addRhythmBar(x, y, payload.cells, payload.numerator, payload.denominator); return; }
     if (payload.type === 'repeat-start' || payload.type === 'repeat-end') {
       const row = findRowAt(x, y);
       if (row) {
@@ -1001,7 +1848,50 @@
         return;
       }
     }
-    addElement(payload.type, x, y);
+    addElement(payload.type, x, y, payload);
+  });
+
+  /* ---------- bars builder ---------- */
+  // Type a bar count (and optionally tick repeat start/end), then drag the
+  // preview onto the page as a row of that many bars with those repeat marks
+  // already attached. The count is read again at drag time, so a value typed
+  // but not yet committed (blur/Enter) still counts.
+  const barsCountInput = document.getElementById('bars-count');
+  const barsRepeatStart = document.getElementById('bars-repeat-start');
+  const barsRepeatEnd = document.getElementById('bars-repeat-end');
+  const BARS_PREVIEW_W = 240, BARS_PREVIEW_H = 44;
+  function barsBuilderCount() {
+    return clamp(parseInt(barsCountInput.value, 10) || 4, 1, ROW_MAX_BARS);
+  }
+  function renderBarsBuilderSvg() {
+    const svg = document.getElementById('bars-builder-svg');
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const n = barsBuilderCount();
+    const padX = 8, top = 8, h = BARS_PREVIEW_H - 16;
+    const barW = (BARS_PREVIEW_W - 2 * padX) / n;
+    for (let i = 0; i <= n; i++) {
+      if (i === 0 && barsRepeatStart.checked) continue; // repeat mark replaces the plain barline, as on the page
+      if (i === n && barsRepeatEnd.checked) continue;
+      svg.appendChild(svgHandDrawnBarline(padX + i * barW, top, h, seedFromString(`bars-preview-${i}`), 'el-row-divider'));
+    }
+    if (barsRepeatStart.checked) drawRepeatMark(svg, padX, top, REPEAT_MARK_W, h, 'start', 'bars-preview-repeatStart');
+    if (barsRepeatEnd.checked) drawRepeatMark(svg, BARS_PREVIEW_W - padX - REPEAT_MARK_W, top, REPEAT_MARK_W, h, 'end', 'bars-preview-repeatEnd');
+    svg.setAttribute('viewBox', `0 0 ${BARS_PREVIEW_W} ${BARS_PREVIEW_H}`);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  }
+  renderBarsBuilderSvg();
+  barsCountInput.addEventListener('input', renderBarsBuilderSvg);
+  barsCountInput.addEventListener('change', () => {
+    barsCountInput.value = barsBuilderCount();
+    renderBarsBuilderSvg();
+  });
+  barsRepeatStart.addEventListener('change', renderBarsBuilderSvg);
+  barsRepeatEnd.addEventListener('change', renderBarsBuilderSvg);
+  document.getElementById('bars-builder-drag').addEventListener('dragstart', e => {
+    startPlacementDrag(e, {
+      type: 'row', barCount: barsBuilderCount(),
+      repeatStart: barsRepeatStart.checked, repeatEnd: barsRepeatEnd.checked,
+    });
   });
 
   /* ---------- rhythm bar builder ---------- */
@@ -1023,7 +1913,7 @@
     renderRhythmCells(svg, builderCells, 6, 40, builderW, BUILDER_H,
       (idx, clientX, clientY) => openRhythmMenu(clientX, clientY, builderCells, idx, newCells => {
         builderCells = newCells; renderBuilderSvg();
-      }),
+      }, { onChange: renderBuilderSvg }),
       null, barBeatUnits(builderDenominator));
     const vbW = builderW + 12;
     svg.setAttribute('viewBox', `0 0 ${vbW} 68`);
@@ -1038,10 +1928,9 @@
   renderBuilderSvg();
 
   document.getElementById('rhythm-builder-drag').addEventListener('dragstart', e => {
-    e.dataTransfer.setData('text/plain', JSON.stringify({
+    startPlacementDrag(e, {
       type: 'rhythmbar', cells: builderCells, numerator: builderNumerator, denominator: builderDenominator,
-    }));
-    e.dataTransfer.effectAllowed = 'copy';
+    });
   });
   document.getElementById('rhythm-builder-reset').addEventListener('click', () => {
     builderCells = defaultRhythmCells(barTotalUnits(builderNumerator, builderDenominator));
@@ -1058,6 +1947,84 @@
   }
   wireTimeSigInput('rhythm-time-num', v => { builderNumerator = v; });
   wireTimeSigInput('rhythm-time-den', v => { builderDenominator = v; });
+
+  /* ---------- note staff builder ---------- */
+  // Same idea as the rhythm bar builder above, plus clef and key-signature
+  // controls. Unlike the rhythm builder (click-only, since a rhythm cell has
+  // no drag of its own), this preview is fully interactive -- dragging a
+  // note re-pitches it and clicking one opens the accidental menu, exactly
+  // like the on-page version -- since there's no reason to restrict that
+  // here.
+  let staffBuilderNumerator = 4, staffBuilderDenominator = 4;
+  let staffBuilderClef = 'treble';
+  let staffBuilderKeySignature = 0;
+  let staffBuilderCells = defaultRhythmCells(barTotalUnits(staffBuilderNumerator, staffBuilderDenominator));
+  const STAFF_BUILDER_H = 40;
+  const STAFF_BUILDER_UNIT_PX = 7.5;
+
+  function renderStaffBuilderSvg() {
+    const svg = document.getElementById('notestaff-builder-svg');
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const builderW = barTotalUnits(staffBuilderNumerator, staffBuilderDenominator) * STAFF_BUILDER_UNIT_PX;
+    const builderEl = {
+      x: 10, y: 40, h: STAFF_BUILDER_H, w: builderW,
+      clef: staffBuilderClef, keySignature: staffBuilderKeySignature, denominator: staffBuilderDenominator,
+    };
+    const leadW = notestaffLeadWidth(builderEl);
+
+    drawStaffLines(svg, builderEl);
+    drawClef(svg, builderEl);
+    drawKeySignature(svg, builderEl);
+    renderStaffCells(svg, staffBuilderCells, builderEl.x + leadW, builderEl.y, builderW, builderEl, {
+      onCellMenu: (idx, clientX, clientY) => {
+        openStaffMenu(clientX, clientY, staffBuilderCells, idx,
+          newCells => { staffBuilderCells = newCells; renderStaffBuilderSvg(); },
+          renderStaffBuilderSvg);
+      },
+      onNoteDrag: (idx, ddy, startPitch) => {
+        const deltaSteps = Math.round(-ddy / (STAFF_BUILDER_H / 8));
+        staffBuilderCells[idx].pitch = clamp(startPitch + deltaSteps, STAFF_PITCH_MIN, STAFF_PITCH_MAX);
+        renderStaffBuilderSvg();
+      },
+    });
+
+    const vbW = leadW + builderW + 14;
+    svg.setAttribute('viewBox', `0 0 ${vbW} 120`);
+    svg.setAttribute('width', vbW);
+    svg.setAttribute('height', 120);
+    svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
+  }
+  renderStaffBuilderSvg();
+
+  document.getElementById('staff-builder-drag').addEventListener('dragstart', e => {
+    startPlacementDrag(e, {
+      type: 'notestaff', cells: staffBuilderCells, numerator: staffBuilderNumerator, denominator: staffBuilderDenominator,
+      clef: staffBuilderClef, keySignature: staffBuilderKeySignature,
+    });
+  });
+  document.getElementById('staff-builder-reset').addEventListener('click', () => {
+    staffBuilderCells = defaultRhythmCells(barTotalUnits(staffBuilderNumerator, staffBuilderDenominator));
+    renderStaffBuilderSvg();
+  });
+  function wireStaffTimeSigInput(id, apply) {
+    document.getElementById(id).addEventListener('change', e => {
+      const v = clamp(parseInt(e.target.value, 10) || 4, 1, 32);
+      e.target.value = v;
+      apply(v);
+      staffBuilderCells = defaultRhythmCells(barTotalUnits(staffBuilderNumerator, staffBuilderDenominator));
+      renderStaffBuilderSvg();
+    });
+  }
+  wireStaffTimeSigInput('staff-time-num', v => { staffBuilderNumerator = v; });
+  wireStaffTimeSigInput('staff-time-den', v => { staffBuilderDenominator = v; });
+  document.getElementById('staff-clef').addEventListener('change', e => {
+    staffBuilderClef = e.target.value;
+    renderStaffBuilderSvg();
+  });
+  document.getElementById('staff-keysig').addEventListener('change', e => {
+    staffBuilderKeySignature = parseInt(e.target.value, 10) || 0;
+    renderStaffBuilderSvg();
+  });
 
   /* ---------- toolbar wiring ---------- */
   document.getElementById('sheet-title').addEventListener('input', e => { model.title = e.target.value; markDirty(); renderSvg(); });
