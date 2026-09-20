@@ -17,21 +17,12 @@
     <button type="button" id="save-btn" class="primary">Save</button>
   </div>
 </div>
-<p class="editor-hint-static no-print">Drag an element from either side onto the page. Click text to edit it; drag anywhere else on an element to move it. Hover an element for its &times; to delete it, or its corner handle to resize it.</p>
+<p class="editor-hint-static no-print">Drag an element from either side onto the page. Click text (or a volta's number) to edit it; drag anywhere else on an element to move it. Hover an element for its &times; to delete it, or its corner handle to resize it. On a rhythm bar or note staff, click a note to change its duration or add a fermata, accent or staccato (on a note staff also an accidental); on a note staff, drag a note up/down to change its pitch. Draw a box around elements to mark them; Press Cmd/Ctrl+D to copy what's marked, then drag the copies where you want them.</p>
 
 <div class="editor-layout">
   <div class="editor-palette editor-palette--side no-print">
     <div class="palette-tile" draggable="true" data-type="title" title="Title box">
       <span class="tile-title-box">Title</span>
-    </div>
-    <div class="palette-tile" draggable="true" data-type="row" title="Bars">
-      <svg class="tile-svg" width="60" height="24" viewBox="0 0 60 24">
-        <line x1="2" y1="2" x2="2" y2="22" stroke-width="1" />
-        <line x1="16" y1="2" x2="16" y2="22" stroke-width="1" />
-        <line x1="30" y1="2" x2="30" y2="22" stroke-width="1" />
-        <line x1="44" y1="2" x2="44" y2="22" stroke-width="1" />
-        <line x1="58" y1="2" x2="58" y2="22" stroke-width="1" />
-      </svg>
     </div>
     <div class="palette-tile" draggable="true" data-type="chordText" title="Chord text">
       <span class="tile-chord-text">Am</span>
@@ -55,6 +46,12 @@
         <line x1="12" y1="1" x2="12" y2="27" stroke-width="3" />
       </svg>
     </div>
+    <div class="palette-tile" draggable="true" data-type="volta" title="Volta (1st/2nd ending)">
+      <svg class="tile-svg" width="42" height="24" viewBox="0 0 46 28">
+        <path d="M3 25 V4 H43" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        <text x="8" y="20" class="tile-volta-num">1.</text>
+      </svg>
+    </div>
     <div class="palette-tile" draggable="true" data-type="arrow" title="Arrow">
       <svg class="tile-svg" width="42" height="24" viewBox="0 0 46 28">
         <defs>
@@ -73,6 +70,26 @@
   </div>
 
   <div id="glyph-palette" class="editor-palette editor-palette--side no-print">
+    <div class="bars-builder">
+      <div class="bars-builder-count">
+        <label>Bars
+          <input type="number" id="bars-count" min="1" max="12" value="4" />
+        </label>
+      </div>
+      <div class="bars-builder-repeats">
+        <label title="Start the row with a repeat sign">
+          <input type="checkbox" id="bars-repeat-start" /> Repeat start
+        </label>
+        <label title="End the row with a repeat sign">
+          <input type="checkbox" id="bars-repeat-end" /> Repeat end
+        </label>
+      </div>
+      <svg id="bars-builder-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="bars-builder-controls">
+        <span id="bars-builder-drag" class="bars-builder-drag" draggable="true" title="Drag these bars onto the page">&#10021; drag to page</span>
+      </div>
+    </div>
+
     <div class="rhythm-builder">
       <div class="rhythm-builder-timesig">
         <label>Time signature
@@ -85,6 +102,46 @@
       <div class="rhythm-builder-controls">
         <span id="rhythm-builder-drag" class="rhythm-builder-drag" draggable="true" title="Drag this rhythm bar onto the page">&#10021; drag to page</span>
         <button type="button" id="rhythm-builder-reset">Reset</button>
+      </div>
+    </div>
+
+    <div class="staff-builder">
+      <div class="staff-builder-controls-row">
+        <label>Time
+          <input type="number" id="staff-time-num" min="1" max="32" value="4" />
+          /
+          <input type="number" id="staff-time-den" min="1" max="32" value="4" />
+        </label>
+        <label>Clef
+          <select id="staff-clef">
+            <option value="treble">Treble</option>
+            <option value="bass">Bass</option>
+          </select>
+        </label>
+        <label>Key
+          <select id="staff-keysig">
+            <option value="-7">Cb (7 flats)</option>
+            <option value="-6">Gb (6 flats)</option>
+            <option value="-5">Db (5 flats)</option>
+            <option value="-4">Ab (4 flats)</option>
+            <option value="-3">Eb (3 flats)</option>
+            <option value="-2">Bb (2 flats)</option>
+            <option value="-1">F (1 flat)</option>
+            <option value="0" selected>C (none)</option>
+            <option value="1">G (1 sharp)</option>
+            <option value="2">D (2 sharps)</option>
+            <option value="3">A (3 sharps)</option>
+            <option value="4">E (4 sharps)</option>
+            <option value="5">B (5 sharps)</option>
+            <option value="6">F# (6 sharps)</option>
+            <option value="7">C# (7 sharps)</option>
+          </select>
+        </label>
+      </div>
+      <svg id="notestaff-builder-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="staff-builder-controls">
+        <span id="staff-builder-drag" class="staff-builder-drag" draggable="true" title="Drag this note staff onto the page">&#9834; drag to page</span>
+        <button type="button" id="staff-builder-reset">Reset</button>
       </div>
     </div>
   </div>

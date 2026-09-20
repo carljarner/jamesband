@@ -1471,6 +1471,8 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   justify-content: center;
   gap: 0.9rem;
   flex-wrap: wrap;
+  /* Room to scroll past the bottom of the page (screen only, see print). */
+  padding-bottom: 400px;
 }
 
 .editor-palette {
@@ -1483,7 +1485,19 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   flex: 0 0 auto;
   flex-direction: column;
   width: 64px;
+  /* Stay in view while the (tall) page scrolls, so elements can be dragged
+     onto any part of it. */
+  position: sticky;
+  top: 1rem;
 }
+/* The builders column can be taller than a short window: scroll it
+   internally rather than leaving its bottom unreachable. */
+#glyph-palette {
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  flex-wrap: nowrap;
+}
+#glyph-palette > * { flex-shrink: 0; }
 
 /* The right-side (rhythm) palette is wider than the left, to fit the
    rhythm bar builder at a legible size. */
@@ -1510,7 +1524,8 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 
 .editor-palette--side .palette-tile { width: 100%; }
 
-.rhythm-builder {
+.rhythm-builder,
+.bars-builder {
   background: #16181d;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 6px;
@@ -1529,7 +1544,16 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   border-radius: 3px;
 }
 
-.rhythm-builder-controls {
+#bars-builder-svg {
+  display: block;
+  width: 100%;
+  height: 44px;
+  background: #fbfaf6;
+  border-radius: 3px;
+}
+
+.rhythm-builder-controls,
+.bars-builder-controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1537,7 +1561,8 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   margin-top: 0.4rem;
 }
 
-.rhythm-builder-drag {
+.rhythm-builder-drag,
+.bars-builder-drag {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.5rem;
@@ -1549,29 +1574,123 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   cursor: grab;
 }
 
-.rhythm-builder-drag:active { cursor: grabbing; }
+.rhythm-builder-drag:active,
+.bars-builder-drag:active { cursor: grabbing; }
 
 #rhythm-builder-reset {
   padding: 0.25rem 0.55rem;
   font-size: 0.68rem;
 }
 
-.rhythm-builder-timesig {
+.rhythm-builder-timesig,
+.bars-builder-count {
   margin-bottom: 0.4rem;
   font-size: 0.72rem;
   color: var(--text-dim);
 }
 
-.rhythm-builder-timesig label {
+.rhythm-builder-timesig label,
+.bars-builder-count label {
   display: flex;
   align-items: center;
   gap: 0.3rem;
 }
 
-.rhythm-builder-timesig input[type="number"] {
+/* Repeat start/end options, on their own row under the bar count. */
+.bars-builder-repeats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.bars-builder-repeats label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.bars-builder-repeats input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.rhythm-builder-timesig input[type="number"],
+.bars-builder-count input[type="number"] {
   width: 2.6rem;
   padding: 0.15rem 0.3rem;
   font-size: 0.72rem;
+}
+
+.staff-builder {
+  background: #16181d;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+#notestaff-builder-svg {
+  display: block;
+  width: 100%;
+  height: 120px;
+  background: #fbfaf6;
+  border-radius: 3px;
+}
+
+.staff-builder-controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.staff-builder-controls-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.staff-builder-controls-row input[type="number"] {
+  width: 2.6rem;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.72rem;
+}
+
+.staff-builder-controls-row select {
+  padding: 0.15rem 0.3rem;
+  font-size: 0.72rem;
+}
+
+.staff-builder-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.staff-builder-drag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background: #fbfaf6;
+  color: #1a1815;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 3px;
+  font-size: 0.68rem;
+  cursor: grab;
+}
+
+.staff-builder-drag:active { cursor: grabbing; }
+
+#staff-builder-reset {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.68rem;
 }
 
 .tile-title-box {
@@ -1589,6 +1708,7 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .tile-svg { display: block; overflow: visible; }
 .tile-svg line, .tile-svg path { stroke: #1a1815; }
 .tile-svg circle { fill: #1a1815; }
+.tile-volta-num { font-family: 'MuseJazzText', cursive; font-size: 13px; fill: #1a1815; }
 
 .palette-tile--glyph {
   font-family: 'MuseJazz', serif;
@@ -1620,19 +1740,24 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   aspect-ratio: 794 / 1123;
 }
 
-.text-edit-input {
+/* Inline text editing writes straight onto the page: no fill, border or
+   focus ring. The `input.` prefix is needed to beat the app-wide
+   input[type="text"] / input:focus rules (dark pill + red focus border).
+   Colour and alignment are set inline to match the element being edited. */
+input.text-edit-input,
+input.text-edit-input:focus {
   position: absolute;
   box-sizing: border-box;
-  border: 2px solid var(--accent);
-  border-radius: 3px;
-  padding: 0 4px;
-  font-family: 'Inter', sans-serif;
-  color: #1a1815;
-  background: #fff;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  font-family: 'MuseJazzText', cursive;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
   z-index: 50;
 }
-
-.text-edit-input:focus { outline: none; }
 
 .rhythm-menu {
   position: fixed;
@@ -1668,7 +1793,34 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   font-family: 'MuseJazz', serif;
   font-size: 1.3rem;
   line-height: 1;
+  min-height: 1.3rem;
+  display: flex;
+  align-items: flex-end;
 }
+
+/* Extra sections under the duration grid (articulation / accidental): a
+   heading plus a row of toggle buttons spanning every grid column. The
+   button whose value is currently set on the cell shows as pressed. */
+.rhythm-menu-heading {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.rhythm-menu-row {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.rhythm-menu-item--on { border-color: var(--accent); background: rgba(255,90,78,0.16); }
+
+.rhythm-menu-icon { display: block; overflow: visible; }
+.rhythm-menu-icon .el-artic-line { stroke: var(--text); }
+.rhythm-menu-icon .el-artic-dot { fill: var(--text); }
 
 .rhythm-menu-label {
   font-size: 0.62rem;
@@ -1680,8 +1832,9 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 @media (max-width: 1000px) {
   .editor-layout { flex-direction: column; align-items: center; }
   .editor-palette--side, #glyph-palette { flex-direction: row; flex-wrap: wrap; width: auto; justify-content: center; }
+  .editor-palette--side, #glyph-palette { position: static; max-height: none; overflow: visible; flex-wrap: wrap; }
   .editor-palette--side .palette-tile { width: auto; }
-  .rhythm-builder { width: 100%; max-width: 300px; }
+  .bars-builder, .rhythm-builder, .staff-builder { width: 100%; max-width: 300px; }
   .page-wrap { width: 100%; order: -1; }
 }
 
@@ -1693,6 +1846,9 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .page-bg { fill: #fbfaf6; stroke: rgba(0,0,0,0.12); stroke-width: 1; }
 .page-title-text { fill: #1a1815; font-family: 'MuseJazzText', cursive; letter-spacing: 0.01em; }
 .page-key-text { fill: #55504a; font-family: 'MuseJazzText', cursive; }
+
+.el-selection { fill: rgba(255,90,78,0.08); stroke: #ff5a4e; stroke-width: 1.5; stroke-dasharray: 4 3; pointer-events: none; }
+.el-marquee { fill: rgba(255,90,78,0.12); stroke: #ff5a4e; stroke-width: 1; pointer-events: none; }
 
 .el-title-box-fill { fill: #fff; stroke: none; }
 .el-title-box-stroke { fill: none; stroke: #1a1815; stroke-width: 1.5; stroke-linecap: round; }
@@ -1718,6 +1874,9 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .el-repeat-thin { stroke: #1a1815; stroke-width: 1; }
 .el-repeat-dot { fill: #1a1815; }
 
+.el-volta-line { stroke: #1a1815; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.el-volta-text { fill: #1a1815; font-family: 'MuseJazzText', cursive; }
+
 .el-arrow-path { stroke: #1a1815; stroke-width: 1.5; fill: none; }
 .el-arrow-hit { stroke: transparent; stroke-width: 14; fill: none; cursor: grab; }
 .el-arrow-handle { fill: #fff; stroke: #1a1815; stroke-width: 1.5; cursor: grab; opacity: 0.55; }
@@ -1736,7 +1895,13 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .page-key-text,
 .el-title-text,
 .el-chord-text,
-.el-text-text {
+.el-text-text,
+.el-volta-text,
+.el-notestaff-clef,
+.el-notestaff-keysig,
+.el-notestaff-accidental,
+.el-notestaff-flag,
+.el-notehead-oval {
   pointer-events: none;
   user-select: none;
 }
@@ -1748,9 +1913,31 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .el-rhythm-cell-hit { fill: transparent; cursor: pointer; }
 .el-rhythm-cell-hit:hover { fill: rgba(0,0,0,0.04); }
 
-.el-notegroup-stem { stroke: #1a1815; stroke-width: 1.5; }
-.el-notegroup-beam { stroke: #1a1815; }
+.el-note-hit { fill: transparent; cursor: ns-resize; }
+.el-note-hit:hover { fill: rgba(0,0,0,0.06); }
+
+/* Drawn lines sit above the hit rects, so they must not swallow the mouse. */
+.el-artic-line { stroke: #1a1815; fill: none; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.el-artic-dot { fill: #1a1815; pointer-events: none; }
+
+.el-notegroup-stem { stroke: #1a1815; stroke-width: 1.5; pointer-events: none; }
+.el-notegroup-beam { stroke: #1a1815; pointer-events: none; }
 .el-notehead-slash { stroke: #1a1815; stroke-linecap: round; }
+
+.el-staff-line { stroke: #1a1815; stroke-width: 1; pointer-events: none; }
+.el-ledger-line { stroke: #1a1815; stroke-width: 1; pointer-events: none; }
+.el-notestaff-clef,
+.el-notestaff-keysig,
+.el-notestaff-accidental,
+.el-notestaff-flag,
+.el-notehead-oval {
+  fill: #1a1815;
+  font-family: 'MuseJazz', serif;
+}
+
+.el-move-handle { fill: #fff; stroke: #1a1815; stroke-width: 1.5; cursor: move; opacity: 0; }
+.el-group:hover .el-move-handle { opacity: 0.85; }
+.el-move-handle:hover { opacity: 1; }
 
 .el-delete {
   fill: #b0392e;
@@ -1775,14 +1962,31 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 @media print {
   .no-print { display: none !important; }
   .topbar, .main-nav { display: none !important; }
-  body { background: #fff; }
-  .page-wrap { box-shadow: none; width: 100%; }
-  .el-delete, .el-row-addbar, .el-row-removebar, .el-resize-handle,
-  .el-arrow-handle, .el-arrow-bow-handle { display: none; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  /* Drop the on-screen chrome (container padding, flex layout, palettes)
+     so the sheet is the only thing on the paper and fills the full A4 sheet
+     edge to edge. 296mm rather than 297mm avoids a spurious blank 2nd page
+     from sub-pixel rounding. */
+  main.container { max-width: none; margin: 0; padding: 0; }
+  .editor-layout { display: block; padding-bottom: 0; }
+  .page-wrap {
+    box-shadow: none;
+    border-radius: 0;
+    width: 210mm;
+    max-width: none;
+    height: 296mm;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-after: avoid;
+  }
+  #sheet-svg { width: 100%; height: 100%; aspect-ratio: auto; }
+  .el-delete, .el-row-addbar, .el-row-removebar, .el-resize-handle, .el-move-handle,
+  .el-arrow-handle, .el-arrow-bow-handle, .el-selection, .el-marquee { display: none; }
   /* The on-screen page/title-box tones are a warm off-white "paper" look;
      on paper that would just waste toner on a tinted fill, so print pure
      white for both instead. */
   .page-bg, .el-title-box-fill { fill: #fff; }
+  .page-bg { stroke: none; }
   @page { size: A4 portrait; margin: 0; }
 }
 
