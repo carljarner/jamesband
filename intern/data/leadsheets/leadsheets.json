@@ -3,7 +3,7 @@
     "id": "test",
     "title": "Kom Tilbage Nu",
     "key": "Am",
-    "updated_at": "2026-09-20T20:51:23.414716+00:00",
+    "updated_at": "2026-09-21T07:32:11.652669+00:00",
     "elements": [
       {
         "id": "el-mtu3curh-5",
@@ -11,7 +11,7 @@
         "x": 24,
         "y": 74.4765625,
         "text": "Intro",
-        "fontSize": 19
+        "fontSize": 17
       },
       {
         "id": "el-mua8yupt-0",
@@ -35,7 +35,7 @@
         "x": 24,
         "y": 157.8828125,
         "text": "Vers",
-        "fontSize": 18
+        "fontSize": 17
       },
       {
         "id": "el-mua91g8h-0",
@@ -43,7 +43,7 @@
         "x": 51,
         "y": 201.8828125,
         "w": 657,
-        "h": 31,
+        "h": 27,
         "barCount": 8,
         "repeatStart": true,
         "repeatEnd": true
@@ -134,7 +134,7 @@
         "x": 626,
         "y": 258.8828125,
         "w": 74,
-        "h": 29,
+        "h": 27,
         "barCount": 1
       },
       {
@@ -179,7 +179,7 @@
         "x": 25,
         "y": 278.8828125,
         "text": "Bro",
-        "fontSize": 18
+        "fontSize": 17
       },
       {
         "id": "el-mua9agsu-b",
@@ -187,7 +187,7 @@
         "x": 51,
         "y": 327.8828125,
         "w": 656,
-        "h": 30,
+        "h": 27,
         "barCount": 8
       },
       {
@@ -252,13 +252,13 @@
         "x": 23,
         "y": 377.8828125,
         "text": "1/2 Vers + Breaks",
-        "fontSize": 16
+        "fontSize": 17
       },
       {
         "id": "el-mua9dvh0-3",
         "type": "text",
-        "x": 46,
-        "y": 425.8828125,
+        "x": 39,
+        "y": 421.8828125,
         "text": "(8 takter)",
         "fontSize": 22
       },
@@ -280,7 +280,7 @@
         "x": 237,
         "y": 427.8828125,
         "w": 328,
-        "h": 30,
+        "h": 27,
         "barCount": 4
       },
       {
@@ -428,7 +428,7 @@
         "x": 24,
         "y": 471.8828125,
         "text": "Omkv\u00e6d",
-        "fontSize": 16
+        "fontSize": 17
       },
       {
         "id": "el-mua9j2js-l",
@@ -436,7 +436,7 @@
         "x": 51,
         "y": 511.8828125,
         "w": 650,
-        "h": 28,
+        "h": 27,
         "barCount": 8
       },
       {
@@ -517,7 +517,7 @@
         "x": 26,
         "y": 550.8828125,
         "text": "Vers",
-        "fontSize": 19
+        "fontSize": 17
       },
       {
         "id": "el-mua9llbe-19",
@@ -525,7 +525,7 @@
         "x": 27,
         "y": 600.8828125,
         "text": "Bro",
-        "fontSize": 18
+        "fontSize": 17
       },
       {
         "id": "el-mua9lww2-1b",
@@ -533,7 +533,7 @@
         "x": 26,
         "y": 651.8828125,
         "text": "1/2 Vers + Breaks",
-        "fontSize": 16
+        "fontSize": 17
       },
       {
         "id": "el-mua9mvz2-1d",
@@ -541,7 +541,7 @@
         "x": 26,
         "y": 698.8828125,
         "text": "1/2 Omkv + Breaks",
-        "fontSize": 16
+        "fontSize": 17
       },
       {
         "id": "el-mua9qo6b-1i",
@@ -549,7 +549,7 @@
         "x": 29,
         "y": 793.8828125,
         "text": "2x Omkv",
-        "fontSize": 15
+        "fontSize": 17
       },
       {
         "id": "el-mua9r6y8-1k",
@@ -557,7 +557,7 @@
         "x": 29,
         "y": 843.8828125,
         "text": "Super-break",
-        "fontSize": 16
+        "fontSize": 17
       },
       {
         "id": "el-mua9s4ft-1o",
@@ -565,7 +565,7 @@
         "x": 45,
         "y": 904.8828125,
         "w": 384,
-        "h": 23,
+        "h": 27,
         "barCount": 4
       },
       {
@@ -758,7 +758,7 @@
         "x": 44,
         "y": 1006.8828125,
         "w": 384,
-        "h": 23,
+        "h": 27,
         "barCount": 4
       },
       {
@@ -1128,7 +1128,7 @@
         "x": 40,
         "y": 743.8984375,
         "w": 656,
-        "h": 26,
+        "h": 27,
         "barCount": 8
       },
       {
@@ -1153,7 +1153,7 @@
         "x": 50,
         "y": 120.3984375,
         "w": 708,
-        "h": 24,
+        "h": 27,
         "barCount": 12
       },
       {

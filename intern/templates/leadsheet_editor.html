@@ -17,7 +17,7 @@
     <button type="button" id="save-btn" class="primary">Save</button>
   </div>
 </div>
-<p class="editor-hint-static no-print">Drag an element from either side onto the page. Click text (or a volta's number) to edit it; drag anywhere else on an element to move it. Hover an element for its &times; to delete it, or its corner handle to resize it. On a rhythm bar or note staff, click a note to change its duration or add a fermata, accent or staccato (on a note staff also an accidental); on a note staff, drag a note up/down to change its pitch. Draw a box around elements to mark them; Press Cmd/Ctrl+D to copy what's marked, then drag the copies where you want them.</p>
+<p class="editor-hint-static no-print">Drag an element from either side onto the page. Click text (or a volta's number) to edit it; click a bar's chord box to type a chord, and press Tab / Shift+Tab to move between the boxes (type - for a full-bar rest, r for a repeat-bar sign); drag anywhere else on an element to move it. Hover an element for its &times; to delete it, or its corner handle to resize it. On a rhythm bar or note staff, click a note to change its duration or add a fermata, accent or staccato (on a note staff also an accidental); on a note staff, drag a note up/down to change its pitch. Draw a box around elements to mark them; Press Cmd/Ctrl+D to copy what's marked, then drag the copies where you want them.</p>
 
 <div class="editor-layout">
   <div class="editor-palette editor-palette--side no-print">
@@ -74,6 +74,9 @@
       <div class="bars-builder-count">
         <label>Bars
           <input type="number" id="bars-count" min="1" max="12" value="4" />
+        </label>
+        <label title="Empty chord boxes in each bar to type into; Tab moves between them; type - for a full-bar rest or r for a repeat bar (0 = plain bars)">Chords / bar
+          <input type="number" id="bars-chords" min="0" max="8" value="1" />
         </label>
       </div>
       <div class="bars-builder-repeats">

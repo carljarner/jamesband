@@ -1596,6 +1596,13 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   gap: 0.3rem;
 }
 
+/* Bar count and chords-per-bar side by side. */
+.bars-builder-count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+}
+
 /* Repeat start/end options, on their own row under the bar count. */
 .bars-builder-repeats {
   display: flex;
@@ -1862,12 +1869,18 @@ input.text-edit-input:focus {
 .el-group:hover .el-resize-handle { opacity: 0.85; }
 .el-resize-handle:hover { opacity: 1; }
 
-/* Bars are just barlines -- no enclosing box, no top/bottom edge, and
-   nothing is typed directly into them; chord/text elements are dragged on
-   top instead. Each barline is a gently bowed path (not a straight line)
-   for a slightly hand-drawn feel. */
+/* Bars are just barlines -- no enclosing box, no top/bottom edge. Each
+   barline is a gently bowed path (not a straight line) for a slightly
+   hand-drawn feel. Chords are typed into the row's chord slots (or dragged
+   on as separate chord elements). */
 .el-row-divider { stroke: #1a1815; stroke-width: 1.1; fill: none; stroke-linecap: round; }
 .el-row-hit { fill: transparent; cursor: grab; }
+
+/* A row's typeable chord box. Empty ones get a faint dashed outline so you can
+   see where to click; it's screen-only (hidden in print, below). */
+.el-chord-slot { fill: transparent; stroke: none; cursor: text; }
+.el-chord-slot.empty { stroke: rgba(0,0,0,0.22); stroke-width: 1; stroke-dasharray: 3 2; }
+.el-chord-slot:hover { fill: rgba(0,0,0,0.05); }
 
 .el-repeat-hit { fill: transparent; cursor: grab; }
 .el-repeat-thick { stroke: #1a1815; stroke-width: 3; }
@@ -1982,6 +1995,7 @@ input.text-edit-input:focus {
   #sheet-svg { width: 100%; height: 100%; aspect-ratio: auto; }
   .el-delete, .el-row-addbar, .el-row-removebar, .el-resize-handle, .el-move-handle,
   .el-arrow-handle, .el-arrow-bow-handle, .el-selection, .el-marquee { display: none; }
+  .el-chord-slot, .el-chord-slot.empty { fill: none; stroke: none; }
   /* The on-screen page/title-box tones are a warm off-white "paper" look;
      on paper that would just waste toner on a tinted fill, so print pure
      white for both instead. */
