@@ -16,6 +16,8 @@
   const ROW_MAX_W = PAGE_W - 2 * PAGE_MARGIN;
   const BAR_H = 27; // average bar-row height across the hand-finished test sheet
   const REPEAT_MARK_W = 14;
+  const REST_SIZE = 0.6; // a "-" rest's glyph size as a fraction of the row height; full size dwarfs the chords
+  const SLOT_CHORD_PAD = 5; // gap between a slot's left edge and the chord in it, in bars with several slots
   const VOLTA_H = 22, VOLTA_FONT_SIZE = 13;
   // Starting font sizes for new text boxes: the averages from the test sheet.
   const TITLE_FONT_SIZE = 17, CHORD_FONT_SIZE = 14, TEXT_FONT_SIZE = 12;
@@ -314,10 +316,46 @@
   function uid(prefix) { return `${prefix}-${Date.now().toString(36)}-${(uidCounter++).toString(36)}`; }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-  // Transient UI state (never saved): the elements picked up by the
-  // marquee, and the marquee box itself while it's being drawn (SVG units).
+  // Transient UI state (never saved): the selected elements (a click or the
+  // marquee fills it; the edit box shows whatever it holds), the chord slot
+  // being typed into on a selected row, and the marquee box itself while it's
+  // being drawn (SVG units).
   const selectedIds = new Set();
+  let activeSlot = null;
   let marquee = null;
+
+  // Size ranges, shared by the on-page resize zones and the edit box so the
+  // two can't drift apart.
+  const LIMITS = {
+    textFont: [8, 64],
+    row: { w: [30, PAGE_W], h: [16, 300] },
+    repeat: { w: [10, 60], h: [16, 200] },
+    volta: { w: [16, PAGE_W], h: [10, 60], fontSize: [6, 32] },
+    glyphFont: [12, 100],
+    rhythmbar: { h: [12, 100] },
+    notestaff: { h: [24, 160] },
+  };
+  function clampR(v, range) { return clamp(v, range[0], range[1]); }
+  // Width/height ranges of an element (absent = that dimension isn't a free
+  // number: text boxes fit their text, glyphs follow their font size).
+  function sizeLimits(el) {
+    switch (el.type) {
+      case 'row': return LIMITS.row;
+      case 'repeat': return LIMITS.repeat;
+      case 'volta': return LIMITS.volta;
+      case 'rhythmbar': return { w: [rhythmBarMinWidth(el.cells), PAGE_W], h: LIMITS.rhythmbar.h };
+      case 'notestaff': return { w: [rhythmBarMinWidth(el.cells), PAGE_W - notestaffLeadWidth(el)], h: LIMITS.notestaff.h };
+      default: return {};
+    }
+  }
+  // The one place a width/height change is applied (corner drag or edit box): clamps to the element's range and keeps a volta's number scaled to
+  // its bracket height.
+  function applySize(el, w, h) {
+    const lim = sizeLimits(el);
+    if (w != null && lim.w) el.w = clampR(w, lim.w);
+    if (h != null && lim.h) el.h = clampR(h, lim.h);
+    if (h != null && el.type === 'volta') el.fontSize = clampR(Math.round(el.h * VOLTA_FONT_SIZE / VOLTA_H), LIMITS.volta.fontSize);
+  }
 
   /* ---------- small SVG helpers ---------- */
   function svgEl(tag, attrs = {}) {
@@ -346,59 +384,82 @@
     return _measureCtx.measureText(text || '').width;
   }
 
-  // Splits a chord symbol into baseline and raised runs, the way it's
-  // engraved on a real chart: the root, its accidental, quality words (m,
-  // maj, dim, sus, add...) and any slash bass note stay on the baseline;
-  // extension numbers and altered tones are raised (Am7 -> Am + ^7,
-  // Cm7b5 -> Cm + ^7b5, C7(#11) -> C + ^7(#11), Bb7/D -> Bb + ^7 + /D).
+  // Splits a chord symbol into runs, the way it's engraved on a real chart.
+  // Each run has a `kind` (see CHORD_RUN_STYLE): `base` -- the root letter,
+  // quality words (m, maj, dim, sus, add...); `acc` -- the root's accidental,
+  // raised and a bit smaller; `sup` -- raised: extension numbers and altered
+  // tones (F#m7 -> F + ^# + m + ^7,
+  // Cm7b5 -> C + m + ^7b5, C7(#11) -> C + ^7(#11)); `bass` -- a slash bass
+  // note, smaller and dropped a little (Bb7/D -> B + ^b + ^7 + /D); `bassSup`
+  // -- that bass note's own accidental, raised within the small run.
   // The stored text stays plain; this only affects how it's drawn.
   function parseChordSegments(text) {
     const s = String(text || '');
-    const root = /^[A-G][#b♯♭]?/.exec(s);
-    if (!root) return s ? [{ text: s, sup: false }] : []; // N.C., %, x2...
+    const root = /^[A-G]/.exec(s);
+    if (!root) return s ? [{ text: s, kind: 'base' }] : []; // N.C., %, x2...
     const segs = [];
-    const push = (t, sup) => {
+    const push = (t, kind) => {
+      if (!t) return;
       const last = segs[segs.length - 1];
-      if (last && last.sup === sup) last.text += t;
-      else segs.push({ text: t, sup });
+      if (last && last.kind === kind) last.text += t;
+      else segs.push({ text: t, kind });
     };
-    push(root[0], false);
-    let i = root[0].length;
+    push(root[0], 'base');
+    let i = 1;
+    const acc = /^[#b♯♭]/.exec(s.slice(i));
+    if (acc) { push(acc[0], 'acc'); i += 1; }
     while (i < s.length) {
       const rest = s.slice(i);
-      if (rest[0] === '/' && !/^\/\d/.test(rest)) { push(rest, false); break; } // slash bass; "6/9" is not one
+      if (rest[0] === '/' && !/^\/\d/.test(rest)) { // slash bass; "6/9" is not one
+        const bass = /^\/[A-Ga-g]?/.exec(rest)[0];
+        push(bass, 'bass');
+        i += bass.length;
+        const bacc = /^[#b♯♭]/.exec(s.slice(i));
+        if (bacc) { push(bacc[0], 'bassSup'); i += 1; }
+        push(s.slice(i), 'bass');
+        break;
+      }
       let m = /^\([^)]*\)/.exec(rest) || /^[#b♯♭]?\d+(?:\/\d+)?/.exec(rest);
       // "+"/"-" only count as an alteration after a number ("7-9"); before one
       // they're the chord's quality ("C-7"), which stays on the baseline.
       if (!m && /[\d)]/.test(s[i - 1])) m = /^[+-]\d+(?:\/\d+)?/.exec(rest);
-      if (m) { push(m[0], true); i += m[0].length; }
-      else { push(rest[0], false); i += 1; }
+      if (m) { push(m[0], 'sup'); i += m[0].length; }
+      else { push(rest[0], 'base'); i += 1; }
     }
     return segs;
   }
 
-  const CHORD_SUP_SCALE = 0.9, CHORD_SUP_RAISE = 0.4; // raised run: font size and rise, as fractions of the chord's font size
+  // Font size and vertical lift of each run kind, as fractions of the chord's
+  // font size (lift > 0 is up).
+  const CHORD_SUP_SCALE = 0.9, CHORD_SUP_RAISE = 0.4;
+  const CHORD_BASS_SCALE = 0.8, CHORD_BASS_DROP = 0.15;
+  const CHORD_ACC_SCALE = 0.75; // the root's # / b: raised like the numbers, but a bit smaller
+  const CHORD_RUN_STYLE = {
+    base: { scale: 1, lift: 0 },
+    sup: { scale: CHORD_SUP_SCALE, lift: CHORD_SUP_RAISE },
+    acc: { scale: CHORD_ACC_SCALE, lift: CHORD_SUP_RAISE },
+    bass: { scale: CHORD_BASS_SCALE, lift: -CHORD_BASS_DROP },
+    bassSup: { scale: CHORD_BASS_SCALE * CHORD_ACC_SCALE, lift: CHORD_SUP_RAISE * CHORD_BASS_SCALE - CHORD_BASS_DROP },
+  };
   function measureChordWidth(text, size) {
     return parseChordSegments(text).reduce(
-      (w, seg) => w + measureTextWidth(seg.text, seg.sup ? size * CHORD_SUP_SCALE : size), 0);
+      (w, seg) => w + measureTextWidth(seg.text, size * CHORD_RUN_STYLE[seg.kind].scale), 0);
   }
-  // Same as svgText, but with the raised runs as smaller, shifted tspans (dy,
-  // not baseline-shift, which Safari/Firefox don't all honour).
+  // Same as svgText, but with the smaller/shifted runs as tspans (dy, not
+  // baseline-shift, which Safari/Firefox don't all honour). Each run's dy is
+  // relative to the run before it.
   function svgChordText(text, x, y, opts = {}) {
     const size = opts.size || 13;
     const el = svgText('', x, y, opts);
-    let raised = false;
+    let lift = 0;
     for (const seg of parseChordSegments(text)) {
+      const style = CHORD_RUN_STYLE[seg.kind];
       const span = svgEl('tspan', {});
-      if (seg.sup) {
-        span.setAttribute('font-size', size * CHORD_SUP_SCALE);
-        span.setAttribute('dy', -size * CHORD_SUP_RAISE);
-      } else if (raised) {
-        span.setAttribute('dy', size * CHORD_SUP_RAISE);
-      }
+      if (style.scale !== 1) span.setAttribute('font-size', size * style.scale);
+      if (style.lift !== lift) span.setAttribute('dy', -(style.lift - lift) * size);
+      lift = style.lift;
       span.textContent = seg.text;
       el.appendChild(span);
-      raised = seg.sup;
     }
     return el;
   }
@@ -502,10 +563,6 @@
     const { rect, scale } = svgMetrics();
     return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
   }
-  function svgRectToScreen(x, y, w, h) {
-    const { rect, scale } = svgMetrics();
-    return { left: rect.left + x * scale, top: rect.top + y * scale, width: w * scale, height: h * scale };
-  }
 
   /* ---------- marquee selection ---------- */
   // Approximate on-page footprint of an element, used only to decide what a
@@ -514,7 +571,7 @@
   function elementBounds(el) {
     switch (el.type) {
       case 'title': case 'chordText': case 'text': {
-        const { w, h } = textBoxSize(el.text, el.fontSize, el.type === 'chordText' && el.id !== editingId);
+        const { w, h } = textBoxSize(el.text, el.fontSize, el.type === 'chordText');
         return { x: el.x, y: el.y, w, h };
       }
       case 'row': case 'repeat': case 'volta':
@@ -556,13 +613,29 @@
     }
   }
 
-  // Drops the selection outline nodes straight from the DOM. Used when a
-  // gesture on an unselected element starts: a full re-render inside
-  // mousedown would detach the very node being pressed.
+  // Drops the selection outline (and resize zone) nodes straight from the DOM. Used when a
+  // gesture changes the selection: a full re-render inside mousedown would
+  // detach the very node being pressed, so the outline is repainted by the
+  // next render (the first drag move, or the mouseup of a click) instead.
+  function dropOutlineNodes() {
+    document.querySelectorAll('#sheet-svg .el-selection, #sheet-svg .el-slot-active, #sheet-svg .el-resize-handle').forEach(n => n.remove());
+    document.querySelectorAll('#sheet-svg .el-group.is-selected').forEach(n => n.classList.remove('is-selected'));
+  }
+  // Makes `id` the only selected element (the edit box follows on the next
+  // syncEditBox). No-op if it already is.
+  function selectOnly(id) {
+    if (selectedIds.size === 1 && selectedIds.has(id)) return;
+    selectedIds.clear();
+    selectedIds.add(id);
+    activeSlot = null;
+    dropOutlineNodes();
+  }
   function clearSelection() {
     if (!selectedIds.size) return;
     selectedIds.clear();
-    document.querySelectorAll('#sheet-svg .el-selection').forEach(n => n.remove());
+    activeSlot = null;
+    dropOutlineNodes();
+    syncEditBox();
   }
 
   function drawSelectionOverlay(svg) {
@@ -570,6 +643,10 @@
       if (!selectedIds.has(el.id)) return;
       const b = elementBounds(el);
       svg.appendChild(svgRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6, { cls: 'el-selection', rx: 3 }));
+      if (selectedIds.size === 1 && el.type === 'row' && activeSlot != null) {
+        const s = rowChordSlots(el)[activeSlot];
+        if (s) svg.appendChild(svgRect(s.x + 1.5, s.y + 1.5, Math.max(s.w - 3, 1), Math.max(s.h - 3, 1), { cls: 'el-slot-active', rx: 2 }));
+      }
     });
     if (marquee) {
       const x = Math.min(marquee.x1, marquee.x2), y = Math.min(marquee.y1, marquee.y2);
@@ -597,6 +674,7 @@
         const bx0 = Math.min(marquee.x1, marquee.x2), bx1 = Math.max(marquee.x1, marquee.x2);
         const by0 = Math.min(marquee.y1, marquee.y2), by1 = Math.max(marquee.y1, marquee.y2);
         selectedIds.clear();
+        activeSlot = null;
         model.elements.forEach(el => {
           const b = elementBounds(el);
           if (b.x <= bx1 && b.x + b.w >= bx0 && b.y <= by1 && b.y + b.h >= by0) selectedIds.add(el.id);
@@ -619,24 +697,39 @@
   // `moveEl` is passed only by gestures that move a whole element (not
   // resize/bow/re-pitch handles): if it belongs to a multi-element selection,
   // the drag moves every selected element by the same offset instead of
-  // calling `onDrag`; otherwise any existing selection is dropped.
-  function wireDragAndClick(hitEl, onDrag, onClick, moveEl) {
+  // calling `onDrag`. `selectEl` is the element a press on this target selects
+  // (defaults to `moveEl`); pass it alone for handles that don't move the
+  // element but should still pick it, like a resize zone or an arrow's end handle. A press selects
+  // right away (so the edit box follows), shift adds/removes it, and a click
+  // that lands inside a multi-selection narrows it to that element.
+  function wireDragAndClick(hitEl, onDrag, onClick, moveEl, selectEl) {
     hitEl.addEventListener('mousedown', e => {
       e.preventDefault();
       e.stopPropagation();
-      let groupDrag = null;
-      if (moveEl) {
-        if (selectedIds.has(moveEl.id) && selectedIds.size > 1) {
-          const snaps = model.elements
-            .filter(el => selectedIds.has(el.id))
-            .map(el => ({ el, snap: snapshotPos(el) }));
-          groupDrag = (ddx, ddy) => {
-            snaps.forEach(({ el, snap }) => applyOffset(el, snap, ddx, ddy));
-            markDirty(); renderSvg();
-          };
+      const target = selectEl || moveEl;
+      let narrowTo = null;
+      if (target) {
+        if (e.shiftKey) {
+          if (selectedIds.has(target.id)) selectedIds.delete(target.id);
+          else selectedIds.add(target.id);
+          activeSlot = null;
+          dropOutlineNodes();
+        } else if (selectedIds.has(target.id) && selectedIds.size > 1) {
+          narrowTo = target.id;
         } else {
-          clearSelection();
+          selectOnly(target.id);
         }
+        syncEditBox();
+      }
+      let groupDrag = null;
+      if (moveEl && selectedIds.has(moveEl.id) && selectedIds.size > 1) {
+        const snaps = model.elements
+          .filter(el => selectedIds.has(el.id))
+          .map(el => ({ el, snap: snapshotPos(el) }));
+        groupDrag = (ddx, ddy) => {
+          snaps.forEach(({ el, snap }) => applyOffset(el, snap, ddx, ddy));
+          markDirty(); renderSvg();
+        };
       }
       // Captured now, while hitEl is still attached -- onDrag re-renders the
       // whole SVG on every move (detaching hitEl itself), but the SVG
@@ -658,105 +751,49 @@
       function onUp(ev) {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
-        if (!moved && onClick) onClick(ev.clientX, ev.clientY);
+        if (!moved) {
+          if (narrowTo) { selectOnly(narrowTo); syncEditBox(); }
+          // Safe now that the press is over: paint the selection outline.
+          if (target) renderSvg();
+          if (onClick) onClick(ev.clientX, ev.clientY);
+        }
       }
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
   }
-
-  // Bottom-right corner resize handle, shared by every element type.
-  function addResizeHandle(g, x, y, onDrag) {
-    const handle = svgRect(x - 5, y - 5, 10, 10, { cls: 'el-resize-handle' });
-    wireDragAndClick(handle, onDrag, null);
-    g.appendChild(handle);
+  // Resizing: an invisible hit-zone over the element's bottom-right corner
+  // (only the cursor changes on hover), so the page shows no handle boxes.
+  // It exists only while `el` is the one selected element -- click an element
+  // first, then drag its corner. `onDrag(ddx, ddy)` gets the drag offset in
+  // SVG units.
+  function addResizeHandle(g, x, y, onDrag, el) {
+    if (selectedIds.size !== 1 || !selectedIds.has(el.id)) return;
+    const zone = svgRect(x - 6, y - 6, 12, 12, { cls: 'el-resize-handle' });
+    wireDragAndClick(zone, onDrag, null, null, el);
+    g.appendChild(zone);
+  }
+  // Drag handlers that resize `el`. Start values are captured when the
+  // element is drawn (a drag re-renders on every move but keeps using the
+  // handler from the first render), so each move applies its offset to the
+  // original size rather than compounding.
+  function sizeDrag(el) {
+    const w0 = el.w, h0 = el.h;
+    return (ddx, ddy) => { applySize(el, w0 + ddx, h0 + ddy); markDirty(); renderSvg(); };
+  }
+  function fontDrag(el, range) {
+    const size0 = el.fontSize;
+    return ddx => { el.fontSize = clampR(Math.round(size0 + ddx * 0.4), range); markDirty(); renderSvg(); };
   }
 
-  // Same shape as the resize handle, but moves the whole element instead of
-  // scaling it -- used where the element's own body is already claimed by a
-  // different drag gesture (a note staff's noteheads drag to re-pitch, so
-  // the bar needs its own dedicated way to move).
+  // A small handle that moves the whole element -- used where the element's
+  // own body is already claimed by a different drag gesture (a note staff's
+  // noteheads drag to re-pitch, so the bar needs its own dedicated way to
+  // move).
   function addMoveHandle(g, x, y, onDrag, moveEl) {
     const handle = svgRect(x - 5, y - 5, 10, 10, { cls: 'el-move-handle' });
     wireDragAndClick(handle, onDrag, null, moveEl);
     g.appendChild(handle);
-  }
-
-  /* ---------- inline text-edit overlay ---------- */
-  let activeOverlay = null;
-  // Id of the element whose text is currently being typed into. Its own SVG
-  // text is skipped in renderTextEl while the (transparent) overlay input is
-  // showing the same text, so it isn't drawn twice.
-  let editingId = null;
-  // For a row's chord slots, which slot of `editingId` is being typed into.
-  let editingSlot = null;
-  function closeOverlay(commit) {
-    if (!activeOverlay) return;
-    const { input, onCommit, onCancel } = activeOverlay;
-    const val = input.value;
-    // Clear state before removing the input: removing a focused input fires
-    // its blur handler synchronously, which would re-enter closeOverlay.
-    activeOverlay = null;
-    editingId = null;
-    editingSlot = null;
-    input.remove();
-    if (commit) onCommit(val);
-    else { if (onCancel) onCancel(); renderSvg(); }
-  }
-  document.addEventListener('mousedown', e => {
-    if (activeOverlay && e.target !== activeOverlay.input) closeOverlay(true);
-  }, true);
-
-  // The input is transparent (see .text-edit-input), so it reads as typing
-  // directly on the page. `getRect` is re-evaluated on every keystroke so the
-  // field tracks the element's auto-fitting box as the text grows; `onInput`
-  // lets the caller update the element live; `onCancel` undoes that on Escape.
-  // Optional extras for a row's chord slots: `getFontSize(val)` re-fits the
-  // font as the text grows, `slotIndex` marks which slot of the element is
-  // being edited, and `onTab(dir)` (-1/+1) moves on to the neighbouring slot.
-  function openTextOverlay({ elementId, initialValue, getRect, fontSize, getFontSize, slotIndex, onTab, color, align, padX, onInput, onCommit, onCancel }) {
-    closeOverlay(true);
-    const wrap = document.getElementById('page-wrap');
-    const { scale } = svgMetrics();
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'text-edit-input';
-    input.value = initialValue;
-    input.style.fontSize = `${fontSize * scale}px`;
-    input.style.color = color;
-    input.style.caretColor = color;
-    input.style.textAlign = align;
-    input.style.paddingLeft = input.style.paddingRight = `${padX * scale}px`;
-    const place = () => {
-      const wrapRect = wrap.getBoundingClientRect();
-      const rect = getRect(input.value);
-      if (getFontSize) input.style.fontSize = `${getFontSize(input.value) * scale}px`;
-      input.style.left = `${rect.left - wrapRect.left}px`;
-      input.style.top = `${rect.top - wrapRect.top}px`;
-      input.style.width = `${rect.width}px`;
-      input.style.height = `${rect.height}px`;
-    };
-    place();
-    wrap.appendChild(input);
-    editingId = elementId;
-    editingSlot = slotIndex == null ? null : slotIndex;
-    activeOverlay = { input, onCommit, onCancel };
-    // Redraw now so the element's own text (raised chord numbers included) is
-    // gone from the page before the input, which shows it flat, appears over it.
-    renderSvg();
-    input.addEventListener('input', () => {
-      onInput(input.value);
-      renderSvg();
-      place();
-    });
-    input.focus();
-    input.select();
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); closeOverlay(true); }
-      else if (e.key === 'Escape') { e.preventDefault(); closeOverlay(false); }
-      else if (e.key === 'Tab' && onTab) { e.preventDefault(); closeOverlay(true); onTab(e.shiftKey ? -1 : 1); }
-    });
-    input.addEventListener('blur', () => closeOverlay(true));
   }
 
   /* ---------- rhythm-cell picker menu ---------- */
@@ -833,7 +870,8 @@
     const menu = document.createElement('div');
     menu.className = 'rhythm-menu';
     const prior = cells[idx];
-    rhythmMenuOptionsFor(cells, idx).forEach(opt => {
+    // Which items appear is set in the edit box (see NOTE_MENU_ITEMS).
+    rhythmMenuOptionsFor(cells, idx).filter(opt => isMenuItemOn(`${opt.type}-${opt.duration}`)).forEach(opt => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'rhythm-menu-item';
@@ -858,20 +896,30 @@
     });
     const changed = () => { if (opts.onChange) opts.onChange(); };
     if (prior.type === 'note') {
-      addMenuToggleSection(menu, 'Articulation', 3, ARTICULATION_KINDS.map(k => ({
-        glyph: articulationIcon(k.value),
-        label: k.label,
-        isOn: () => cellHasArticulation(prior, k.value),
-        onClick: () => { toggleCellArticulation(prior, k.value); changed(); },
-      })));
-      if (opts.accidentals) {
-        addMenuToggleSection(menu, 'Accidental', 4, ACCIDENTAL_MENU_OPTIONS.map(a => ({
+      const artics = ARTICULATION_KINDS.filter(k => isMenuItemOn(`artic-${k.value}`));
+      if (artics.length) {
+        addMenuToggleSection(menu, 'Articulation', Math.min(artics.length, 3), artics.map(k => ({
+          glyph: articulationIcon(k.value),
+          label: k.label,
+          isOn: () => cellHasArticulation(prior, k.value),
+          onClick: () => { toggleCellArticulation(prior, k.value); changed(); },
+        })));
+      }
+      const accidentals = ACCIDENTAL_MENU_OPTIONS.filter(a => isMenuItemOn(`acc-${a.value || 'default'}`));
+      if (opts.accidentals && accidentals.length) {
+        addMenuToggleSection(menu, 'Accidental', Math.min(accidentals.length, 4), accidentals.map(a => ({
           glyph: a.code,
           label: a.label,
           isOn: () => (prior.accidental || null) === a.value,
           onClick: () => { prior.accidental = a.value; changed(); },
         })));
       }
+    }
+    if (!menu.children.length) {
+      const none = document.createElement('div');
+      none.className = 'rhythm-menu-heading';
+      none.textContent = 'Nothing to show. Turn menu items on in the edit box.';
+      menu.appendChild(none);
     }
     document.body.appendChild(menu);
     // Opens to the right of the click (flipping to the left near the window's
@@ -922,123 +970,107 @@
     return { x: el.x, y: el.y, w: Math.max(el.fontSize * 2.3, measureTextWidth(text, el.fontSize) + 2 * voltaTextPad(el)), h: el.h };
   }
 
-  function startTextEdit(elementId) {
-    const el = model.elements.find(e => e.id === elementId);
-    if (!el) return;
-    const fontSize = el.fontSize;
-    const original = el.text || '';
-    const boxed = el.type === 'title';
-    const isVolta = el.type === 'volta';
-    openTextOverlay({
-      elementId: el.id,
-      initialValue: original,
-      getRect: val => {
-        const { x, y, w, h } = isVolta ? voltaLabelBox(el, val) : { x: el.x, y: el.y, ...textBoxSize(val, fontSize) };
-        return svgRectToScreen(x, y, w, h);
-      },
-      fontSize,
-      color: el.type === 'text' ? '#55504a' : '#1a1815',
-      align: boxed ? 'center' : 'left',
-      padX: boxed ? 0 : (isVolta ? voltaTextPad(el) : 8), // renderTextEl starts unboxed text 8px in from the left edge
-      onInput: val => { el.text = val; },
-      onCommit: val => { el.text = val; markDirty(); renderSvg(); },
-      onCancel: () => { el.text = original; },
-    });
-  }
-
   /* ---------- row chord slots ---------- */
+  // How many chord boxes each bar of a row has. Bars usually all share the
+  // row's `chordsPerBar`; `chordCounts` (one entry per bar) is only present
+  // while some bar differs. The flat `row.chords` list holds the boxes bar by
+  // bar, so box `k` of bar `i` is at (boxes in the bars before `i`) + k.
+  function rowBarCounts(row) {
+    if (Array.isArray(row.chordCounts) && row.chordCounts.length === row.barCount) {
+      return row.chordCounts.map(c => clamp(Math.round(c) || 0, 0, ROW_MAX_CHORDS));
+    }
+    return Array(row.barCount).fill(row.chordsPerBar || 0);
+  }
+  function rowSlotCount(row) { return rowBarCounts(row).reduce((sum, c) => sum + c, 0); }
+
   // The typeable chord boxes of a row (or of the sidebar preview, which passes
-  // its own geometry): each bar is split into `cpb` equal slots, with the
-  // first/last bar inset where a repeat mark sits on that edge. `idx` is the
-  // slot's index into `row.chords`.
-  function chordSlotRects(x, y, w, h, barCount, cpb, repeatStart, repeatEnd) {
+  // its own geometry): each bar is split into `counts[bar]` equal slots, with
+  // the first/last bar inset where a repeat mark sits on that edge. `idx` is
+  // the slot's index into `row.chords` (and its position in the returned
+  // list), `n` how many slots share its bar.
+  function chordSlotRects(x, y, w, h, counts, repeatStart, repeatEnd) {
     const rects = [];
-    if (!(cpb > 0)) return rects;
+    const barCount = counts.length;
+    if (!barCount) return rects;
     const barW = w / barCount;
     for (let i = 0; i < barCount; i++) {
+      const n = counts[i];
+      if (!(n > 0)) continue;
       const left = x + i * barW + (i === 0 && repeatStart ? REPEAT_MARK_W : 0);
       const right = x + (i + 1) * barW - (i === barCount - 1 && repeatEnd ? REPEAT_MARK_W : 0);
-      const slotW = (right - left) / cpb;
-      for (let k = 0; k < cpb; k++) {
-        rects.push({ x: left + k * slotW, y, w: slotW, h, bar: i, k, idx: i * cpb + k });
+      const slotW = (right - left) / n;
+      for (let k = 0; k < n; k++) {
+        rects.push({ x: left + k * slotW, y, w: slotW, h, bar: i, k, idx: rects.length, n });
       }
     }
     return rects;
   }
   function rowChordSlots(row) {
-    return chordSlotRects(row.x, row.y, row.w, row.h, row.barCount, row.chordsPerBar || 0, row.repeatStart, row.repeatEnd);
+    return chordSlotRects(row.x, row.y, row.w, row.h, rowBarCounts(row), row.repeatStart, row.repeatEnd);
   }
 
-  // Largest chord size that still fits the slot: shrinks for long chords in
-  // narrow slots (8 to a bar) rather than spilling over the barlines.
-  function slotFontSize(text, slotW, h) {
+  // Largest chord size that still fits the room (`gap` is the breathing room
+  // it needs in total): shrinks for long chords in narrow slots (8 to a bar)
+  // rather than spilling over the barlines.
+  function slotFontSize(text, room, h, gap = 4) {
     let size = Math.min(CHORD_FONT_SIZE, h * 0.55);
-    while (size > 7 && measureChordWidth(text, size) + 4 > slotW) size -= 0.5;
+    while (size > 7 && measureChordWidth(text, size) + gap > room) size -= 0.5;
     return Math.max(size, 7);
   }
 
+  // The rest a "-" draws: the longest standard rest that fits its box, taking
+  // the bar as 4/4 (rows carry no time signature) -- a whole rest with 1 box in
+  // the bar, a half with 2, a quarter with 3-4, an eighth with 5-8. `rise` (a
+  // fraction of the glyph size) nudges each glyph so it sits centred in the
+  // bar: the whole rest hangs below its origin, the half rest sits on top.
+  function restForSlots(n) {
+    if (n <= 1) return { code: REST_CODES.whole, rise: -1 / 16 };
+    if (n === 2) return { code: REST_CODES.half, rise: 1 / 16 };
+    if (n <= 4) return { code: REST_CODES.quarter, rise: 0 };
+    return { code: REST_CODES['8th'], rise: 0 };
+  }
+
   // Shorthand typed into a chord box that is drawn as a symbol instead of
-  // text: "-" is a full-bar rest, "r" a repeat-previous-bar sign. The stored
-  // text stays what was typed.
-  function barSymbol(text) {
+  // text: "-" is a rest as long as the box (see restForSlots), "r" a
+  // repeat-previous-bar sign spanning the whole bar. `n` is how many boxes
+  // share the bar. The stored text stays what was typed.
+  function barSymbol(text, n) {
     const t = String(text || '').trim().toLowerCase();
-    if (t === '-') return { code: REST_CODES.whole, rise: -1 / 16 }; // the whole rest hangs below its origin, so lift it to sit centred
-    if (t === 'r') return { code: SIMILE_MARK, rise: 0 };
+    if (t === '-') return { ...restForSlots(n || 1), across: 'slot' };
+    if (t === 'r') return { code: SIMILE_MARK, rise: 0, across: 'bar' };
     return null;
   }
 
-  // Draws a slot's content, centred in the slot: the chord (shrunk to fit),
-  // or, if it's shorthand for a bar symbol, that symbol centred across the
-  // whole bar `bar` (a full-bar rest / repeat covers every chord slot in it).
-  function drawSlotContent(g, text, s, bar, h) {
-    const sym = barSymbol(text);
+  // Draws a slot's content: the chord, or, if it's shorthand for a symbol, that
+  // symbol -- a rest centred in its own slot, a repeat sign centred across the
+  // whole bar `bar`. A chord never moves out of its slot: in a
+  // bar with one slot it is centred; in a bar with several it starts at the
+  // slot's left edge, so `Am F _ _` and `_ _ Am F` read differently.
+  function drawSlotContent(g, text, s, bar, h, chordSize, perBar) {
+    const sym = barSymbol(text, s.n);
     if (sym) {
-      let size = h;
+      const room = sym.across === 'slot' ? s.w : bar.w;
+      const cx = sym.across === 'slot' ? s.x + s.w / 2 : bar.x + bar.w / 2;
+      let size = sym.across === 'slot' ? h * REST_SIZE : h;
       const gw = measureTextWidth(sym.code, size, 'MuseJazz');
-      if (gw > bar.w - 4) size *= Math.max(bar.w - 4, 4) / gw; // very narrow bars
-      g.appendChild(svgText(sym.code, bar.x + bar.w / 2, s.y + h / 2 + sym.rise * size, {
+      if (gw > room - 4) size *= Math.max(room - 4, 4) / gw; // very narrow bars / boxes
+      g.appendChild(svgText(sym.code, cx, s.y + h / 2 + sym.rise * size, {
         cls: 'el-glyph-text', anchor: 'middle', size,
       }));
       return;
     }
-    const size = slotFontSize(text, s.w, h);
-    g.appendChild(svgChordText(text, s.x + s.w / 2, s.y + h / 2 + size * 0.35, {
-      cls: 'el-chord-text', anchor: 'middle', size,
+    const size = chordSize || slotFontSize(text, s.w, h);
+    const left = perBar > 1;
+    g.appendChild(svgChordText(text, left ? s.x + SLOT_CHORD_PAD : s.x + s.w / 2, s.y + h / 2 + size * 0.35, {
+      cls: 'el-chord-text', anchor: left ? 'start' : 'middle', size,
     }));
-  }
-
-  function startChordEdit(rowId, idx) {
-    const row = model.elements.find(e => e.id === rowId);
-    if (!row || !(row.chordsPerBar > 0)) return;
-    if (!row.chords) row.chords = [];
-    const original = row.chords[idx] || '';
-    const slot = () => rowChordSlots(row)[idx];
-    if (!slot()) return;
-    openTextOverlay({
-      elementId: row.id,
-      slotIndex: idx,
-      initialValue: original,
-      getRect: () => { const s = slot(); return svgRectToScreen(s.x, s.y, s.w, s.h); },
-      fontSize: slotFontSize(original, slot().w, row.h),
-      getFontSize: val => slotFontSize(val, slot().w, row.h),
-      color: '#1a1815',
-      align: 'center',
-      padX: 2,
-      onInput: val => { row.chords[idx] = val; },
-      onCommit: val => { row.chords[idx] = val; markDirty(); renderSvg(); },
-      onCancel: () => { row.chords[idx] = original; },
-      onTab: dir => {
-        const next = nextChordSlot(row, idx, dir);
-        if (next) startChordEdit(next.rowId, next.idx);
-      },
-    });
   }
 
   // Tab order: every chord slot of every row that has any, rows in reading
   // order (top to bottom, then left to right), slots left to right within.
   function nextChordSlot(row, idx, dir) {
     const rows = model.elements
-      .filter(e => e.type === 'row' && e.chordsPerBar > 0)
+      .filter(e => e.type === 'row' && rowSlotCount(e) > 0)
       .sort((a, b) => a.y - b.y || a.x - b.x);
     const seq = [];
     rows.forEach(r => rowChordSlots(r).forEach(s => seq.push({ rowId: r.id, idx: s.idx })));
@@ -1122,12 +1154,12 @@
     model.elements.push(el);
     markDirty();
     render();
-    if (type === 'title' || type === 'chordText' || type === 'text') {
-      setTimeout(() => startTextEdit(el.id), 0);
-    } else if (el.type === 'row' && el.chordsPerBar > 0) {
-      // Straight into the first chord box, so Tab can carry on from there.
-      setTimeout(() => startChordEdit(el.id, 0), 0);
-    }
+    // Pick the new element and put the cursor where typing starts: its text
+    // field, or a row's first chord box (Tab carries on from there).
+    selectOnly(el.id);
+    renderSvg();
+    if (type === 'title' || type === 'chordText' || type === 'text') focusEditField('text');
+    else if (el.type === 'row' && rowSlotCount(el) > 0) focusSlot(el.id, 0);
   }
 
   // Copies everything currently marked, a little down and to the right of the
@@ -1144,6 +1176,7 @@
     if (!copies.length) return;
     model.elements.push(...copies);
     selectedIds.clear();
+    activeSlot = null;
     copies.forEach(c => selectedIds.add(c.id));
     markDirty(); render();
   }
@@ -1151,26 +1184,29 @@
   function removeElement(id) {
     model.elements = model.elements.filter(e => e.id !== id);
     selectedIds.delete(id);
+    activeSlot = null;
     markDirty(); render();
+  }
+  function removeSelection() {
+    if (!selectedIds.size) return;
+    model.elements = model.elements.filter(e => !selectedIds.has(e.id));
+    selectedIds.clear();
+    activeSlot = null;
+    markDirty(); render();
+  }
+  function nudgeSelection(dx, dy) {
+    model.elements.forEach(el => { if (selectedIds.has(el.id)) applyOffset(el, snapshotPos(el), dx, dy); });
+    markDirty(); renderSvg();
   }
 
   /* ---------- rendering ---------- */
-  function addDeleteButton(g, el, x, y, w) {
-    const del = svgText('×', x + w + 6, y + 11, { cls: 'el-delete' });
-    del.addEventListener('mousedown', e => e.stopPropagation());
-    del.addEventListener('click', e => { e.stopPropagation(); removeElement(el.id); });
-    g.appendChild(del);
-  }
-
   // Title/chordText/text all share this: an optional visible box, text
-  // inside it, drag-to-move, click-to-edit, and a corner handle that scales
-  // fontSize (which drives the box's own auto-fit size on the next render).
+  // inside it, drag-to-move, click-to-select (the text itself is typed in the
+  // edit box), and a corner handle that scales fontSize (which drives the
+  // box's own auto-fit size on the next render).
   function renderTextEl(svg, el, opts) {
     const fontSize = el.fontSize;
-    // While editing, the overlay input shows the raw typed text, so the box
-    // is sized for that rather than for the raised-number layout.
-    const chord = opts.chord && el.id !== editingId;
-    const { w, h } = textBoxSize(el.text, fontSize, chord);
+    const { w, h } = textBoxSize(el.text, fontSize, opts.chord);
     const g = svgGroup({ cls: 'el-group' });
 
     let interactiveEl;
@@ -1183,33 +1219,27 @@
       g.appendChild(interactiveEl);
     }
 
-    if (el.id !== editingId) {
-      const textX = opts.boxed ? el.x + w / 2 : el.x + 8;
-      const draw = opts.chord ? svgChordText : svgText;
-      g.appendChild(draw(el.text || '', textX, el.y + h / 2 + fontSize * 0.35, {
-        cls: opts.textCls, anchor: opts.boxed ? 'middle' : 'start', size: fontSize,
-      }));
-    }
+    const textX = opts.boxed ? el.x + w / 2 : el.x + 8;
+    const draw = opts.chord ? svgChordText : svgText;
+    g.appendChild(draw(el.text || '', textX, el.y + h / 2 + fontSize * 0.35, {
+      cls: opts.textCls, anchor: opts.boxed ? 'middle' : 'start', size: fontSize,
+    }));
 
     const startX = el.x, startY = el.y;
     wireDragAndClick(interactiveEl,
       (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); },
-      () => startTextEdit(el.id), el);
+      () => focusEditField('text'), el);
 
-    const startSize = fontSize;
-    addResizeHandle(g, el.x + w, el.y + h, (ddx) => {
-      el.fontSize = clamp(Math.round(startSize + ddx * 0.4), 8, 64);
-      markDirty(); renderSvg();
-    });
+    addResizeHandle(g, el.x + w, el.y + h, fontDrag(el, LIMITS.textFont), el);
 
-    addDeleteButton(g, el, el.x, el.y, w);
     svg.appendChild(g);
   }
 
   function renderRowEl(svg, el) {
     const n = el.barCount, w = el.w, h = el.h;
     const barW = w / n;
-    const g = svgGroup({ cls: 'el-group' });
+    // The dashed outlines of empty chord slots show only on the one selected row.
+    const g = svgGroup({ cls: selectedIds.size === 1 && selectedIds.has(el.id) ? 'el-group is-selected' : 'el-group' });
 
     const hit = svgRect(el.x, el.y, w, h, { cls: 'el-row-hit' });
     g.appendChild(hit);
@@ -1218,19 +1248,47 @@
     wireDragAndClick(hit, dragRow, null, el);
 
     // Chord slots sit right above the hit rect (and below everything else
-    // drawn here) so the +/-, repeat and resize controls stay clickable. A
-    // drag on a slot still moves the row; a plain click types a chord.
-    const slots = rowChordSlots(el), perBar = el.chordsPerBar || 0;
+    // drawn here) so the repeat marks and the resize corner stay clickable. A drag on
+    // a slot still moves the row; a plain click selects the row and puts the
+    // cursor in that slot's field in the edit box.
+    const slots = rowChordSlots(el);
+    const barExtent = {}; // bar index -> the x-range its boxes span
     slots.forEach(s => {
-      const text = (el.chords && el.chords[s.idx]) || '';
-      const first = slots[s.bar * perBar], last = slots[s.bar * perBar + perBar - 1];
-      const bar = { x: first.x, w: last.x + last.w - first.x };
+      const e = barExtent[s.bar] || (barExtent[s.bar] = { x: s.x, right: s.x + s.w });
+      e.x = Math.min(e.x, s.x);
+      e.right = Math.max(e.right, s.x + s.w);
+    });
+    const chordAt = s => (el.chords && el.chords[s.idx]) || '';
+    // How much room a chord may take: its own slot plus the empty slots after
+    // it in the same bar (`Am _ F G`: the Am can run into the empty slot).
+    // This only limits its size -- it never changes where the chord sits.
+    const roomOf = s => {
+      let last = s;
+      for (let j = s.idx + 1; j < slots.length && slots[j].bar === s.bar && !chordAt(slots[j]); j++) last = slots[j];
+      const w = last.x + last.w - s.x;
+      // Left-aligned chords start a little inside their slot, which only costs
+      // room at the end of the bar (the next chord starts inside its slot too).
+      return s.n > 1 && last.k === s.n - 1 ? w - SLOT_CHORD_PAD : w;
+    };
+    const gapOf = s => (s.n > 1 ? 2 : 4);
+    // One chord size per row -- the largest that fits its tightest spot --
+    // so the same chord never looks bigger in one bar than in another.
+    let chordSize = Infinity;
+    slots.forEach(s => {
+      const t = chordAt(s);
+      if (t && !barSymbol(t)) chordSize = Math.min(chordSize, slotFontSize(t, roomOf(s), h, gapOf(s)));
+    });
+    if (!isFinite(chordSize)) chordSize = 0;
+    slots.forEach(s => {
+      const text = chordAt(s);
+      const ext = barExtent[s.bar];
+      const bar = { x: ext.x, w: ext.right - ext.x };
       const slotEl = svgRect(s.x + 1.5, s.y + 1.5, Math.max(s.w - 3, 1), Math.max(s.h - 3, 1), {
         cls: text ? 'el-chord-slot' : 'el-chord-slot empty',
       });
       g.appendChild(slotEl);
-      wireDragAndClick(slotEl, dragRow, () => startChordEdit(el.id, s.idx), el);
-      if (text && !(el.id === editingId && editingSlot === s.idx)) drawSlotContent(g, text, s, bar, h);
+      wireDragAndClick(slotEl, dragRow, () => focusSlot(el.id, s.idx), el);
+      if (text) drawSlotContent(g, text, s, bar, h, chordSize, s.n);
     });
 
     for (let i = 0; i <= n; i++) {
@@ -1242,52 +1300,14 @@
 
     if (el.repeatStart) {
       drawRepeatMark(g, el.x, el.y, REPEAT_MARK_W, h, 'start', `${el.id}-repeatStart`);
-      const del = svgText('×', el.x + REPEAT_MARK_W + 2, el.y + 11, { cls: 'el-delete' });
-      del.addEventListener('mousedown', e => e.stopPropagation());
-      del.addEventListener('click', e => { e.stopPropagation(); el.repeatStart = false; markDirty(); renderSvg(); });
-      g.appendChild(del);
     }
     if (el.repeatEnd) {
       const rx = el.x + w - REPEAT_MARK_W;
       drawRepeatMark(g, rx, el.y, REPEAT_MARK_W, h, 'end', `${el.id}-repeatEnd`);
-      const del = svgText('×', rx - 14, el.y + 11, { cls: 'el-delete' });
-      del.addEventListener('mousedown', e => e.stopPropagation());
-      del.addEventListener('click', e => { e.stopPropagation(); el.repeatEnd = false; markDirty(); renderSvg(); });
-      g.appendChild(del);
     }
 
-    const removeBtn = svgText('−', el.x - 10, el.y + h / 2 + 4, { cls: 'el-row-removebar', anchor: 'middle' });
-    removeBtn.addEventListener('mousedown', e => e.stopPropagation());
-    removeBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      if (el.barCount > 1) {
-        el.barCount -= 1;
-        if (el.chords) el.chords.length = el.barCount * (el.chordsPerBar || 0); // don't resurrect old chords if a bar is added back
-        markDirty(); renderSvg();
-      }
-    });
-    g.appendChild(removeBtn);
+    addResizeHandle(g, el.x + w, el.y + h, sizeDrag(el), el);
 
-    const addBtn = svgText('+', el.x + w + 12, el.y + h / 2 + 4, { cls: 'el-row-addbar', anchor: 'middle' });
-    addBtn.addEventListener('mousedown', e => e.stopPropagation());
-    addBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      if (el.barCount < ROW_MAX_BARS) {
-        el.barCount += 1;
-        if (el.chords) { while (el.chords.length < el.barCount * el.chordsPerBar) el.chords.push(''); }
-        markDirty(); renderSvg();
-      }
-    });
-    g.appendChild(addBtn);
-
-    const startW = w, startH = h;
-    addResizeHandle(g, el.x + w, el.y + h, (ddx, ddy) => {
-      el.w = clamp(startW + ddx, 30, PAGE_W);
-      el.h = clamp(startH + ddy, 16, 300);
-      markDirty(); renderSvg();
-    });
-
-    addDeleteButton(g, el, el.x, el.y, w + 24);
     svg.appendChild(g);
   }
 
@@ -1318,16 +1338,10 @@
     const startX = el.x, startY = el.y;
     wireDragAndClick(hit,
       (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); },
-      () => { el.kind = el.kind === 'start' ? 'end' : 'start'; markDirty(); renderSvg(); }, el);
+      null, el);
 
-    const startW = w, startH = h;
-    addResizeHandle(g, el.x + w, el.y + h, (ddx, ddy) => {
-      el.w = clamp(startW + ddx, 10, 60);
-      el.h = clamp(startH + ddy, 16, 200);
-      markDirty(); renderSvg();
-    });
+    addResizeHandle(g, el.x + w, el.y + h, sizeDrag(el), el);
 
-    addDeleteButton(g, el, el.x, el.y, w);
     svg.appendChild(g);
   }
 
@@ -1347,24 +1361,16 @@
 
     const box = voltaLabelBox(el, el.text);
     const label = g.appendChild(svgRect(box.x, box.y, box.w, box.h, { cls: 'el-text-hit' }));
-    wireDragAndClick(label, moveTo, () => startTextEdit(el.id), el);
-    if (el.id !== editingId) {
-      g.appendChild(svgText(el.text || '', el.x + voltaTextPad(el), el.y + h / 2 + el.fontSize * 0.35 + 1, {
-        cls: 'el-volta-text', size: el.fontSize,
-      }));
-    }
+    wireDragAndClick(label, moveTo, () => focusEditField('text'), el);
+    g.appendChild(svgText(el.text || '', el.x + voltaTextPad(el), el.y + h / 2 + el.fontSize * 0.35 + 1, {
+      cls: 'el-volta-text', size: el.fontSize,
+    }));
 
-    const startW = w, startH = h;
-    addResizeHandle(g, el.x + w, el.y + h, (ddx, ddy) => {
-      el.w = clamp(startW + ddx, 16, PAGE_W);
-      el.h = clamp(startH + ddy, 10, 60);
-      // The number scales with the bracket's height, so shrinking the corner
-      // shrinks the whole volta rather than cramping a full-size number.
-      el.fontSize = clamp(Math.round(el.h * VOLTA_FONT_SIZE / VOLTA_H), 6, 32);
-      markDirty(); renderSvg();
-    });
+    // The number scales with the bracket's height (see applySize), so
+    // shrinking the corner shrinks the whole volta rather than cramping a
+    // full-size number.
+    addResizeHandle(g, el.x + w, el.y + h, sizeDrag(el), el);
 
-    addDeleteButton(g, el, el.x, el.y - 6, w);
     svg.appendChild(g);
   }
 
@@ -1393,11 +1399,11 @@
     }, null, el);
 
     const h1 = svgCircle(el.x1, el.y1, 5, { cls: 'el-arrow-handle' });
-    wireDragAndClick(h1, (ddx, ddy) => { el.x1 = sx1 + ddx; el.y1 = sy1 + ddy; markDirty(); renderSvg(); }, null);
+    wireDragAndClick(h1, (ddx, ddy) => { el.x1 = sx1 + ddx; el.y1 = sy1 + ddy; markDirty(); renderSvg(); }, null, null, el);
     g.appendChild(h1);
 
     const h2 = svgCircle(el.x2, el.y2, 5, { cls: 'el-arrow-handle' });
-    wireDragAndClick(h2, (ddx, ddy) => { el.x2 = sx2 + ddx; el.y2 = sy2 + ddy; markDirty(); renderSvg(); }, null);
+    wireDragAndClick(h2, (ddx, ddy) => { el.x2 = sx2 + ddx; el.y2 = sy2 + ddy; markDirty(); renderSvg(); }, null, null, el);
     g.appendChild(h2);
 
     // Bow handle: drag away from the straight-line midpoint to curve the
@@ -1408,10 +1414,9 @@
     wireDragAndClick(hb, (ddx, ddy) => {
       el.bow.dx = startBowDx + ddx; el.bow.dy = startBowDy + ddy;
       markDirty(); renderSvg();
-    }, null);
+    }, null, null, el);
     g.appendChild(hb);
 
-    addDeleteButton(g, el, Math.max(el.x1, el.x2), Math.min(el.y1, el.y2) - 20, 0);
     svg.appendChild(g);
   }
 
@@ -1426,13 +1431,8 @@
     const startX = el.x, startY = el.y;
     wireDragAndClick(hit, (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); }, null, el);
 
-    const startSize = size;
-    addResizeHandle(g, el.x + w, el.y + h * 0.25, (ddx) => {
-      el.fontSize = clamp(Math.round(startSize + ddx * 0.4), 12, 100);
-      markDirty(); renderSvg();
-    });
+    addResizeHandle(g, el.x + w, el.y + h * 0.25, fontDrag(el, LIMITS.glyphFont), el);
 
-    addDeleteButton(g, el, el.x, el.y - h * 0.75, w);
     svg.appendChild(g);
   }
 
@@ -1648,24 +1648,18 @@
   function renderRhythmBarEl(svg, el) {
     const g = svgGroup({ cls: 'el-group' });
     const startX = el.x, startY = el.y;
-    const { topY, bottomY } = renderRhythmCells(g, el.cells, el.x, el.y, el.w, el.h,
+    const { bottomY } = renderRhythmCells(g, el.cells, el.x, el.y, el.w, el.h,
       (idx, clientX, clientY) => openRhythmMenu(clientX, clientY, el.cells, idx, newCells => {
         el.cells = newCells; markDirty(); renderSvg();
       }, { onChange: () => { markDirty(); renderSvg(); } }),
       (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); },
       barBeatUnits(el.denominator || 4), el);
 
-    // Width and height are independent -- dragging sideways spaces the 16
-    // units out without changing note size; dragging up/down scales the
-    // notes/stems without changing the bar's overall width.
-    const startW = el.w, startH = el.h;
-    addResizeHandle(g, el.x + el.w, bottomY, (ddx, ddy) => {
-      el.w = clamp(startW + ddx, rhythmBarMinWidth(el.cells), PAGE_W);
-      el.h = clamp(startH + ddy, 12, 100);
-      markDirty(); renderSvg();
-    });
+    // Width and height are independent -- dragging sideways spaces the cells
+    // out without changing note size; dragging up/down scales the notes and
+    // stems without changing the bar's overall width.
+    addResizeHandle(g, el.x + el.w, bottomY, sizeDrag(el), el);
 
-    addDeleteButton(g, el, el.x, topY, el.w);
     svg.appendChild(g);
   }
 
@@ -1791,7 +1785,8 @@
       const dragStartPitch = pitchOf(i);
       wireDragAndClick(hit,
         (ddx, ddy) => callbacks.onNoteDrag(i, ddy, dragStartPitch),
-        (clientX, clientY) => callbacks.onCellMenu(i, clientX, clientY));
+        (clientX, clientY) => callbacks.onCellMenu(i, clientX, clientY),
+        null, callbacks.onMove ? el : null); // a note drag re-pitches rather than moves, but a press still picks the staff
     });
 
     const handledRunStarts = new Set();
@@ -1907,7 +1902,6 @@
   function renderNoteStaffEl(svg, el) {
     const g = svgGroup({ cls: 'el-group' });
     const startX = el.x, startY = el.y;
-    const startW = el.w, startH = el.h;
     const leadW = notestaffLeadWidth(el);
     const moveTo = (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); };
 
@@ -1915,7 +1909,7 @@
     drawClef(g, el);
     drawKeySignature(g, el);
 
-    const { topY, bottomY } = renderStaffCells(g, el.cells, el.x + leadW, el.y, el.w, el, {
+    const { bottomY } = renderStaffCells(g, el.cells, el.x + leadW, el.y, el.w, el, {
       onCellMenu: (idx, clientX, clientY) => {
         openStaffMenu(clientX, clientY, el.cells, idx,
           newCells => { el.cells = newCells; markDirty(); renderSvg(); },
@@ -1931,15 +1925,9 @@
 
     addMoveHandle(g, el.x - 8, el.y + el.h / 2, moveTo, el);
 
-    // Width and height are independent, same as the rhythm bar's resize
-    // handle -- width re-spaces cells, height rescales note/staff size.
-    addResizeHandle(g, el.x + leadW + el.w, bottomY, (ddx, ddy) => {
-      el.w = clamp(startW + ddx, rhythmBarMinWidth(el.cells), PAGE_W - leadW);
-      el.h = clamp(startH + ddy, 24, 160);
-      markDirty(); renderSvg();
-    });
+    // Same as the rhythm bar: width re-spaces cells, height rescales the notes and staff.
+    addResizeHandle(g, el.x + leadW + el.w, bottomY, sizeDrag(el), el);
 
-    addDeleteButton(g, el, el.x, topY, leadW + el.w);
     svg.appendChild(g);
   }
 
@@ -1972,6 +1960,7 @@
 
     model.elements.forEach(el => renderElement(svg, el));
     drawSelectionOverlay(svg);
+    syncEditBox();
   }
 
   function render() {
@@ -1986,6 +1975,770 @@
     const el = document.getElementById('save-status');
     el.textContent = dirty ? 'Unsaved' : 'Saved';
     el.classList.toggle('unsaved', dirty);
+  }
+
+  /* ---------- floating note-menu items ---------- */
+  // Every entry the note/rest picker menu (openRhythmMenu) can show. Which
+  // ones are on is chosen in the edit box, so rarely used items can live here
+  // without cluttering the menu: give a new item `defaultOn: false` and it
+  // stays hidden until someone ticks it. Ids: `note-<dur>` / `rest-<dur>`
+  // (durations, matching RHYTHM_MENU_OPTIONS), `artic-<kind>`, `acc-<value>`.
+  const NOTE_MENU_GROUPS = [
+    { id: 'duration', label: 'Notes' },
+    { id: 'rest', label: 'Rests' },
+    { id: 'articulation', label: 'Articulations' },
+    { id: 'accidental', label: 'Accidentals (note staff only)' },
+  ];
+  const NOTE_MENU_ITEMS = [
+    ...RHYTHM_MENU_OPTIONS.map(o => ({ id: `${o.type}-${o.duration}`, group: o.type === 'note' ? 'duration' : 'rest', label: o.label, defaultOn: true })),
+    ...ARTICULATION_KINDS.map(k => ({ id: `artic-${k.value}`, group: 'articulation', label: k.label, defaultOn: true })),
+    ...ACCIDENTAL_MENU_OPTIONS.map(a => ({ id: `acc-${a.value || 'default'}`, group: 'accidental', label: a.label, defaultOn: true })),
+  ];
+  const NOTE_MENU_BY_ID = Object.fromEntries(NOTE_MENU_ITEMS.map(i => [i.id, i]));
+  // An editor preference rather than sheet content, so it lives in this
+  // browser (`{ id: bool }` overrides; anything absent follows `defaultOn`).
+  const NOTE_MENU_STORAGE_KEY = 'leadsheet.noteMenu.v1';
+  let noteMenuPrefs = {};
+  try {
+    const saved = JSON.parse(localStorage.getItem(NOTE_MENU_STORAGE_KEY));
+    if (saved && typeof saved === 'object') noteMenuPrefs = saved;
+  } catch (err) { /* storage unavailable: defaults */ }
+  function saveNoteMenuPrefs() {
+    try { localStorage.setItem(NOTE_MENU_STORAGE_KEY, JSON.stringify(noteMenuPrefs)); } catch (err) { /* ignore */ }
+  }
+  function isMenuItemOn(id) {
+    const item = NOTE_MENU_BY_ID[id];
+    if (!item) return true;
+    return id in noteMenuPrefs ? !!noteMenuPrefs[id] : item.defaultOn;
+  }
+  let noteMenuSectionOpen = false;
+
+  /* ---------- edit-box setters ---------- */
+  // The logic behind the edit box's fields, kept apart from the DOM code.
+  function ensureChords(row) {
+    if (!row.chords) row.chords = [];
+    const total = rowSlotCount(row);
+    while (row.chords.length < total) row.chords.push('');
+  }
+  // Re-lays the flat `chords` list out for new per-bar counts: every bar keeps
+  // its first min(old, new) chords, so what is typed stays in its (bar, box).
+  function remapChords(row, oldCounts, newCounts) {
+    const old = row.chords || [];
+    const out = [];
+    let at = 0;
+    newCounts.forEach((n, i) => {
+      const had = oldCounts[i] || 0;
+      for (let k = 0; k < n; k++) out.push(k < had ? (old[at + k] || '') : '');
+      at += had;
+    });
+    row.chords = out;
+  }
+  // Stores per-bar counts the shortest way: when every bar agrees they collapse
+  // back into the row's `chordsPerBar`, so `chordCounts` only exists while
+  // bars really differ (and the two never contradict each other).
+  function storeBarCounts(row, counts) {
+    if (counts.every(c => c === counts[0])) {
+      delete row.chordCounts;
+      if (counts[0] > 0) row.chordsPerBar = counts[0]; else delete row.chordsPerBar;
+    } else {
+      row.chordCounts = counts;
+    }
+    if (!counts.some(c => c > 0)) delete row.chords;
+    activeSlot = null;
+  }
+  // Keeps each bar's width (adding a bar adds a bar), but never lets the row
+  // grow past the right page margin: then the bars squeeze instead. New bars
+  // get the row's default chord count; existing bars keep theirs.
+  function setRowBars(row, n) {
+    n = clamp(Math.round(n) || 1, 1, ROW_MAX_BARS);
+    if (n === row.barCount) return;
+    const oldCounts = rowBarCounts(row); // before barCount changes
+    const barW = row.w / row.barCount;
+    const room = Math.max(PAGE_W - PAGE_MARGIN - row.x, row.w);
+    row.w = clamp(n * barW, LIMITS.row.w[0], Math.min(ROW_MAX_W, room));
+    row.barCount = n;
+    const cpb = row.chordsPerBar || 0;
+    const counts = Array.from({ length: n }, (_, i) => (i < oldCounts.length ? oldCounts[i] : cpb));
+    remapChords(row, oldCounts, counts); // rebuilt rather than resized, so a removed bar's chords don't come back when one is added again
+    storeBarCounts(row, counts);
+  }
+  // Every bar gets `cpb` chord boxes (the edit box's "all bars" stepper).
+  function setRowChordsPerBar(row, cpb) {
+    cpb = clamp(Math.round(cpb) || 0, 0, ROW_MAX_CHORDS);
+    if (!row.chordCounts && (row.chordsPerBar || 0) === cpb) return;
+    const counts = Array(row.barCount).fill(cpb);
+    remapChords(row, rowBarCounts(row), counts);
+    storeBarCounts(row, counts);
+  }
+  // Just bar `bar` (0-based) gets `n` chord boxes.
+  function setRowBarChords(row, bar, n) {
+    const counts = rowBarCounts(row);
+    if (bar < 0 || bar >= counts.length) return;
+    const next = counts.slice();
+    next[bar] = clamp(Math.round(n) || 0, 0, ROW_MAX_CHORDS);
+    if (next[bar] === counts[bar]) return;
+    remapChords(row, counts, next);
+    storeBarCounts(row, next);
+  }
+  function fitRowToPage(row) {
+    row.x = PAGE_MARGIN;
+    row.w = ROW_MAX_W;
+  }
+
+  // Keeps the leading cells that still fit a bar of `totalUnits`, and fills the
+  // rest with 16th rests -- a time-signature change keeps what was written.
+  function refitCells(cells, totalUnits) {
+    const out = [];
+    let used = 0;
+    for (const c of cells) {
+      if (used + c.duration > totalUnits) break;
+      out.push(JSON.parse(JSON.stringify(c)));
+      used += c.duration;
+    }
+    for (; used < totalUnits; used += 2) out.push({ type: 'rest', duration: 2 });
+    return out;
+  }
+  // Shared by the rhythm bar and the note staff. The width follows the bar's
+  // length, so the spacing per beat stays as it was.
+  function setBarTimeSig(el, num, den) {
+    const oldUnits = barTotalUnits(el.numerator || 4, el.denominator || 4);
+    el.numerator = clamp(Math.round(num) || 4, 1, 32);
+    el.denominator = den;
+    const newUnits = barTotalUnits(el.numerator, el.denominator);
+    el.cells = refitCells(el.cells, newUnits);
+    applySize(el, el.w * newUnits / oldUnits, null);
+  }
+  // Refills the bar with notes of `unit` 32nds each (0 = all rests).
+  function fillCells(el, unit) {
+    const total = barTotalUnits(el.numerator || 4, el.denominator || 4);
+    const staff = el.type === 'notestaff';
+    const cells = [];
+    let used = 0;
+    if (unit) {
+      for (; used + unit <= total; used += unit) {
+        cells.push(staff ? { type: 'note', duration: unit, pitch: STAFF_DEFAULT_PITCH, accidental: null } : { type: 'note', duration: unit });
+      }
+    }
+    for (; used < total; used += 2) cells.push({ type: 'rest', duration: 2 });
+    el.cells = cells;
+  }
+  // Moves every note by `steps` staff steps (7 = an octave), as far as the
+  // staff allows, keeping the intervals between them.
+  function transposeStaff(el, steps) {
+    const notes = el.cells.filter(c => c.type === 'note');
+    if (!notes.length) return;
+    const pitchOf = c => (c.pitch != null ? c.pitch : STAFF_DEFAULT_PITCH);
+    const lo = STAFF_PITCH_MIN - Math.min(...notes.map(pitchOf));
+    const hi = STAFF_PITCH_MAX - Math.max(...notes.map(pitchOf));
+    const d = clamp(steps, lo, hi);
+    notes.forEach(c => { c.pitch = pitchOf(c) + d; });
+  }
+  function reorderElement(el, toFront) {
+    model.elements = model.elements.filter(e => e !== el);
+    if (toFront) model.elements.push(el); else model.elements.unshift(el);
+  }
+  function alignToPage(el, mode) {
+    const b = elementBounds(el);
+    const dx = mode === 'center' ? (PAGE_W - b.w) / 2 - b.x : PAGE_MARGIN - b.x;
+    applyOffset(el, snapshotPos(el), dx, 0);
+  }
+  // Aligns the selection's edges/centres to its own bounding box.
+  function alignSelection(mode) {
+    const els = model.elements.filter(e => selectedIds.has(e.id));
+    const bs = els.map(elementBounds);
+    const minX = Math.min(...bs.map(b => b.x)), maxX = Math.max(...bs.map(b => b.x + b.w));
+    const minY = Math.min(...bs.map(b => b.y)), maxY = Math.max(...bs.map(b => b.y + b.h));
+    els.forEach((el, i) => {
+      const b = bs[i];
+      let dx = 0, dy = 0;
+      if (mode === 'left') dx = minX - b.x;
+      else if (mode === 'center') dx = (minX + maxX) / 2 - (b.x + b.w / 2);
+      else if (mode === 'right') dx = maxX - (b.x + b.w);
+      else if (mode === 'top') dy = minY - b.y;
+      else if (mode === 'middle') dy = (minY + maxY) / 2 - (b.y + b.h / 2);
+      else if (mode === 'bottom') dy = maxY - (b.y + b.h);
+      applyOffset(el, snapshotPos(el), dx, dy);
+    });
+  }
+  // Spaces the selection so the gaps between neighbours are equal.
+  function distributeSelection(axis) {
+    const horiz = axis === 'h';
+    const items = model.elements.filter(e => selectedIds.has(e.id)).map(el => ({ el, b: elementBounds(el) }));
+    if (items.length < 3) return;
+    const pos = b => (horiz ? b.x : b.y), size = b => (horiz ? b.w : b.h);
+    items.sort((a, c) => pos(a.b) - pos(c.b));
+    const first = pos(items[0].b);
+    const last = items.reduce((m, i) => Math.max(m, pos(i.b) + size(i.b)), -Infinity);
+    const gap = (last - first - items.reduce((s, i) => s + size(i.b), 0)) / (items.length - 1);
+    let cursor = first;
+    items.forEach(({ el, b }) => {
+      const d = cursor - pos(b);
+      applyOffset(el, snapshotPos(el), horiz ? d : 0, horiz ? 0 : d);
+      cursor += size(b) + gap;
+    });
+  }
+
+  /* ---------- edit box ---------- */
+  // Everything about the selected element that isn't a drag, a squeeze or a
+  // click lives here. Each element type has a schema (a list of sections of
+  // fields, see EDIT_SCHEMAS); the box is rebuilt from it when the selection
+  // changes, and its inputs are refreshed in place after every render, so
+  // dragging or squeezing an element on the page updates its numbers live.
+  const editBox = document.getElementById('edit-box');
+  let editBoxSig = null;     // which selection the box was last built for
+  let editBoxSyncs = [];     // one refresher per input
+  let editBoxBuilding = false;
+
+  const ELEMENT_NAMES = {
+    title: 'Title box', chordText: 'Chord text', text: 'Text', row: 'Bars', repeat: 'Repeat sign',
+    volta: 'Volta ending', arrow: 'Arrow', glyph: 'Symbol', rhythmbar: 'Rhythm bar', notestaff: 'Note staff',
+  };
+  const TEXT_TYPE_OPTIONS = [
+    { value: 'title', label: 'Title box' }, { value: 'chordText', label: 'Chord text' }, { value: 'text', label: 'Text' },
+  ];
+  const GLYPH_OPTIONS = [
+    { value: '', label: 'Repeat bar (%)' }, { value: '', label: 'Repeat 2 bars' }, { value: '', label: 'Repeat 4 bars' },
+    { value: '', label: 'Segno' }, { value: '', label: 'Coda' }, { value: '', label: 'Fermata' },
+    { value: '', label: 'Breath mark' }, { value: '', label: 'Caesura' },
+  ];
+  const KEYSIG_OPTIONS = [
+    'Cb (7 flats)', 'Gb (6 flats)', 'Db (5 flats)', 'Ab (4 flats)', 'Eb (3 flats)', 'Bb (2 flats)', 'F (1 flat)', 'C (none)',
+    'G (1 sharp)', 'D (2 sharps)', 'A (3 sharps)', 'E (4 sharps)', 'B (5 sharps)', 'F# (6 sharps)', 'C# (7 sharps)',
+  ].map((label, i) => ({ value: i - 7, label }));
+  // What one beat of the time signature is (the bottom number), in words.
+  const TIMESIG_DENOMINATORS = [1, 2, 4, 8, 16];
+  const TIMESIG_NOTE_NAMES = { 1: 'whole notes', 2: 'half notes', 4: 'quarter notes', 8: 'eighth notes', 16: '16th notes' };
+
+  function mk(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  const fmtNum = v => String(Math.round(v * 10) / 10);
+  const resolveLimit = (v, el) => (typeof v === 'function' ? v(el) : v);
+  function numField(label, key, extra) {
+    return { kind: 'number', id: key, label, get: e => e[key], set: (e, v) => { e[key] = v; }, ...extra };
+  }
+
+  function geometrySection(el) {
+    const lim = sizeLimits(el);
+    const fields = [];
+    const posRange = { min: -50, max: PAGE_W + 50 };
+    if (el.type === 'arrow') {
+      ['x1', 'y1', 'x2', 'y2'].forEach(k => fields.push(numField(k.toUpperCase(), k, posRange)));
+    } else {
+      fields.push(numField('X', 'x', posRange), numField('Y', 'y', { min: -50, max: PAGE_H + 50 }));
+      if (lim.w) fields.push(numField('W', 'w', { min: e => sizeLimits(e).w[0], max: e => sizeLimits(e).w[1], set: (e, v) => applySize(e, v, null) }));
+      if (lim.h) fields.push(numField('H', 'h', { min: e => sizeLimits(e).h[0], max: e => sizeLimits(e).h[1], set: (e, v) => applySize(e, null, v) }));
+    }
+    return { title: 'Position & size', fields };
+  }
+  function actionsSection() {
+    return {
+      title: 'Element',
+      fields: [
+        { kind: 'buttons', items: [
+          { label: 'Duplicate', own: true, onClick: () => duplicateSelection() },
+          { label: 'To front', onClick: e => reorderElement(e, true) },
+          { label: 'To back', onClick: e => reorderElement(e, false) },
+        ] },
+        { kind: 'buttons', items: [
+          { label: 'Center on page', onClick: e => alignToPage(e, 'center') },
+          { label: 'Left margin', onClick: e => alignToPage(e, 'left') },
+        ] },
+        { kind: 'buttons', items: [
+          { label: 'Delete', danger: true, own: true, onClick: e => removeElement(e.id) },
+        ] },
+      ],
+    };
+  }
+  function textSchema(el) {
+    return [
+      { fields: [
+        { kind: 'text', id: 'text', label: 'Text', wide: true, get: e => e.text || '', set: (e, v) => { e.text = v; } },
+        numField('Size', 'fontSize', { stepper: true, integer: true, min: LIMITS.textFont[0], max: LIMITS.textFont[1] }),
+        { kind: 'select', id: 'type', label: 'Type', options: TEXT_TYPE_OPTIONS, get: e => e.type, set: (e, v) => { e.type = v; }, structural: true },
+      ] },
+      geometrySection(el),
+      actionsSection(),
+    ];
+  }
+  // Time signature, fills and the floating-menu list: shared by the rhythm
+  // bar and the note staff.
+  function barSections(el) {
+    const beat = barBeatUnits(el.denominator || 4);
+    const denOptions = TIMESIG_DENOMINATORS.includes(el.denominator || 4)
+      ? TIMESIG_DENOMINATORS : [...TIMESIG_DENOMINATORS, el.denominator].sort((a, b) => a - b);
+    return [
+      { title: 'Time signature', fields: [
+        numField('Beats', 'numerator', { stepper: true, integer: true, min: 1, max: 32, get: e => e.numerator || 4, set: (e, v) => setBarTimeSig(e, v, e.denominator || 4), structural: true }),
+        { kind: 'select', id: 'denominator', label: 'of', options: denOptions.map(d => ({ value: d, label: TIMESIG_NOTE_NAMES[d] || `1/${d} notes` })),
+          get: e => e.denominator || 4, set: (e, v) => setBarTimeSig(e, e.numerator || 4, v), structural: true },
+      ] },
+      { title: 'Fill the bar with', fields: [
+        { kind: 'buttons', items: [
+          { label: 'Rests', onClick: e => fillCells(e, 0) },
+          { label: 'Each beat', onClick: e => fillCells(e, beat) },
+          ...(beat >= 4 ? [{ label: 'Half beats', onClick: e => fillCells(e, beat / 2) }] : []),
+        ] },
+      ] },
+    ];
+  }
+  const EDIT_SCHEMAS = {
+    title: textSchema,
+    chordText: textSchema,
+    text: textSchema,
+    row: el => [
+      { fields: [
+        numField('Bars', 'barCount', { stepper: true, integer: true, min: 1, max: ROW_MAX_BARS, set: setRowBars, structural: true }),
+        numField('Chords / bar (all)', 'chordsPerBar', { stepper: true, integer: true, min: 0, max: ROW_MAX_CHORDS, get: e => e.chordsPerBar || 0, set: setRowChordsPerBar, structural: true }),
+        { kind: 'toggle', id: 'repeatStart', label: 'Repeat start', get: e => !!e.repeatStart, set: (e, v) => { e.repeatStart = v; } },
+        { kind: 'toggle', id: 'repeatEnd', label: 'Repeat end', get: e => !!e.repeatEnd, set: (e, v) => { e.repeatEnd = v; } },
+      ] },
+      { title: 'Chords', fields: [{ kind: 'chordSlots' }] },
+      geometrySection(el),
+      { title: 'Layout', fields: [{ kind: 'buttons', items: [
+        { label: 'Fit to page width', onClick: e => fitRowToPage(e) },
+        ...(rowSlotCount(el) > 0 ? [{ label: 'Clear chords', onClick: e => { e.chords = Array(rowSlotCount(e)).fill(''); } }] : []),
+      ] }] },
+      actionsSection(),
+    ],
+    repeat: el => [
+      { fields: [
+        { kind: 'segmented', id: 'kind', label: 'Kind', options: [{ value: 'start', label: 'Start' }, { value: 'end', label: 'End' }],
+          get: e => e.kind, set: (e, v) => { e.kind = v; } },
+      ] },
+      geometrySection(el),
+      actionsSection(),
+    ],
+    volta: el => [
+      { fields: [
+        { kind: 'text', id: 'text', label: 'Text', wide: true, get: e => e.text || '', set: (e, v) => { e.text = v; } },
+        { kind: 'buttons', items: ['1.', '2.', '3.', '1, 2.'].map(t => ({ label: t, onClick: e => { e.text = t; } })) },
+        numField('Size', 'fontSize', { stepper: true, integer: true, min: LIMITS.volta.fontSize[0], max: LIMITS.volta.fontSize[1] }),
+      ] },
+      geometrySection(el),
+      actionsSection(),
+    ],
+    glyph: el => [
+      { fields: [
+        { kind: 'select', id: 'code', label: 'Symbol',
+          options: GLYPH_OPTIONS.some(o => o.value === el.code) ? GLYPH_OPTIONS : [...GLYPH_OPTIONS, { value: el.code, label: 'Custom' }],
+          get: e => e.code, set: (e, v) => { e.code = v; } },
+        numField('Size', 'fontSize', { stepper: true, integer: true, min: LIMITS.glyphFont[0], max: LIMITS.glyphFont[1] }),
+      ] },
+      geometrySection(el),
+      actionsSection(),
+    ],
+    arrow: el => [
+      { title: 'Curve', fields: [
+        numField('Bow X', 'bowDx', { min: -300, max: 300, get: e => (e.bow ? e.bow.dx : 0), set: (e, v) => { e.bow = { dx: v, dy: e.bow ? e.bow.dy : 0 }; } }),
+        numField('Bow Y', 'bowDy', { min: -300, max: 300, get: e => (e.bow ? e.bow.dy : 0), set: (e, v) => { e.bow = { dx: e.bow ? e.bow.dx : 0, dy: v }; } }),
+        { kind: 'buttons', items: [
+          { label: 'Straighten', onClick: e => { e.bow = { dx: 0, dy: 0 }; } },
+          { label: 'Swap ends', onClick: e => { [e.x1, e.x2] = [e.x2, e.x1]; [e.y1, e.y2] = [e.y2, e.y1]; } },
+        ] },
+      ] },
+      geometrySection(el),
+      actionsSection(),
+    ],
+    rhythmbar: el => [
+      ...barSections(el),
+      { fields: [{ kind: 'noteMenu' }] },
+      geometrySection(el),
+      actionsSection(),
+    ],
+    notestaff: el => [
+      ...barSections(el),
+      { title: 'Clef & key', fields: [
+        { kind: 'select', id: 'clef', label: 'Clef', options: [{ value: 'treble', label: 'Treble' }, { value: 'bass', label: 'Bass' }],
+          get: e => e.clef || 'treble', set: (e, v) => { e.clef = v; } },
+        { kind: 'select', id: 'keySignature', label: 'Key', options: KEYSIG_OPTIONS,
+          get: e => e.keySignature || 0, set: (e, v) => { e.keySignature = v; applySize(e, e.w, null); } },
+      ] },
+      { title: 'Transpose notes', fields: [{ kind: 'buttons', items: [
+        { label: '− step', onClick: e => transposeStaff(e, -1) },
+        { label: '+ step', onClick: e => transposeStaff(e, 1) },
+        { label: '− octave', onClick: e => transposeStaff(e, -7) },
+        { label: '+ octave', onClick: e => transposeStaff(e, 7) },
+      ] }] },
+      { fields: [{ kind: 'noteMenu', staff: true }] },
+      geometrySection(el),
+      actionsSection(),
+    ],
+  };
+
+  // Applies a field's new value to the element and refreshes everything that
+  // shows it. `structural` fields (bar count, time signature, ...) change what
+  // the box itself contains, so it is rebuilt.
+  function applyField(el, spec, value) {
+    spec.set(el, value);
+    markDirty();
+    renderSvg();
+    if (spec.structural) renderEditBox();
+  }
+
+  function fieldNumber(el, f) {
+    const wrap = mk('div', 'eb-field');
+    wrap.appendChild(mk('span', 'eb-label', f.label));
+    const input = mk('input');
+    input.type = 'number';
+    input.dataset.field = f.id;
+    input.setAttribute('aria-label', f.label);
+    const step = f.step || 1;
+    input.step = f.integer ? step : 'any';
+    const read = () => f.get(el);
+    const commit = raw => {
+      let v = parseFloat(raw);
+      if (Number.isNaN(v)) { input.value = fmtNum(read()); return; }
+      if (f.integer) v = Math.round(v);
+      const lo = resolveLimit(f.min, el), hi = resolveLimit(f.max, el);
+      if (lo != null) v = Math.max(lo, v);
+      if (hi != null) v = Math.min(hi, v);
+      if (v !== read()) applyField(el, f, v);
+      input.value = fmtNum(read());
+    };
+    input.addEventListener('change', () => commit(input.value));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
+    if (f.stepper) {
+      const box = mk('span', 'eb-stepper');
+      const minus = mk('button', 'eb-btn eb-btn--step', '−');
+      const plus = mk('button', 'eb-btn eb-btn--step', '+');
+      minus.type = plus.type = 'button';
+      minus.dataset.field = `${f.id}-minus`; // so focus survives a rebuild (see renderEditBox)
+      plus.dataset.field = `${f.id}-plus`;
+      minus.setAttribute('aria-label', `${f.label} minus`);
+      plus.setAttribute('aria-label', `${f.label} plus`);
+      minus.addEventListener('click', () => commit(read() - step));
+      plus.addEventListener('click', () => commit(read() + step));
+      box.append(minus, input, plus);
+      wrap.appendChild(box);
+    } else {
+      wrap.appendChild(input);
+    }
+    const sync = () => { if (document.activeElement !== input) input.value = fmtNum(read()); };
+    sync();
+    editBoxSyncs.push(sync);
+    return wrap;
+  }
+
+  function fieldText(el, f) {
+    const wrap = mk('div', f.wide ? 'eb-field eb-field--wide' : 'eb-field');
+    wrap.appendChild(mk('span', 'eb-label', f.label));
+    const input = mk('input');
+    input.type = 'text';
+    input.dataset.field = f.id;
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.setAttribute('aria-label', f.label);
+    // Typed text lands on the page as it is typed.
+    input.addEventListener('input', () => { f.set(el, input.value); markDirty(); renderSvg(); });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
+    const sync = () => { if (document.activeElement !== input) input.value = f.get(el); };
+    sync();
+    editBoxSyncs.push(sync);
+    wrap.appendChild(input);
+    return wrap;
+  }
+
+  function fieldToggle(el, f) {
+    const wrap = mk('label', 'eb-field');
+    const input = mk('input');
+    input.type = 'checkbox';
+    input.dataset.field = f.id;
+    input.addEventListener('change', () => applyField(el, f, input.checked));
+    wrap.append(input, mk('span', 'eb-label', f.label));
+    const sync = () => { input.checked = !!f.get(el); };
+    sync();
+    editBoxSyncs.push(sync);
+    return wrap;
+  }
+
+  function fieldSelect(el, f) {
+    const wrap = mk('div', 'eb-field');
+    wrap.appendChild(mk('span', 'eb-label', f.label));
+    const select = mk('select');
+    select.dataset.field = f.id;
+    select.setAttribute('aria-label', f.label);
+    f.options.forEach((o, i) => { const opt = mk('option', null, o.label); opt.value = String(i); select.appendChild(opt); });
+    select.addEventListener('change', () => applyField(el, f, f.options[parseInt(select.value, 10)].value));
+    const sync = () => { select.value = String(Math.max(0, f.options.findIndex(o => o.value === f.get(el)))); };
+    sync();
+    editBoxSyncs.push(sync);
+    wrap.appendChild(select);
+    return wrap;
+  }
+
+  function fieldSegmented(el, f) {
+    const wrap = mk('div', 'eb-field');
+    wrap.appendChild(mk('span', 'eb-label', f.label));
+    const seg = mk('span', 'eb-seg');
+    const btns = f.options.map(o => {
+      const b = mk('button', 'eb-btn', o.label);
+      b.type = 'button';
+      b.addEventListener('click', () => applyField(el, f, o.value));
+      seg.appendChild(b);
+      return { b, o };
+    });
+    const sync = () => btns.forEach(({ b, o }) => b.classList.toggle('eb-btn--on', f.get(el) === o.value));
+    sync();
+    editBoxSyncs.push(sync);
+    wrap.appendChild(seg);
+    return wrap;
+  }
+
+  function fieldButtons(el, f) {
+    const wrap = mk('div', 'eb-actions');
+    f.items.forEach(item => {
+      const b = mk('button', item.danger ? 'eb-btn eb-btn--danger' : 'eb-btn', item.label);
+      b.type = 'button';
+      if (item.title) b.title = item.title;
+      b.addEventListener('click', () => {
+        item.onClick(el);
+        // `own` actions (duplicate, delete) render for themselves.
+        if (!item.own) { markDirty(); renderSvg(); }
+        if (item.rebuild) renderEditBox();
+      });
+      wrap.appendChild(b);
+    });
+    return wrap;
+  }
+
+  // One text box per chord slot, grouped by bar, in Tab order, with a - / + on
+  // each bar's line to change how many boxes that bar has. A box gets the page
+  // highlight while it has focus; Tab off the row's first/last box moves on to
+  // the neighbouring row.
+  function fieldChordSlots(el) {
+    ensureChords(el);
+    const counts = rowBarCounts(el);
+    const total = rowSlotCount(el);
+    const wrap = mk('div');
+    const list = mk('div', 'eb-chords');
+    let idx = 0;
+    counts.forEach((n, bar) => {
+      const line = mk('div', 'eb-chord-bar');
+      line.appendChild(mk('span', 'eb-chord-bar-num', String(bar + 1)));
+      const boxes = mk('div', 'eb-chord-boxes');
+      for (let k = 0; k < n; k++) {
+        const slotIdx = idx++;
+        const input = mk('input');
+        input.type = 'text';
+        input.dataset.field = `slot-${slotIdx}`;
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+        input.setAttribute('aria-label', `Bar ${bar + 1}, chord ${k + 1}`);
+        input.addEventListener('focus', () => { if (activeSlot !== slotIdx) { activeSlot = slotIdx; renderSvg(); } });
+        input.addEventListener('blur', () => {
+          if (editBoxBuilding) return; // the box is being rebuilt around it
+          if (activeSlot === slotIdx) { activeSlot = null; renderSvg(); }
+        });
+        input.addEventListener('input', () => { ensureChords(el); el.chords[slotIdx] = input.value; markDirty(); renderSvg(); });
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); input.blur(); return; }
+          if (e.key !== 'Tab') return;
+          const dir = e.shiftKey ? -1 : 1;
+          if ((dir < 0 && slotIdx === 0) || (dir > 0 && slotIdx === total - 1)) {
+            const next = nextChordSlot(el, slotIdx, dir);
+            if (next) { e.preventDefault(); focusSlot(next.rowId, next.idx); }
+          }
+        });
+        const sync = () => { if (document.activeElement !== input) input.value = el.chords[slotIdx] || ''; };
+        sync();
+        editBoxSyncs.push(sync);
+        boxes.appendChild(input);
+      }
+      line.appendChild(boxes);
+      const step = mk('span', 'eb-bar-step');
+      [['\u2212', -1, 'minus', 'fewer'], ['+', 1, 'plus', 'more']].forEach(([label, d, name, word]) => {
+        const b = mk('button', 'eb-btn eb-btn--step', label);
+        b.type = 'button';
+        b.dataset.field = `bar-${bar}-${name}`; // so focus survives the rebuild
+        b.tabIndex = -1; // Tab runs box to box; these are for the mouse
+        b.setAttribute('aria-label', `Bar ${bar + 1}: ${word} chords`);
+        b.disabled = d < 0 ? n <= 0 : n >= ROW_MAX_CHORDS;
+        b.addEventListener('click', () => {
+          setRowBarChords(el, bar, n + d);
+          markDirty(); renderSvg(); renderEditBox();
+        });
+        step.appendChild(b);
+      });
+      line.appendChild(step);
+      list.appendChild(line);
+    });
+    wrap.appendChild(list);
+    wrap.appendChild(mk('p', 'eb-hint', 'The - / + on each line changes that bar only; "Chords / bar (all)" above sets every bar. Type - for a rest as long as the box, r for a repeat-bar sign. Tab moves to the next box.'));
+    return wrap;
+  }
+
+  // The list of items the floating note menu shows (see NOTE_MENU_ITEMS).
+  function fieldNoteMenu(el, f) {
+    const det = mk('details', 'eb-details');
+    det.open = noteMenuSectionOpen;
+    det.addEventListener('toggle', () => { noteMenuSectionOpen = det.open; });
+    det.appendChild(mk('summary', null, 'Floating note menu'));
+    det.appendChild(mk('p', 'eb-hint', `Choose what the menu offers when you click a note. Applies to all rhythm bars and note staves.`));
+    NOTE_MENU_GROUPS.forEach(group => {
+      if (group.id === 'accidental' && !f.staff) return;
+      const items = NOTE_MENU_ITEMS.filter(i => i.group === group.id);
+      const box = mk('div', 'eb-check-group');
+      box.appendChild(mk('div', 'eb-check-group-title', group.label));
+      const list = mk('div', 'eb-check-list');
+      items.forEach(item => {
+        const label = mk('label');
+        const cb = mk('input');
+        cb.type = 'checkbox';
+        cb.checked = isMenuItemOn(item.id);
+        cb.addEventListener('change', () => { noteMenuPrefs[item.id] = cb.checked; saveNoteMenuPrefs(); });
+        label.append(cb, mk('span', null, item.label));
+        list.appendChild(label);
+      });
+      box.appendChild(list);
+      det.appendChild(box);
+    });
+    const actions = mk('div', 'eb-actions');
+    const all = mk('button', 'eb-btn', 'Show all');
+    const reset = mk('button', 'eb-btn', 'Reset');
+    all.type = reset.type = 'button';
+    all.addEventListener('click', () => { NOTE_MENU_ITEMS.forEach(i => { noteMenuPrefs[i.id] = true; }); saveNoteMenuPrefs(); renderEditBox(); });
+    reset.addEventListener('click', () => { noteMenuPrefs = {}; saveNoteMenuPrefs(); renderEditBox(); });
+    actions.append(all, reset);
+    det.appendChild(actions);
+    return det;
+  }
+
+  const FIELD_BUILDERS = {
+    number: fieldNumber, text: fieldText, toggle: fieldToggle, select: fieldSelect, segmented: fieldSegmented,
+    buttons: fieldButtons, chordSlots: fieldChordSlots, noteMenu: fieldNoteMenu,
+  };
+  // Full-width fields; the rest (numbers, selects, toggles) flow side by side.
+  const BLOCK_KINDS = new Set(['buttons', 'chordSlots', 'noteMenu']);
+
+  function buildSection(el, sec) {
+    const box = mk('div', 'eb-section');
+    if (sec.title) box.appendChild(mk('div', 'eb-section-title', sec.title));
+    let row = null;
+    sec.fields.forEach(f => {
+      const node = FIELD_BUILDERS[f.kind](el, f);
+      if (BLOCK_KINDS.has(f.kind) || f.wide) {
+        row = null;
+        box.appendChild(node.classList.contains('eb-field') ? wrapRow(node) : node);
+      } else {
+        if (!row) { row = mk('div', 'eb-row'); box.appendChild(row); }
+        row.appendChild(node);
+      }
+    });
+    return box;
+  }
+  function wrapRow(node) {
+    const row = mk('div', 'eb-row');
+    row.appendChild(node);
+    return row;
+  }
+
+  function buildEmptyPanel() {
+    editBox.appendChild(mk('div', 'eb-head')).appendChild(mk('span', 'eb-head-title', 'Edit'));
+    const empty = mk('div', 'eb-empty');
+    empty.appendChild(mk('p', null, 'Click an element on the page to edit it here.'));
+    const tips = mk('ul');
+    ['Drag an element to move it, or its corner handle to resize it.',
+      'Drag a box around several elements to select them, or Shift-click to add one.',
+      'Cmd/Ctrl+D copies the selection, Delete removes it, arrow keys nudge it.'].forEach(t => tips.appendChild(mk('li', null, t)));
+    empty.appendChild(tips);
+    editBox.appendChild(empty);
+  }
+
+  function buildMultiPanel(els) {
+    const head = mk('div', 'eb-head');
+    head.appendChild(mk('span', 'eb-head-title', `${els.length} elements selected`));
+    editBox.appendChild(head);
+    const sec = (title, items) => {
+      const s = mk('div', 'eb-section');
+      s.appendChild(mk('div', 'eb-section-title', title));
+      const row = mk('div', 'eb-actions');
+      items.forEach(([label, fn, danger]) => {
+        const b = mk('button', danger ? 'eb-btn eb-btn--danger' : 'eb-btn', label);
+        b.type = 'button';
+        b.addEventListener('click', fn);
+        row.appendChild(b);
+      });
+      s.appendChild(row);
+      editBox.appendChild(s);
+    };
+    const changed = fn => () => { fn(); markDirty(); renderSvg(); };
+    sec('Align', [
+      ['Left', changed(() => alignSelection('left'))], ['Center', changed(() => alignSelection('center'))], ['Right', changed(() => alignSelection('right'))],
+      ['Top', changed(() => alignSelection('top'))], ['Middle', changed(() => alignSelection('middle'))], ['Bottom', changed(() => alignSelection('bottom'))],
+    ]);
+    if (els.length >= 3) {
+      sec('Distribute', [
+        ['Horizontally', changed(() => distributeSelection('h'))], ['Vertically', changed(() => distributeSelection('v'))],
+      ]);
+    }
+    sec('Selection', [
+      ['Duplicate', () => duplicateSelection()],
+      ['Delete', () => removeSelection(), true],
+    ]);
+  }
+
+  function selectionSig() {
+    return model.elements.filter(el => selectedIds.has(el.id)).map(el => el.id).join(',');
+  }
+
+  // Rebuilds the box for the current selection, keeping the cursor in the same
+  // field if one had it (a structural change rebuilds under the user's hands).
+  function renderEditBox() {
+    const active = document.activeElement;
+    const keep = active && editBox.contains(active) && active.dataset && active.dataset.field
+      ? { field: active.dataset.field, start: active.selectionStart, end: active.selectionEnd } : null;
+    editBoxBuilding = true;
+    editBoxSyncs = [];
+    editBox.textContent = '';
+    editBoxSig = selectionSig();
+    const els = model.elements.filter(el => selectedIds.has(el.id));
+    if (!els.length) {
+      buildEmptyPanel();
+    } else if (els.length > 1) {
+      buildMultiPanel(els);
+    } else {
+      const el = els[0];
+      const head = mk('div', 'eb-head');
+      head.appendChild(mk('span', 'eb-head-title', ELEMENT_NAMES[el.type] || el.type));
+      editBox.appendChild(head);
+      (EDIT_SCHEMAS[el.type] ? EDIT_SCHEMAS[el.type](el) : []).filter(Boolean)
+        .forEach(sec => editBox.appendChild(buildSection(el, sec)));
+    }
+    editBoxBuilding = false;
+    if (keep) {
+      const input = editBox.querySelector(`[data-field="${keep.field}"]`);
+      if (input) {
+        input.focus();
+        try { if (keep.start != null) input.setSelectionRange(keep.start, keep.end); } catch (err) { /* number inputs have no selection range */ }
+      }
+    }
+  }
+
+  // Called after every render: rebuilds if the selection changed, otherwise
+  // just refreshes the numbers and text the page may have moved under it.
+  function syncEditBox() {
+    if (editBoxBuilding) return;
+    if (selectionSig() !== editBoxSig) renderEditBox();
+    else editBoxSyncs.forEach(fn => fn());
+  }
+  function focusEditField(name) {
+    syncEditBox();
+    const input = editBox.querySelector(`[data-field="${name}"]`);
+    if (!input) return;
+    input.focus();
+    if (input.select) input.select();
+  }
+  // Selects `rowId` and puts the cursor in its chord slot `idx`.
+  function focusSlot(rowId, idx) {
+    selectOnly(rowId);
+    activeSlot = idx;
+    syncEditBox();
+    focusEditField(`slot-${idx}`);
+    renderSvg();
   }
 
   /* ---------- palette ---------- */
@@ -2027,14 +2780,31 @@
 
   wireMarquee();
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && selectedIds.size) { selectedIds.clear(); renderSvg(); }
-    // Cmd/Ctrl+D duplicates the marked elements (and keeps the browser from
-    // bookmarking the page). Left alone while typing in any field.
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd' && selectedIds.size) {
-      const t = e.target;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+    const t = e.target;
+    const typing = !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT'));
+    // Escape leaves a field first; pressed on the page it drops the selection.
+    if (e.key === 'Escape') {
+      if (typing) t.blur();
+      else if (selectedIds.size) { clearSelection(); renderSvg(); }
+      return;
+    }
+    // The rest are left alone while typing in any field.
+    if (typing || !selectedIds.size) return;
+    // Cmd/Ctrl+D duplicates the selection (and keeps the browser from
+    // bookmarking the page).
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
       e.preventDefault();
       duplicateSelection();
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && t.tagName !== 'BUTTON') { // not while a button has focus: a stray key shouldn't delete
+      e.preventDefault();
+      removeSelection();
+    } else if (e.key.startsWith('Arrow') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      // Nudge the selection: 1px, or 10px with Shift.
+      e.preventDefault();
+      const step = e.shiftKey ? 10 : 1;
+      const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+      const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+      nudgeSelection(dx, dy);
     }
   });
 
@@ -2083,7 +2853,7 @@
     const n = barsBuilderCount();
     const padX = 8, top = 8, h = BARS_PREVIEW_H - 16;
     const barW = (BARS_PREVIEW_W - 2 * padX) / n;
-    chordSlotRects(padX, top, BARS_PREVIEW_W - 2 * padX, h, n, barsBuilderChords(), barsRepeatStart.checked, barsRepeatEnd.checked)
+    chordSlotRects(padX, top, BARS_PREVIEW_W - 2 * padX, h, Array(n).fill(barsBuilderChords()), barsRepeatStart.checked, barsRepeatEnd.checked)
       .forEach(s => svg.appendChild(svgRect(s.x + 1, s.y + 1.5, Math.max(s.w - 2, 1), h - 3, { cls: 'el-chord-slot empty' })));
     for (let i = 0; i <= n; i++) {
       if (i === 0 && barsRepeatStart.checked) continue; // repeat mark replaces the plain barline, as on the page

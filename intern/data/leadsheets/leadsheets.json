@@ -3,7 +3,7 @@
     "id": "test",
     "title": "Kom Tilbage Nu",
     "key": "Am",
-    "updated_at": "2026-09-21T07:32:11.652669+00:00",
+    "updated_at": "2026-09-21T10:24:44.189996+00:00",
     "elements": [
       {
         "id": "el-mtu3curh-5",
@@ -46,87 +46,31 @@
         "h": 27,
         "barCount": 8,
         "repeatStart": true,
-        "repeatEnd": true
-      },
-      {
-        "id": "el-mua91vr8-1",
-        "type": "chordText",
-        "x": 62,
-        "y": 205.8828125,
-        "text": "Am",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua9215p-2",
-        "type": "glyph",
-        "x": 168,
-        "y": 215.8828125,
-        "code": "\ue500",
-        "fontSize": 28
-      },
-      {
-        "id": "el-mua9310w-0",
-        "type": "chordText",
-        "x": 224,
-        "y": 202.8828125,
-        "text": "F",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua93ak0-1",
-        "type": "chordText",
-        "x": 386,
-        "y": 203.8828125,
-        "text": "G",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua93fff-2",
-        "type": "glyph",
-        "x": 329,
-        "y": 217.8828125,
-        "code": "\ue500",
-        "fontSize": 28
-      },
-      {
-        "id": "el-mua93i00-3",
-        "type": "glyph",
-        "x": 493,
-        "y": 219.8828125,
-        "code": "\ue500",
-        "fontSize": 28
-      },
-      {
-        "id": "el-mua93pt2-4",
-        "type": "chordText",
-        "x": 547,
-        "y": 202.8828125,
-        "text": "Am",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua93y96-5",
-        "type": "chordText",
-        "x": 624,
-        "y": 203.8828125,
-        "text": "Am",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua94kvl-6",
-        "type": "chordText",
-        "x": 660,
-        "y": 204.8828125,
-        "text": "F",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua94q32-7",
-        "type": "chordText",
-        "x": 672,
-        "y": 204.8828125,
-        "text": "G",
-        "fontSize": 14
+        "repeatEnd": true,
+        "chordsPerBar": 4,
+        "chords": [
+          "Am",
+          "r",
+          "F",
+          "r",
+          "G",
+          "r",
+          "Am",
+          "Am",
+          "",
+          "F",
+          "G"
+        ],
+        "chordCounts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          4
+        ]
       },
       {
         "id": "el-mua96a1g-8",
@@ -135,15 +79,14 @@
         "y": 258.8828125,
         "w": 74,
         "h": 27,
-        "barCount": 1
-      },
-      {
-        "id": "el-mua96j9f-9",
-        "type": "chordText",
-        "x": 626,
-        "y": 259.8828125,
-        "text": "Am",
-        "fontSize": 14
+        "barCount": 1,
+        "chordsPerBar": 4,
+        "chords": [
+          "Am",
+          "",
+          "",
+          ""
+        ]
       },
       {
         "id": "el-mua96ub3-a",
@@ -188,63 +131,18 @@
         "y": 327.8828125,
         "w": 656,
         "h": 27,
-        "barCount": 8
-      },
-      {
-        "id": "el-mua9b0xr-d",
-        "type": "chordText",
-        "x": 55,
-        "y": 328.8828125,
-        "text": "Am7",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua9b51g-f",
-        "type": "glyph",
-        "x": 164,
-        "y": 343.8828125,
-        "code": "\ue500",
-        "fontSize": 28
-      },
-      {
-        "id": "el-mua9bafx-j",
-        "type": "glyph",
-        "x": 493,
-        "y": 341.8828125,
-        "code": "\ue500",
-        "fontSize": 28
-      },
-      {
-        "id": "el-mua9bcm5-l",
-        "type": "glyph",
-        "x": 655,
-        "y": 342.8828125,
-        "code": "\ue500",
-        "fontSize": 28
-      },
-      {
-        "id": "el-mua9bffj-n",
-        "type": "chordText",
-        "x": 219,
-        "y": 328.8828125,
-        "text": "B",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua9bk4j-p",
-        "type": "chordText",
-        "x": 382,
-        "y": 327.8828125,
-        "text": "B/d#",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua9bppx-r",
-        "type": "chordText",
-        "x": 546,
-        "y": 327.8828125,
-        "text": "E7",
-        "fontSize": 14
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "Am7",
+          "r",
+          "B",
+          "r",
+          "B/d#",
+          "r",
+          "E7",
+          "r"
+        ]
       },
       {
         "id": "el-mua9djn5-1",
@@ -281,7 +179,8 @@
         "y": 427.8828125,
         "w": 328,
         "h": 27,
-        "barCount": 4
+        "barCount": 4,
+        "chords": []
       },
       {
         "id": "el-mua9es2m-9",
@@ -437,71 +336,18 @@
         "y": 511.8828125,
         "w": 650,
         "h": 27,
-        "barCount": 8
-      },
-      {
-        "id": "el-mua9je4x-n",
-        "type": "chordText",
-        "x": 50,
-        "y": 511.8828125,
-        "text": "Dm7",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua9jlkj-r",
-        "type": "chordText",
-        "x": 135,
-        "y": 511.8828125,
-        "text": "G",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua9jurz-t",
-        "type": "chordText",
-        "x": 215,
-        "y": 509.8828125,
-        "text": "Am",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua9jyli-v",
-        "type": "glyph",
-        "x": 323,
-        "y": 524.8828125,
-        "code": "\ue500",
-        "fontSize": 28
-      },
-      {
-        "id": "el-mua9k2ge-x",
-        "type": "chordText",
-        "x": 378,
-        "y": 511.8828125,
-        "text": "Dm7",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua9k6o9-z",
-        "type": "chordText",
-        "x": 459,
-        "y": 511.8828125,
-        "text": "G",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua9ke64-11",
-        "type": "chordText",
-        "x": 540,
-        "y": 511.8828125,
-        "text": "Am",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mua9kn90-13",
-        "type": "glyph",
-        "x": 647,
-        "y": 526.8828125,
-        "code": "\ue500",
-        "fontSize": 28
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "Dm7",
+          "G",
+          "Am",
+          "r",
+          "Dm7",
+          "G",
+          "Am",
+          "r"
+        ]
       },
       {
         "id": "el-mua9ksr3-15",
@@ -952,38 +798,6 @@
         "fontSize": 14
       },
       {
-        "id": "el-muaa1itf-7",
-        "type": "chordText",
-        "x": 40,
-        "y": 744.8828125,
-        "text": "Dm7",
-        "fontSize": 14
-      },
-      {
-        "id": "el-muaa1itf-8",
-        "type": "chordText",
-        "x": 125,
-        "y": 744.8828125,
-        "text": "G",
-        "fontSize": 14
-      },
-      {
-        "id": "el-muaa1itf-9",
-        "type": "chordText",
-        "x": 205,
-        "y": 742.8828125,
-        "text": "Am",
-        "fontSize": 14
-      },
-      {
-        "id": "el-muaa1itf-a",
-        "type": "glyph",
-        "x": 313,
-        "y": 757.8828125,
-        "code": "\ue500",
-        "fontSize": 28
-      },
-      {
         "id": "el-muaa2dt7-g",
         "type": "chordText",
         "x": 367,
@@ -1129,7 +943,18 @@
         "y": 743.8984375,
         "w": 656,
         "h": 27,
-        "barCount": 8
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "Dm7",
+          "G",
+          "Am",
+          "r",
+          "",
+          "",
+          "",
+          ""
+        ]
       },
       {
         "id": "el-muaa44st-o",
@@ -1140,117 +965,28 @@
         "fontSize": 12
       },
       {
-        "id": "el-muaa9ysr-1",
-        "type": "chordText",
-        "x": 333,
-        "y": 328.3984375,
-        "text": "B7",
-        "fontSize": 14
-      },
-      {
         "id": "el-muaagisw-1",
         "type": "row",
         "x": 50,
         "y": 120.3984375,
         "w": 708,
         "h": 27,
-        "barCount": 12
-      },
-      {
-        "id": "el-muaagt62-3",
-        "type": "chordText",
-        "x": 52,
-        "y": 119.3984375,
-        "text": "Am5",
-        "fontSize": 14
-      },
-      {
-        "id": "el-muaah0hf-5",
-        "type": "glyph",
-        "x": 127,
-        "y": 133.3984375,
-        "code": "\ue500",
-        "fontSize": 26
-      },
-      {
-        "id": "el-muaah3r1-7",
-        "type": "glyph",
-        "x": 187,
-        "y": 131.3984375,
-        "code": "\ue500",
-        "fontSize": 26
-      },
-      {
-        "id": "el-muaah759-9",
-        "type": "glyph",
-        "x": 244,
-        "y": 132.3984375,
-        "code": "\ue500",
-        "fontSize": 26
-      },
-      {
-        "id": "el-muaaharu-b",
-        "type": "chordText",
-        "x": 287,
-        "y": 118.3984375,
-        "text": "Am11",
-        "fontSize": 14
-      },
-      {
-        "id": "el-muaahhkr-d",
-        "type": "chordText",
-        "x": 582,
-        "y": 118.3984375,
-        "text": "F/a",
-        "fontSize": 14
-      },
-      {
-        "id": "el-muaahmxb-f",
-        "type": "chordText",
-        "x": 525,
-        "y": 117.3984375,
-        "text": "Am",
-        "fontSize": 14
-      },
-      {
-        "id": "el-muaahx4h-h",
-        "type": "chordText",
-        "x": 640,
-        "y": 118.3984375,
-        "text": "Am",
-        "fontSize": 14
-      },
-      {
-        "id": "el-muaahz8t-j",
-        "type": "chordText",
-        "x": 698,
-        "y": 119.3984375,
-        "text": "F/a",
-        "fontSize": 14
-      },
-      {
-        "id": "el-muaai8zs-l",
-        "type": "glyph",
-        "x": 364,
-        "y": 130.3984375,
-        "code": "\ue500",
-        "fontSize": 28
-      },
-      {
-        "id": "el-muaaibed-n",
-        "type": "glyph",
-        "x": 423,
-        "y": 132.3984375,
-        "code": "\ue500",
-        "fontSize": 28
-      },
-      {
-        "id": "el-muaaidq4-p",
-        "type": "glyph",
-        "x": 482,
-        "y": 131.3984375,
-        "code": "\ue500",
-        "fontSize": 28
+        "barCount": 12,
+        "chordsPerBar": 1,
+        "chords": [
+          "Am5",
+          "r",
+          "r",
+          "r",
+          "Am11",
+          "r",
+          "r",
+          "r",
+          "Am",
+          "F/a",
+          "Am",
+          "F/a"
+        ]
       }
     ]
   }

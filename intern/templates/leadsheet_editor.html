@@ -17,52 +17,55 @@
     <button type="button" id="save-btn" class="primary">Save</button>
   </div>
 </div>
-<p class="editor-hint-static no-print">Drag an element from either side onto the page. Click text (or a volta's number) to edit it; click a bar's chord box to type a chord, and press Tab / Shift+Tab to move between the boxes (type - for a full-bar rest, r for a repeat-bar sign); drag anywhere else on an element to move it. Hover an element for its &times; to delete it, or its corner handle to resize it. On a rhythm bar or note staff, click a note to change its duration or add a fermata, accent or staccato (on a note staff also an accidental); on a note staff, drag a note up/down to change its pitch. Draw a box around elements to mark them; Press Cmd/Ctrl+D to copy what's marked, then drag the copies where you want them.</p>
+<p class="editor-hint-static no-print">Drag an element from either side onto the page. Click an element to edit it in the box at the top left; drag it to move it, or use its corner handle to resize it. Draw a box around elements to select several; Cmd/Ctrl+D copies the selection, Delete removes it.</p>
 
 <div class="editor-layout">
-  <div class="editor-palette editor-palette--side no-print">
-    <div class="palette-tile" draggable="true" data-type="title" title="Title box">
-      <span class="tile-title-box">Title</span>
+  <div id="left-column" class="editor-palette editor-palette--left no-print">
+    <div id="edit-box" class="edit-box"></div>
+    <div class="palette-tiles">
+      <div class="palette-tile" draggable="true" data-type="title" title="Title box">
+        <span class="tile-title-box">Title</span>
+      </div>
+      <div class="palette-tile" draggable="true" data-type="chordText" title="Chord text">
+        <span class="tile-chord-text">Am</span>
+      </div>
+      <div class="palette-tile" draggable="true" data-type="text" title="Text">
+        <span class="tile-text-text">Note</span>
+      </div>
+      <div class="palette-tile" draggable="true" data-type="repeat-start" title="Repeat start">
+        <svg class="tile-svg" width="16" height="24" viewBox="0 0 18 28">
+          <line x1="2" y1="1" x2="2" y2="27" stroke-width="3" />
+          <line x1="6" y1="1" x2="6" y2="27" stroke-width="1" />
+          <circle cx="11" cy="9" r="2" />
+          <circle cx="11" cy="19" r="2" />
+        </svg>
+      </div>
+      <div class="palette-tile" draggable="true" data-type="repeat-end" title="Repeat end">
+        <svg class="tile-svg" width="16" height="24" viewBox="0 0 18 28">
+          <circle cx="3" cy="9" r="2" />
+          <circle cx="3" cy="19" r="2" />
+          <line x1="8" y1="1" x2="8" y2="27" stroke-width="1" />
+          <line x1="12" y1="1" x2="12" y2="27" stroke-width="3" />
+        </svg>
+      </div>
+      <div class="palette-tile" draggable="true" data-type="volta" title="Volta (1st/2nd ending)">
+        <svg class="tile-svg" width="42" height="24" viewBox="0 0 46 28">
+          <path d="M3 25 V4 H43" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          <text x="8" y="20" class="tile-volta-num">1.</text>
+        </svg>
+      </div>
+      <div class="palette-tile" draggable="true" data-type="arrow" title="Arrow">
+        <svg class="tile-svg" width="42" height="24" viewBox="0 0 46 28">
+          <defs>
+            <marker id="tile-arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" style="fill:#1a1815" />
+            </marker>
+          </defs>
+          <path d="M2 25 L40 3" fill="none" stroke-width="1.5" marker-end="url(#tile-arrowhead)" />
+        </svg>
+      </div>
+      <div class="palette-tile palette-tile--glyph" draggable="true" data-type="glyph" data-code="&#xE500;" title="Repeat previous bar (%)">&#xE500;</div>
     </div>
-    <div class="palette-tile" draggable="true" data-type="chordText" title="Chord text">
-      <span class="tile-chord-text">Am</span>
-    </div>
-    <div class="palette-tile" draggable="true" data-type="text" title="Text">
-      <span class="tile-text-text">Note</span>
-    </div>
-    <div class="palette-tile" draggable="true" data-type="repeat-start" title="Repeat start">
-      <svg class="tile-svg" width="16" height="24" viewBox="0 0 18 28">
-        <line x1="2" y1="1" x2="2" y2="27" stroke-width="3" />
-        <line x1="6" y1="1" x2="6" y2="27" stroke-width="1" />
-        <circle cx="11" cy="9" r="2" />
-        <circle cx="11" cy="19" r="2" />
-      </svg>
-    </div>
-    <div class="palette-tile" draggable="true" data-type="repeat-end" title="Repeat end">
-      <svg class="tile-svg" width="16" height="24" viewBox="0 0 18 28">
-        <circle cx="3" cy="9" r="2" />
-        <circle cx="3" cy="19" r="2" />
-        <line x1="8" y1="1" x2="8" y2="27" stroke-width="1" />
-        <line x1="12" y1="1" x2="12" y2="27" stroke-width="3" />
-      </svg>
-    </div>
-    <div class="palette-tile" draggable="true" data-type="volta" title="Volta (1st/2nd ending)">
-      <svg class="tile-svg" width="42" height="24" viewBox="0 0 46 28">
-        <path d="M3 25 V4 H43" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-        <text x="8" y="20" class="tile-volta-num">1.</text>
-      </svg>
-    </div>
-    <div class="palette-tile" draggable="true" data-type="arrow" title="Arrow">
-      <svg class="tile-svg" width="42" height="24" viewBox="0 0 46 28">
-        <defs>
-          <marker id="tile-arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6 Z" style="fill:#1a1815" />
-          </marker>
-        </defs>
-        <path d="M2 25 L40 3" fill="none" stroke-width="1.5" marker-end="url(#tile-arrowhead)" />
-      </svg>
-    </div>
-    <div class="palette-tile palette-tile--glyph" draggable="true" data-type="glyph" data-code="&#xE500;" title="Repeat previous bar (%)">&#xE500;</div>
   </div>
 
   <div id="page-wrap" class="page-wrap">
@@ -75,7 +78,7 @@
         <label>Bars
           <input type="number" id="bars-count" min="1" max="12" value="4" />
         </label>
-        <label title="Empty chord boxes in each bar to type into; Tab moves between them; type - for a full-bar rest or r for a repeat bar (0 = plain bars)">Chords / bar
+        <label title="How many chord boxes each new bar gets when you drag it onto the page (0 = plain bars). Change any single bar afterwards in the edit box. Type - in a box for a rest as long as the box, or r for a repeat bar; Tab moves between boxes">Chords / bar
           <input type="number" id="bars-chords" min="0" max="8" value="1" />
         </label>
       </div>

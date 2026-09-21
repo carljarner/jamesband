@@ -1503,6 +1503,26 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
    rhythm bar builder at a legible size. */
 #glyph-palette { width: 270px; }
 
+/* The left column: the edit box on top, the drag tiles below it. Sticky and
+   internally scrolling like the builders column, so both stay reachable
+   beside the (tall) page. */
+.editor-palette--left {
+  flex: 0 0 auto;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  width: 250px;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+.editor-palette--left > * { flex-shrink: 0; }
+.palette-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 /* Palette tiles are deliberately NOT styled like the app's buttons -- each
    one is a small literal preview of the element it drags onto the page, so
    it looks like the paper-page content, not the dark app chrome. */
@@ -1729,9 +1749,11 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 }
 
 .page-wrap {
-  width: 794px;
-  max-width: 100%;
-  flex: 0 1 auto;
+  /* Shrinks (down to ~560px) so the two side columns still fit beside it on
+     a laptop; the SVG inside scales with it. */
+  flex: 1 1 560px;
+  min-width: 0;
+  max-width: 794px;
   position: relative;
   box-shadow: 0 10px 40px rgba(0,0,0,0.5);
   border-radius: 2px;
@@ -1745,25 +1767,6 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   width: 100%;
   height: auto;
   aspect-ratio: 794 / 1123;
-}
-
-/* Inline text editing writes straight onto the page: no fill, border or
-   focus ring. The `input.` prefix is needed to beat the app-wide
-   input[type="text"] / input:focus rules (dark pill + red focus border).
-   Colour and alignment are set inline to match the element being edited. */
-input.text-edit-input,
-input.text-edit-input:focus {
-  position: absolute;
-  box-sizing: border-box;
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  margin: 0;
-  font-family: 'MuseJazzText', cursive;
-  background: transparent;
-  box-shadow: none;
-  outline: none;
-  z-index: 50;
 }
 
 .rhythm-menu {
@@ -1836,13 +1839,129 @@ input.text-edit-input:focus {
   line-height: 1.15;
 }
 
+/* ---------- Edit box (top of the left column) ---------- */
+.edit-box {
+  background: #16181d;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 0.55rem;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+.eb-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.15rem;
+}
+.eb-head-title { color: var(--text); font-size: 0.82rem; font-weight: 600; }
+.eb-head-hint { font-size: 0.62rem; }
+.eb-empty { line-height: 1.45; }
+.eb-empty p { margin: 0 0 0.4rem; }
+.eb-empty ul { margin: 0; padding-left: 1.1rem; }
+.eb-empty li { margin-bottom: 0.2rem; }
+.eb-section {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin-top: 0.5rem;
+  padding-top: 0.45rem;
+}
+.eb-section-title {
+  margin-bottom: 0.3rem;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.eb-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.8rem;
+  margin-bottom: 0.3rem;
+}
+.eb-field {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.eb-field--wide { flex: 1 1 100%; }
+.eb-field--wide input[type="text"] { flex: 1; min-width: 0; }
+.eb-field input[type="number"] {
+  width: 3.9rem;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.72rem;
+  border-radius: 6px;
+}
+.eb-field input[type="text"],
+.eb-field select {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+.eb-field select {
+  background: var(--surface-alt);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text);
+  max-width: 9rem;
+}
+.eb-field input[type="checkbox"] { margin: 0; accent-color: var(--accent); }
+.eb-stepper { display: inline-flex; align-items: center; gap: 0.2rem; }
+.eb-stepper input[type="number"] { width: 2.6rem; text-align: center; -moz-appearance: textfield; }
+.eb-stepper input[type="number"]::-webkit-outer-spin-button,
+.eb-stepper input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.eb-btn {
+  padding: 0.22rem 0.55rem;
+  border-width: 1px;
+  border-color: rgba(255,255,255,0.18);
+  border-radius: 6px;
+  font-size: 0.68rem;
+  text-transform: none;
+  letter-spacing: normal;
+  background: var(--surface-alt);
+  color: var(--text);
+}
+.eb-btn:hover { background: rgba(79,215,209,0.18); color: var(--text); border-color: var(--accent-2); }
+.eb-btn--step { padding: 0.15rem 0.4rem; line-height: 1; }
+.eb-btn--on, .eb-btn--on:hover { border-color: var(--accent); background: rgba(255,90,78,0.16); }
+.eb-btn--danger { border-color: #b0392e; color: #ff9b92; }
+.eb-btn--danger:hover { background: #b0392e; color: #fff; border-color: #b0392e; }
+.eb-seg { display: inline-flex; gap: 0.25rem; flex-wrap: wrap; }
+.eb-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.eb-chords { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.3rem; }
+.eb-chord-bar { display: flex; align-items: flex-start; gap: 0.25rem; }
+.eb-chord-bar-num { flex: 0 0 1.3rem; text-align: right; font-size: 0.62rem; padding-top: 0.35rem; }
+/* A bar's boxes wrap onto extra lines once it has more than about 4. */
+.eb-chord-boxes { flex: 1 1 0; min-width: 0; display: flex; flex-wrap: wrap; gap: 0.25rem; min-height: 1.6rem; }
+.eb-chord-bar input[type="text"] {
+  flex: 1 1 3.2rem;
+  min-width: 0;
+  width: 3.2rem;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.75rem;
+  text-align: center;
+  border-radius: 6px;
+}
+.eb-bar-step { display: flex; gap: 0.15rem; padding-top: 0.15rem; }
+.eb-bar-step .eb-btn--step { padding: 0.1rem 0.35rem; }
+.eb-bar-step .eb-btn:disabled { opacity: 0.35; cursor: default; }
+.eb-hint { font-size: 0.62rem; line-height: 1.35; margin: 0.15rem 0 0.3rem; }
+.eb-details { margin-top: 0.1rem; }
+.eb-details > summary { cursor: pointer; color: var(--text); margin-bottom: 0.3rem; }
+.eb-check-group { margin-bottom: 0.3rem; }
+.eb-check-group-title { font-size: 0.62rem; margin-bottom: 0.15rem; }
+.eb-check-list { display: flex; flex-wrap: wrap; gap: 0.15rem 0.7rem; }
+.eb-check-list label { display: flex; align-items: center; gap: 0.25rem; }
+.eb-check-list input[type="checkbox"] { margin: 0; accent-color: var(--accent); }
+
 @media (max-width: 1000px) {
   .editor-layout { flex-direction: column; align-items: center; }
   .editor-palette--side, #glyph-palette { flex-direction: row; flex-wrap: wrap; width: auto; justify-content: center; }
   .editor-palette--side, #glyph-palette { position: static; max-height: none; overflow: visible; flex-wrap: wrap; }
   .editor-palette--side .palette-tile { width: auto; }
+  .editor-palette--left { position: static; max-height: none; overflow: visible; width: 100%; max-width: 420px; }
+  .palette-tiles { justify-content: center; }
   .bars-builder, .rhythm-builder, .staff-builder { width: 100%; max-width: 300px; }
-  .page-wrap { width: 100%; order: -1; }
+  .page-wrap { flex: 0 0 auto; width: 100%; max-width: 100%; order: -1; }
 }
 
 /* SVG page + element styling. The page always renders as light "paper"
@@ -1855,6 +1974,7 @@ input.text-edit-input:focus {
 .page-key-text { fill: #55504a; font-family: 'MuseJazzText', cursive; }
 
 .el-selection { fill: rgba(255,90,78,0.08); stroke: #ff5a4e; stroke-width: 1.5; stroke-dasharray: 4 3; pointer-events: none; }
+.el-slot-active { fill: rgba(79,215,209,0.18); stroke: #2aa7a1; stroke-width: 1.2; pointer-events: none; }
 .el-marquee { fill: rgba(255,90,78,0.12); stroke: #ff5a4e; stroke-width: 1; pointer-events: none; }
 
 .el-title-box-fill { fill: #fff; stroke: none; }
@@ -1865,27 +1985,31 @@ input.text-edit-input:focus {
 .el-text-hit { fill: transparent; cursor: pointer; }
 .el-text-hit:hover { fill: rgba(0,0,0,0.04); }
 
-.el-resize-handle { fill: #fff; stroke: #1a1815; stroke-width: 1.5; cursor: nwse-resize; opacity: 0; }
-.el-group:hover .el-resize-handle { opacity: 0.85; }
-.el-resize-handle:hover { opacity: 1; }
 
 /* Bars are just barlines -- no enclosing box, no top/bottom edge. Each
    barline is a gently bowed path (not a straight line) for a slightly
    hand-drawn feel. Chords are typed into the row's chord slots (or dragged
    on as separate chord elements). */
-.el-row-divider { stroke: #1a1815; stroke-width: 1.1; fill: none; stroke-linecap: round; }
+.el-row-divider { stroke: #1a1815; stroke-width: 1.1; fill: none; stroke-linecap: round; pointer-events: none; }
 .el-row-hit { fill: transparent; cursor: grab; }
 
 /* A row's typeable chord box. Empty ones get a faint dashed outline so you can
    see where to click; it's screen-only (hidden in print, below). */
-.el-chord-slot { fill: transparent; stroke: none; cursor: text; }
+.el-chord-slot { fill: transparent; stroke: none; cursor: pointer; }
 .el-chord-slot.empty { stroke: rgba(0,0,0,0.22); stroke-width: 1; stroke-dasharray: 3 2; }
 .el-chord-slot:hover { fill: rgba(0,0,0,0.05); }
+/* On the sheet the dashes show only for the selected row (the sidebar
+   bar-builder preview keeps them always). */
+#sheet-svg .el-chord-slot.empty { stroke: none; }
+/* Two-step click: the first click anywhere on a row selects the whole bar
+   field; only then do its individual chord slots take clicks. */
+#sheet-svg .el-group:not(.is-selected) .el-chord-slot { pointer-events: none; }
+#sheet-svg .el-group.is-selected .el-chord-slot.empty { stroke: rgba(0,0,0,0.22); }
 
 .el-repeat-hit { fill: transparent; cursor: grab; }
-.el-repeat-thick { stroke: #1a1815; stroke-width: 3; }
-.el-repeat-thin { stroke: #1a1815; stroke-width: 1; }
-.el-repeat-dot { fill: #1a1815; }
+.el-repeat-thick { stroke: #1a1815; stroke-width: 3; pointer-events: none; }
+.el-repeat-thin { stroke: #1a1815; stroke-width: 1; pointer-events: none; }
+.el-repeat-dot { fill: #1a1815; pointer-events: none; }
 
 .el-volta-line { stroke: #1a1815; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .el-volta-text { fill: #1a1815; font-family: 'MuseJazzText', cursive; }
@@ -1948,28 +2072,13 @@ input.text-edit-input:focus {
   font-family: 'MuseJazz', serif;
 }
 
+/* Invisible corner hit-zone: the cursor is the only sign it's there. */
+.el-resize-handle { fill: transparent; stroke: none; cursor: nwse-resize; }
+
 .el-move-handle { fill: #fff; stroke: #1a1815; stroke-width: 1.5; cursor: move; opacity: 0; }
 .el-group:hover .el-move-handle { opacity: 0.85; }
 .el-move-handle:hover { opacity: 1; }
 
-.el-delete {
-  fill: #b0392e;
-  font-size: 12px;
-  cursor: pointer;
-  opacity: 0;
-}
-.el-group:hover .el-delete { opacity: 0.85; }
-.el-delete:hover { opacity: 1; }
-
-.el-row-addbar, .el-row-removebar {
-  fill: #55504a;
-  cursor: pointer;
-  font-size: 16px;
-  opacity: 0;
-}
-.el-group:hover .el-row-addbar,
-.el-group:hover .el-row-removebar { opacity: 0.85; }
-.el-row-addbar:hover, .el-row-removebar:hover { fill: #1a1815; opacity: 1; }
 
 /* ---------- Print ---------- */
 @media print {
@@ -1993,8 +2102,8 @@ input.text-edit-input:focus {
     page-break-after: avoid;
   }
   #sheet-svg { width: 100%; height: 100%; aspect-ratio: auto; }
-  .el-delete, .el-row-addbar, .el-row-removebar, .el-resize-handle, .el-move-handle,
-  .el-arrow-handle, .el-arrow-bow-handle, .el-selection, .el-marquee { display: none; }
+  .el-resize-handle, .el-move-handle,
+  .el-arrow-handle, .el-arrow-bow-handle, .el-selection, .el-slot-active, .el-marquee { display: none; }
   .el-chord-slot, .el-chord-slot.empty { fill: none; stroke: none; }
   /* The on-screen page/title-box tones are a warm off-white "paper" look;
      on paper that would just waste toner on a tinted fill, so print pure
