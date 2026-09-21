@@ -12,10 +12,13 @@
   // A row can hold up to 12 bars; past 9 the bars get narrower so the row
   // still fits within the page margins.
   const ROW_MAX_BARS = 12;
+  const ROW_MAX_CHORDS = 8; // chord slots per bar
   const ROW_MAX_W = PAGE_W - 2 * PAGE_MARGIN;
-  const BAR_H = 30; // calibrated against a hand-finished 8-bar row on a real sheet
+  const BAR_H = 27; // average bar-row height across the hand-finished test sheet
   const REPEAT_MARK_W = 14;
   const VOLTA_H = 22, VOLTA_FONT_SIZE = 13;
+  // Starting font sizes for new text boxes: the averages from the test sheet.
+  const TITLE_FONT_SIZE = 17, CHORD_FONT_SIZE = 14, TEXT_FONT_SIZE = 12;
 
   // Codepoints verified directly against fonts/MuseJazz.otf's cmap (this
   // font implements SMuFL's Rests range at the standard codepoints, but not
@@ -343,6 +346,63 @@
     return _measureCtx.measureText(text || '').width;
   }
 
+  // Splits a chord symbol into baseline and raised runs, the way it's
+  // engraved on a real chart: the root, its accidental, quality words (m,
+  // maj, dim, sus, add...) and any slash bass note stay on the baseline;
+  // extension numbers and altered tones are raised (Am7 -> Am + ^7,
+  // Cm7b5 -> Cm + ^7b5, C7(#11) -> C + ^7(#11), Bb7/D -> Bb + ^7 + /D).
+  // The stored text stays plain; this only affects how it's drawn.
+  function parseChordSegments(text) {
+    const s = String(text || '');
+    const root = /^[A-G][#b♯♭]?/.exec(s);
+    if (!root) return s ? [{ text: s, sup: false }] : []; // N.C., %, x2...
+    const segs = [];
+    const push = (t, sup) => {
+      const last = segs[segs.length - 1];
+      if (last && last.sup === sup) last.text += t;
+      else segs.push({ text: t, sup });
+    };
+    push(root[0], false);
+    let i = root[0].length;
+    while (i < s.length) {
+      const rest = s.slice(i);
+      if (rest[0] === '/' && !/^\/\d/.test(rest)) { push(rest, false); break; } // slash bass; "6/9" is not one
+      let m = /^\([^)]*\)/.exec(rest) || /^[#b♯♭]?\d+(?:\/\d+)?/.exec(rest);
+      // "+"/"-" only count as an alteration after a number ("7-9"); before one
+      // they're the chord's quality ("C-7"), which stays on the baseline.
+      if (!m && /[\d)]/.test(s[i - 1])) m = /^[+-]\d+(?:\/\d+)?/.exec(rest);
+      if (m) { push(m[0], true); i += m[0].length; }
+      else { push(rest[0], false); i += 1; }
+    }
+    return segs;
+  }
+
+  const CHORD_SUP_SCALE = 0.9, CHORD_SUP_RAISE = 0.4; // raised run: font size and rise, as fractions of the chord's font size
+  function measureChordWidth(text, size) {
+    return parseChordSegments(text).reduce(
+      (w, seg) => w + measureTextWidth(seg.text, seg.sup ? size * CHORD_SUP_SCALE : size), 0);
+  }
+  // Same as svgText, but with the raised runs as smaller, shifted tspans (dy,
+  // not baseline-shift, which Safari/Firefox don't all honour).
+  function svgChordText(text, x, y, opts = {}) {
+    const size = opts.size || 13;
+    const el = svgText('', x, y, opts);
+    let raised = false;
+    for (const seg of parseChordSegments(text)) {
+      const span = svgEl('tspan', {});
+      if (seg.sup) {
+        span.setAttribute('font-size', size * CHORD_SUP_SCALE);
+        span.setAttribute('dy', -size * CHORD_SUP_RAISE);
+      } else if (raised) {
+        span.setAttribute('dy', size * CHORD_SUP_RAISE);
+      }
+      span.textContent = seg.text;
+      el.appendChild(span);
+      raised = seg.sup;
+    }
+    return el;
+  }
+
   // Barlines get a slight hand-drawn wobble instead of a perfectly straight
   // vector line: a gentle bow through a random-ish midpoint, seeded from the
   // element's own id so the wiggle is fixed (stable across re-renders, not
@@ -454,7 +514,7 @@
   function elementBounds(el) {
     switch (el.type) {
       case 'title': case 'chordText': case 'text': {
-        const { w, h } = textBoxSize(el.text, el.fontSize);
+        const { w, h } = textBoxSize(el.text, el.fontSize, el.type === 'chordText' && el.id !== editingId);
         return { x: el.x, y: el.y, w, h };
       }
       case 'row': case 'repeat': case 'volta':
@@ -628,6 +688,8 @@
   // text is skipped in renderTextEl while the (transparent) overlay input is
   // showing the same text, so it isn't drawn twice.
   let editingId = null;
+  // For a row's chord slots, which slot of `editingId` is being typed into.
+  let editingSlot = null;
   function closeOverlay(commit) {
     if (!activeOverlay) return;
     const { input, onCommit, onCancel } = activeOverlay;
@@ -636,6 +698,7 @@
     // its blur handler synchronously, which would re-enter closeOverlay.
     activeOverlay = null;
     editingId = null;
+    editingSlot = null;
     input.remove();
     if (commit) onCommit(val);
     else { if (onCancel) onCancel(); renderSvg(); }
@@ -648,7 +711,10 @@
   // directly on the page. `getRect` is re-evaluated on every keystroke so the
   // field tracks the element's auto-fitting box as the text grows; `onInput`
   // lets the caller update the element live; `onCancel` undoes that on Escape.
-  function openTextOverlay({ elementId, initialValue, getRect, fontSize, color, align, padX, onInput, onCommit, onCancel }) {
+  // Optional extras for a row's chord slots: `getFontSize(val)` re-fits the
+  // font as the text grows, `slotIndex` marks which slot of the element is
+  // being edited, and `onTab(dir)` (-1/+1) moves on to the neighbouring slot.
+  function openTextOverlay({ elementId, initialValue, getRect, fontSize, getFontSize, slotIndex, onTab, color, align, padX, onInput, onCommit, onCancel }) {
     closeOverlay(true);
     const wrap = document.getElementById('page-wrap');
     const { scale } = svgMetrics();
@@ -664,6 +730,7 @@
     const place = () => {
       const wrapRect = wrap.getBoundingClientRect();
       const rect = getRect(input.value);
+      if (getFontSize) input.style.fontSize = `${getFontSize(input.value) * scale}px`;
       input.style.left = `${rect.left - wrapRect.left}px`;
       input.style.top = `${rect.top - wrapRect.top}px`;
       input.style.width = `${rect.width}px`;
@@ -672,7 +739,11 @@
     place();
     wrap.appendChild(input);
     editingId = elementId;
+    editingSlot = slotIndex == null ? null : slotIndex;
     activeOverlay = { input, onCommit, onCancel };
+    // Redraw now so the element's own text (raised chord numbers included) is
+    // gone from the page before the input, which shows it flat, appears over it.
+    renderSvg();
     input.addEventListener('input', () => {
       onInput(input.value);
       renderSvg();
@@ -683,6 +754,7 @@
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); closeOverlay(true); }
       else if (e.key === 'Escape') { e.preventDefault(); closeOverlay(false); }
+      else if (e.key === 'Tab' && onTab) { e.preventDefault(); closeOverlay(true); onTab(e.shiftKey ? -1 : 1); }
     });
     input.addEventListener('blur', () => closeOverlay(true));
   }
@@ -836,8 +908,9 @@
     }, { onChange, accidentals: true });
   }
 
-  function textBoxSize(text, fontSize) {
-    const w = Math.max(50, measureTextWidth(text, fontSize) + 16);
+  // `chord`: size for a chord symbol's raised numbers (see parseChordSegments).
+  function textBoxSize(text, fontSize, chord) {
+    const w = Math.max(50, (chord ? measureChordWidth(text, fontSize) : measureTextWidth(text, fontSize)) + 16);
     const h = fontSize + 14;
     return { w, h };
   }
@@ -873,6 +946,106 @@
     });
   }
 
+  /* ---------- row chord slots ---------- */
+  // The typeable chord boxes of a row (or of the sidebar preview, which passes
+  // its own geometry): each bar is split into `cpb` equal slots, with the
+  // first/last bar inset where a repeat mark sits on that edge. `idx` is the
+  // slot's index into `row.chords`.
+  function chordSlotRects(x, y, w, h, barCount, cpb, repeatStart, repeatEnd) {
+    const rects = [];
+    if (!(cpb > 0)) return rects;
+    const barW = w / barCount;
+    for (let i = 0; i < barCount; i++) {
+      const left = x + i * barW + (i === 0 && repeatStart ? REPEAT_MARK_W : 0);
+      const right = x + (i + 1) * barW - (i === barCount - 1 && repeatEnd ? REPEAT_MARK_W : 0);
+      const slotW = (right - left) / cpb;
+      for (let k = 0; k < cpb; k++) {
+        rects.push({ x: left + k * slotW, y, w: slotW, h, bar: i, k, idx: i * cpb + k });
+      }
+    }
+    return rects;
+  }
+  function rowChordSlots(row) {
+    return chordSlotRects(row.x, row.y, row.w, row.h, row.barCount, row.chordsPerBar || 0, row.repeatStart, row.repeatEnd);
+  }
+
+  // Largest chord size that still fits the slot: shrinks for long chords in
+  // narrow slots (8 to a bar) rather than spilling over the barlines.
+  function slotFontSize(text, slotW, h) {
+    let size = Math.min(CHORD_FONT_SIZE, h * 0.55);
+    while (size > 7 && measureChordWidth(text, size) + 4 > slotW) size -= 0.5;
+    return Math.max(size, 7);
+  }
+
+  // Shorthand typed into a chord box that is drawn as a symbol instead of
+  // text: "-" is a full-bar rest, "r" a repeat-previous-bar sign. The stored
+  // text stays what was typed.
+  function barSymbol(text) {
+    const t = String(text || '').trim().toLowerCase();
+    if (t === '-') return { code: REST_CODES.whole, rise: -1 / 16 }; // the whole rest hangs below its origin, so lift it to sit centred
+    if (t === 'r') return { code: SIMILE_MARK, rise: 0 };
+    return null;
+  }
+
+  // Draws a slot's content, centred in the slot: the chord (shrunk to fit),
+  // or, if it's shorthand for a bar symbol, that symbol centred across the
+  // whole bar `bar` (a full-bar rest / repeat covers every chord slot in it).
+  function drawSlotContent(g, text, s, bar, h) {
+    const sym = barSymbol(text);
+    if (sym) {
+      let size = h;
+      const gw = measureTextWidth(sym.code, size, 'MuseJazz');
+      if (gw > bar.w - 4) size *= Math.max(bar.w - 4, 4) / gw; // very narrow bars
+      g.appendChild(svgText(sym.code, bar.x + bar.w / 2, s.y + h / 2 + sym.rise * size, {
+        cls: 'el-glyph-text', anchor: 'middle', size,
+      }));
+      return;
+    }
+    const size = slotFontSize(text, s.w, h);
+    g.appendChild(svgChordText(text, s.x + s.w / 2, s.y + h / 2 + size * 0.35, {
+      cls: 'el-chord-text', anchor: 'middle', size,
+    }));
+  }
+
+  function startChordEdit(rowId, idx) {
+    const row = model.elements.find(e => e.id === rowId);
+    if (!row || !(row.chordsPerBar > 0)) return;
+    if (!row.chords) row.chords = [];
+    const original = row.chords[idx] || '';
+    const slot = () => rowChordSlots(row)[idx];
+    if (!slot()) return;
+    openTextOverlay({
+      elementId: row.id,
+      slotIndex: idx,
+      initialValue: original,
+      getRect: () => { const s = slot(); return svgRectToScreen(s.x, s.y, s.w, s.h); },
+      fontSize: slotFontSize(original, slot().w, row.h),
+      getFontSize: val => slotFontSize(val, slot().w, row.h),
+      color: '#1a1815',
+      align: 'center',
+      padX: 2,
+      onInput: val => { row.chords[idx] = val; },
+      onCommit: val => { row.chords[idx] = val; markDirty(); renderSvg(); },
+      onCancel: () => { row.chords[idx] = original; },
+      onTab: dir => {
+        const next = nextChordSlot(row, idx, dir);
+        if (next) startChordEdit(next.rowId, next.idx);
+      },
+    });
+  }
+
+  // Tab order: every chord slot of every row that has any, rows in reading
+  // order (top to bottom, then left to right), slots left to right within.
+  function nextChordSlot(row, idx, dir) {
+    const rows = model.elements
+      .filter(e => e.type === 'row' && e.chordsPerBar > 0)
+      .sort((a, b) => a.y - b.y || a.x - b.x);
+    const seq = [];
+    rows.forEach(r => rowChordSlots(r).forEach(s => seq.push({ rowId: r.id, idx: s.idx })));
+    const at = seq.findIndex(s => s.rowId === row.id && s.idx === idx);
+    return at < 0 ? null : seq[at + dir] || null;
+  }
+
   /* ---------- model mutation ---------- */
   // Finds a row under (x,y) so a dropped repeat mark can attach to it
   // instead of becoming its own free-floating element. Checked in reverse
@@ -894,17 +1067,21 @@
   // dragging is exactly what gets placed.
   function buildElement(type, x, y, opts = {}) {
     if (type === 'title') {
-      return { id: uid('el'), type: 'title', x, y, text: 'Section', fontSize: 12 };
+      return { id: uid('el'), type: 'title', x, y, text: 'Section', fontSize: TITLE_FONT_SIZE };
     } else if (type === 'row') {
       const n = clamp(parseInt(opts.barCount, 10) || 4, 1, ROW_MAX_BARS);
       const el = { id: uid('el'), type: 'row', x, y, w: Math.min(n * BAR_UNIT, ROW_MAX_W), h: BAR_H, barCount: n };
       if (opts.repeatStart) el.repeatStart = true;
       if (opts.repeatEnd) el.repeatEnd = true;
+      // Each bar holds `chordsPerBar` typeable chord slots; `chords` is flat,
+      // slot `k` of bar `i` at index i * chordsPerBar + k. Absent = plain bars.
+      const cpb = clamp(parseInt(opts.chordsPerBar, 10) || 0, 0, ROW_MAX_CHORDS);
+      if (cpb > 0) { el.chordsPerBar = cpb; el.chords = Array(n * cpb).fill(''); }
       return el;
     } else if (type === 'chordText') {
-      return { id: uid('el'), type: 'chordText', x, y, text: 'Am', fontSize: 14 };
+      return { id: uid('el'), type: 'chordText', x, y, text: 'Am', fontSize: CHORD_FONT_SIZE };
     } else if (type === 'text') {
-      return { id: uid('el'), type: 'text', x, y, text: 'Note', fontSize: 12 };
+      return { id: uid('el'), type: 'text', x, y, text: 'Note', fontSize: TEXT_FONT_SIZE };
     } else if (type === 'repeat-start') {
       return { id: uid('el'), type: 'repeat', x, y, w: REPEAT_MARK_W, h: BAR_H, kind: 'start' };
     } else if (type === 'repeat-end') {
@@ -947,6 +1124,9 @@
     render();
     if (type === 'title' || type === 'chordText' || type === 'text') {
       setTimeout(() => startTextEdit(el.id), 0);
+    } else if (el.type === 'row' && el.chordsPerBar > 0) {
+      // Straight into the first chord box, so Tab can carry on from there.
+      setTimeout(() => startChordEdit(el.id, 0), 0);
     }
   }
 
@@ -987,7 +1167,10 @@
   // fontSize (which drives the box's own auto-fit size on the next render).
   function renderTextEl(svg, el, opts) {
     const fontSize = el.fontSize;
-    const { w, h } = textBoxSize(el.text, fontSize);
+    // While editing, the overlay input shows the raw typed text, so the box
+    // is sized for that rather than for the raised-number layout.
+    const chord = opts.chord && el.id !== editingId;
+    const { w, h } = textBoxSize(el.text, fontSize, chord);
     const g = svgGroup({ cls: 'el-group' });
 
     let interactiveEl;
@@ -1002,7 +1185,8 @@
 
     if (el.id !== editingId) {
       const textX = opts.boxed ? el.x + w / 2 : el.x + 8;
-      g.appendChild(svgText(el.text || '', textX, el.y + h / 2 + fontSize * 0.35, {
+      const draw = opts.chord ? svgChordText : svgText;
+      g.appendChild(draw(el.text || '', textX, el.y + h / 2 + fontSize * 0.35, {
         cls: opts.textCls, anchor: opts.boxed ? 'middle' : 'start', size: fontSize,
       }));
     }
@@ -1030,7 +1214,24 @@
     const hit = svgRect(el.x, el.y, w, h, { cls: 'el-row-hit' });
     g.appendChild(hit);
     const startX = el.x, startY = el.y;
-    wireDragAndClick(hit, (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); }, null, el);
+    const dragRow = (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); };
+    wireDragAndClick(hit, dragRow, null, el);
+
+    // Chord slots sit right above the hit rect (and below everything else
+    // drawn here) so the +/-, repeat and resize controls stay clickable. A
+    // drag on a slot still moves the row; a plain click types a chord.
+    const slots = rowChordSlots(el), perBar = el.chordsPerBar || 0;
+    slots.forEach(s => {
+      const text = (el.chords && el.chords[s.idx]) || '';
+      const first = slots[s.bar * perBar], last = slots[s.bar * perBar + perBar - 1];
+      const bar = { x: first.x, w: last.x + last.w - first.x };
+      const slotEl = svgRect(s.x + 1.5, s.y + 1.5, Math.max(s.w - 3, 1), Math.max(s.h - 3, 1), {
+        cls: text ? 'el-chord-slot' : 'el-chord-slot empty',
+      });
+      g.appendChild(slotEl);
+      wireDragAndClick(slotEl, dragRow, () => startChordEdit(el.id, s.idx), el);
+      if (text && !(el.id === editingId && editingSlot === s.idx)) drawSlotContent(g, text, s, bar, h);
+    });
 
     for (let i = 0; i <= n; i++) {
       if (i === 0 && el.repeatStart) continue; // a repeat mark replaces the plain barline at that edge
@@ -1059,7 +1260,11 @@
     removeBtn.addEventListener('mousedown', e => e.stopPropagation());
     removeBtn.addEventListener('click', e => {
       e.stopPropagation();
-      if (el.barCount > 1) { el.barCount -= 1; markDirty(); renderSvg(); }
+      if (el.barCount > 1) {
+        el.barCount -= 1;
+        if (el.chords) el.chords.length = el.barCount * (el.chordsPerBar || 0); // don't resurrect old chords if a bar is added back
+        markDirty(); renderSvg();
+      }
     });
     g.appendChild(removeBtn);
 
@@ -1067,7 +1272,11 @@
     addBtn.addEventListener('mousedown', e => e.stopPropagation());
     addBtn.addEventListener('click', e => {
       e.stopPropagation();
-      if (el.barCount < ROW_MAX_BARS) { el.barCount += 1; markDirty(); renderSvg(); }
+      if (el.barCount < ROW_MAX_BARS) {
+        el.barCount += 1;
+        if (el.chords) { while (el.chords.length < el.barCount * el.chordsPerBar) el.chords.push(''); }
+        markDirty(); renderSvg();
+      }
     });
     g.appendChild(addBtn);
 
@@ -1736,7 +1945,7 @@
 
   function renderElement(svg, el) {
     if (el.type === 'title') renderTextEl(svg, el, { boxed: true, textCls: 'el-title-text' });
-    else if (el.type === 'chordText') renderTextEl(svg, el, { boxed: false, textCls: 'el-chord-text' });
+    else if (el.type === 'chordText') renderTextEl(svg, el, { boxed: false, textCls: 'el-chord-text', chord: true });
     else if (el.type === 'text') renderTextEl(svg, el, { boxed: false, textCls: 'el-text-text' });
     else if (el.type === 'row') renderRowEl(svg, el);
     else if (el.type === 'repeat') renderRepeatEl(svg, el);
@@ -1859,9 +2068,14 @@
   const barsCountInput = document.getElementById('bars-count');
   const barsRepeatStart = document.getElementById('bars-repeat-start');
   const barsRepeatEnd = document.getElementById('bars-repeat-end');
+  const barsChordsInput = document.getElementById('bars-chords');
   const BARS_PREVIEW_W = 240, BARS_PREVIEW_H = 44;
   function barsBuilderCount() {
     return clamp(parseInt(barsCountInput.value, 10) || 4, 1, ROW_MAX_BARS);
+  }
+  function barsBuilderChords() {
+    const v = parseInt(barsChordsInput.value, 10);
+    return clamp(Number.isNaN(v) ? 1 : v, 0, ROW_MAX_CHORDS);
   }
   function renderBarsBuilderSvg() {
     const svg = document.getElementById('bars-builder-svg');
@@ -1869,6 +2083,8 @@
     const n = barsBuilderCount();
     const padX = 8, top = 8, h = BARS_PREVIEW_H - 16;
     const barW = (BARS_PREVIEW_W - 2 * padX) / n;
+    chordSlotRects(padX, top, BARS_PREVIEW_W - 2 * padX, h, n, barsBuilderChords(), barsRepeatStart.checked, barsRepeatEnd.checked)
+      .forEach(s => svg.appendChild(svgRect(s.x + 1, s.y + 1.5, Math.max(s.w - 2, 1), h - 3, { cls: 'el-chord-slot empty' })));
     for (let i = 0; i <= n; i++) {
       if (i === 0 && barsRepeatStart.checked) continue; // repeat mark replaces the plain barline, as on the page
       if (i === n && barsRepeatEnd.checked) continue;
@@ -1885,11 +2101,16 @@
     barsCountInput.value = barsBuilderCount();
     renderBarsBuilderSvg();
   });
+  barsChordsInput.addEventListener('input', renderBarsBuilderSvg);
+  barsChordsInput.addEventListener('change', () => {
+    barsChordsInput.value = barsBuilderChords();
+    renderBarsBuilderSvg();
+  });
   barsRepeatStart.addEventListener('change', renderBarsBuilderSvg);
   barsRepeatEnd.addEventListener('change', renderBarsBuilderSvg);
   document.getElementById('bars-builder-drag').addEventListener('dragstart', e => {
     startPlacementDrag(e, {
-      type: 'row', barCount: barsBuilderCount(),
+      type: 'row', barCount: barsBuilderCount(), chordsPerBar: barsBuilderChords(),
       repeatStart: barsRepeatStart.checked, repeatEnd: barsRepeatEnd.checked,
     });
   });
