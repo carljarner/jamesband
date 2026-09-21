@@ -626,6 +626,8 @@ table.repertoire button.row-delete:hover {
 .modal-box--centered .modal-actions { justify-content: center; }
 .modal-box--wide { max-width: 540px; }
 .modal-box input[type="url"] { width: 100%; margin-bottom: 1.25rem; }
+.modal-box .field { margin-bottom: 1.25rem; }
+.modal-box .field input { width: 100%; box-sizing: border-box; }
 .modal-box .save-status { display: block; }
 
 .modal-actions {
@@ -1742,12 +1744,6 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   font-size: 1.2rem;
 }
 
-.editor-hint-static {
-  color: var(--text-dim);
-  font-size: 0.82rem;
-  margin: 0 0 1.25rem;
-}
-
 .page-wrap {
   /* Shrinks (down to ~560px) so the two side columns still fit beside it on
      a laptop; the SVG inside scales with it. */
@@ -1923,6 +1919,20 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .eb-btn:hover { background: rgba(79,215,209,0.18); color: var(--text); border-color: var(--accent-2); }
 .eb-btn--step { padding: 0.15rem 0.4rem; line-height: 1; }
 .eb-btn--on, .eb-btn--on:hover { border-color: var(--accent); background: rgba(255,90,78,0.16); }
+.eb-btn:disabled, .eb-btn:disabled:hover {
+  opacity: 0.4;
+  cursor: default;
+  background: var(--surface-alt);
+  border-color: rgba(255,255,255,0.18);
+}
+
+/* ---------- Transpose box (above the edit box) ---------- */
+.tr-key-line { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; margin: 0.25rem 0 0.1rem; }
+.tr-key { color: var(--text); font-size: 0.78rem; }
+.tr-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.25rem; margin: 0.4rem 0 0.1rem; }
+.tr-keys .eb-btn { padding: 0.25rem 0; text-align: center; }
+.tr-acc { margin-top: 0.4rem; }
+.tr-acc .eb-btn { font-size: 0.9rem; line-height: 1; padding: 0.15rem 0.5rem; }
 .eb-btn--danger { border-color: #b0392e; color: #ff9b92; }
 .eb-btn--danger:hover { background: #b0392e; color: #fff; border-color: #b0392e; }
 .eb-seg { display: inline-flex; gap: 0.25rem; flex-wrap: wrap; }

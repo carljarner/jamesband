@@ -3,7 +3,7 @@
     "id": "test",
     "title": "Kom Tilbage Nu",
     "key": "Am",
-    "updated_at": "2026-09-21T10:24:44.189996+00:00",
+    "updated_at": "2026-09-21T12:16:56.072062+00:00",
     "elements": [
       {
         "id": "el-mtu3curh-5",
@@ -136,9 +136,9 @@
         "chords": [
           "Am7",
           "r",
-          "B",
+          "B7",
           "r",
-          "B/d#",
+          "B7/d#",
           "r",
           "E7",
           "r"
@@ -164,9 +164,9 @@
         "id": "el-mua9e9ev-5",
         "type": "arrow",
         "x1": 152,
-        "y1": 442.8828125,
+        "y1": 442,
         "x2": 203,
-        "y2": 441.8828125,
+        "y2": 442,
         "bow": {
           "dx": 0,
           "dy": 0
@@ -605,12 +605,15 @@
         "y": 1006.8828125,
         "w": 384,
         "h": 27,
-        "barCount": 4
+        "barCount": 4,
+        "chords": [],
+        "repeatStart": true,
+        "repeatEnd": true
       },
       {
         "id": "el-muaa0bqy-1",
         "type": "rhythmbar",
-        "x": 49,
+        "x": 56,
         "y": 1023.8828125,
         "w": 89,
         "h": 20,
@@ -753,10 +756,10 @@
       {
         "id": "el-muaa0bqy-4",
         "type": "rhythmbar",
-        "x": 340,
+        "x": 336,
         "y": 1021.8828125,
-        "w": 89,
-        "h": 21,
+        "w": 84,
+        "h": 20,
         "numerator": 4,
         "denominator": 4,
         "cells": [
@@ -987,6 +990,261 @@
           "Am",
           "F/a"
         ]
+      }
+    ]
+  },
+  {
+    "id": "stor-mand",
+    "title": "STOR MAND",
+    "key": "F",
+    "updated_at": "2026-09-21T12:29:04.690297+00:00",
+    "elements": [
+      {
+        "id": "el-mub7qyuw-1",
+        "type": "title",
+        "x": 29,
+        "y": 80.8515625,
+        "text": "Intro",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mub7r333-3",
+        "type": "title",
+        "x": 31,
+        "y": 135.8515625,
+        "text": "Vers",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mub7rezc-5",
+        "type": "row",
+        "x": 44,
+        "y": 180.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "Gm",
+          "Bb6",
+          "F",
+          "C",
+          "Gm",
+          "Bb6",
+          "F",
+          "C"
+        ]
+      },
+      {
+        "id": "el-mub7rtpf-7",
+        "type": "title",
+        "x": 33,
+        "y": 223.8515625,
+        "text": "Bro",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mub7rx7r-8",
+        "type": "row",
+        "x": 45,
+        "y": 266.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "Gm",
+          "Bb6",
+          "F",
+          "C",
+          "Gm",
+          "Bb6",
+          "F",
+          "C"
+        ]
+      },
+      {
+        "id": "el-mub7s5s6-a",
+        "type": "title",
+        "x": 32,
+        "y": 312.8515625,
+        "text": "Omkv\u00e6d",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mub7sczx-b",
+        "type": "row",
+        "x": 41,
+        "y": 359.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "Gm",
+          "Bb6",
+          "F",
+          "C",
+          "Gm",
+          "Bb6",
+          "F",
+          "C"
+        ],
+        "repeatEnd": true,
+        "repeatStart": true
+      },
+      {
+        "id": "el-mub7slfk-d",
+        "type": "title",
+        "x": 31,
+        "y": 400.8515625,
+        "text": "Tema",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mub7snnn-e",
+        "type": "row",
+        "x": 42,
+        "y": 444.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "Gm",
+          "Bb6",
+          "F",
+          "C",
+          "Gm",
+          "Bb6",
+          "F",
+          "-"
+        ]
+      },
+      {
+        "id": "el-mub7t2t1-g",
+        "type": "text",
+        "x": 595,
+        "y": 420.8515625,
+        "text": "",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mub7ti08-i",
+        "type": "title",
+        "x": 28,
+        "y": 482.8515625,
+        "text": "Vers",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mub7twy9-k",
+        "type": "title",
+        "x": 27,
+        "y": 533.8515625,
+        "text": "Bro",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mub7u23m-l",
+        "type": "row",
+        "x": 39,
+        "y": 578.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "Gm",
+          "Bb6",
+          "F",
+          "C",
+          "Gm",
+          "Bb6",
+          "F",
+          "-"
+        ]
+      },
+      {
+        "id": "el-mub7ue4a-n",
+        "type": "title",
+        "x": 27,
+        "y": 620.8515625,
+        "text": "Omkv\u00e6d",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mub7uixj-p",
+        "type": "title",
+        "x": 28,
+        "y": 671.8515625,
+        "text": "C",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mub7urzw-q",
+        "type": "row",
+        "x": 35,
+        "y": 717.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "Gm",
+          "Bb6",
+          "F",
+          "C",
+          "Gm",
+          "Bb6",
+          "F",
+          "C"
+        ],
+        "repeatStart": true,
+        "repeatEnd": true
+      },
+      {
+        "id": "el-mub7uzib-s",
+        "type": "volta",
+        "x": 361,
+        "y": 694.8515625,
+        "w": 80,
+        "h": 14,
+        "text": "1.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mub7vhm6-u",
+        "type": "row",
+        "x": 362,
+        "y": 775.8515625,
+        "w": 246,
+        "h": 27,
+        "barCount": 3,
+        "chordsPerBar": 1,
+        "chords": [
+          "C",
+          "C",
+          "-"
+        ]
+      },
+      {
+        "id": "el-mub7vpsg-x",
+        "type": "volta",
+        "x": 360,
+        "y": 756.8515625,
+        "w": 80,
+        "h": 14,
+        "text": "2.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mub7w133-z",
+        "type": "title",
+        "x": 27,
+        "y": 821.8515625,
+        "text": "Omkv\u00e6d",
+        "fontSize": 17
       }
     ]
   }

@@ -18,7 +18,8 @@
   const REPEAT_MARK_W = 14;
   const REST_SIZE = 0.6; // a "-" rest's glyph size as a fraction of the row height; full size dwarfs the chords
   const SLOT_CHORD_PAD = 5; // gap between a slot's left edge and the chord in it, in bars with several slots
-  const VOLTA_H = 22, VOLTA_FONT_SIZE = 13;
+  const SLOT_CHORD_OVERHANG = 4; // how far the last chord of a crowded bar may run past its barline
+  const VOLTA_W = 80, VOLTA_H = 14, VOLTA_FONT_SIZE = 8;
   // Starting font sizes for new text boxes: the averages from the test sheet.
   const TITLE_FONT_SIZE = 17, CHORD_FONT_SIZE = 14, TEXT_FONT_SIZE = 12;
 
@@ -384,6 +385,94 @@
     return _measureCtx.measureText(text || '').width;
   }
 
+  /* ---------- transposing ---------- */
+  // The stored chords are always in the sheet's original key. Transposing is a
+  // view: displayChord() is what gets drawn and shown in the edit box, and
+  // storeChord() turns what's typed there back into the original key. The
+  // state is per editor session; it is never saved with the sheet.
+  const SHARP_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const FLAT_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+  const NOTE_SEMITONE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const FLAT_MAJOR_ROOTS = [1, 3, 5, 8, 10]; // Db Eb F Ab Bb
+  const transposeState = { semitones: 0, flats: false, flatsChosen: false, pickerOpen: true };
+
+  function noteSemitone(letter, acc) {
+    const shift = acc === '#' || acc === '♯' ? 1 : acc === 'b' || acc === '♭' ? -1 : 0;
+    return (NOTE_SEMITONE[letter.toUpperCase()] + shift + 12) % 12;
+  }
+  // `lower`: a slash bass may be written in lower case (B7/d#), and stays so.
+  function noteName(semitone, flats, lower) {
+    const name = (flats ? FLAT_NAMES : SHARP_NAMES)[((semitone % 12) + 12) % 12];
+    return lower ? name.charAt(0).toLowerCase() + name.slice(1) : name;
+  }
+
+  // Same reading of a chord as parseChordSegments: a root letter and its
+  // accidental, then a slash bass unless the "/" is part of a number (6/9) or a
+  // bracket. Everything between them (m7b5, (#11) ...) is intervals and stays.
+  // Shorthand and other text without a root (-, r, N.C., x2) is left alone.
+  function transposeChordText(text, semitones, flats) {
+    const s = String(text || '');
+    const root = /^([A-G])([#b♯♭])?/.exec(s);
+    if (!root || !semitones) return s;
+    let out = noteName(noteSemitone(root[1], root[2]) + semitones, flats);
+    let rest = s.slice(root[0].length);
+    let depth = 0, slash = -1;
+    for (let i = 0; i < rest.length; i++) {
+      const c = rest[i];
+      if (c === '(') depth++;
+      else if (c === ')') depth = Math.max(0, depth - 1);
+      else if (c === '/' && !depth && !/\d/.test(rest[i + 1] || '')) { slash = i; break; }
+    }
+    if (slash >= 0) {
+      const bass = /^([A-Ga-g])([#b♯♭])?/.exec(rest.slice(slash + 1));
+      if (bass) {
+        out += rest.slice(0, slash + 1)
+          + noteName(noteSemitone(bass[1], bass[2]) + semitones, flats, bass[1] === bass[1].toLowerCase());
+        rest = rest.slice(slash + 1 + bass[0].length);
+      }
+    }
+    return out + rest;
+  }
+
+  // The sheet's key text ("Am", "Bb", "F# minor") as a root plus what follows it.
+  function parseKey(str) {
+    const m = /^\s*([A-Ga-g])([#b♯♭])?(.*?)\s*$/.exec(String(str || ''));
+    if (!m) return null;
+    return { semitone: noteSemitone(m[1], m[2]), acc: m[2] || '', suffix: m[3], minor: /^\s*(?:m(?!aj)|[Mm]in|-)/.test(m[3]) };
+  }
+  // Which spelling a key is written in: flat keys by their relative major
+  // (Ebm counts as flat although its major is Gb).
+  function semitonePrefersFlats(semitone, minor) {
+    const major = minor ? (semitone + 3) % 12 : semitone;
+    return FLAT_MAJOR_ROOTS.includes(major) || (minor && major === 6);
+  }
+  function keyPrefersFlats(str) {
+    const k = parseKey(str);
+    if (!k) return false;
+    return k.acc ? k.acc === 'b' || k.acc === '♭' : semitonePrefersFlats(k.semitone, k.minor);
+  }
+  // Whole tones, like a singer says it: Am -> Bm is "1 up", Am -> G#m "0.5 down".
+  function formatAmount(semitones) {
+    if (!semitones) return 'original';
+    return `${Math.abs(semitones) / 2} ${semitones > 0 ? 'up' : 'down'}`;
+  }
+
+  function displayChord(text) {
+    const t = transposeState;
+    return t.semitones ? transposeChordText(text, t.semitones, t.flats) : text;
+  }
+  function storeChord(text) {
+    const t = transposeState;
+    return t.semitones ? transposeChordText(text, -t.semitones, keyPrefersFlats(model.key)) : text;
+  }
+  // The key as it should read now: the sheet's own text until transposed.
+  function transposedKeyName() {
+    const k = parseKey(model.key);
+    const t = transposeState;
+    if (!k || !t.semitones) return String(model.key || '').trim();
+    return noteName(k.semitone + t.semitones, t.flats) + k.suffix;
+  }
+
   // Splits a chord symbol into runs, the way it's engraved on a real chart.
   // Each run has a `kind` (see CHORD_RUN_STYLE): `base` -- the root letter,
   // quality words (m, maj, dim, sus, add...); `acc` -- the root's accidental,
@@ -571,7 +660,8 @@
   function elementBounds(el) {
     switch (el.type) {
       case 'title': case 'chordText': case 'text': {
-        const { w, h } = textBoxSize(el.text, el.fontSize, el.type === 'chordText');
+        const chord = el.type === 'chordText';
+        const { w, h } = textBoxSize(chord ? displayChord(el.text) : el.text, el.fontSize, chord);
         return { x: el.x, y: el.y, w, h };
       }
       case 'row': case 'repeat': case 'volta':
@@ -613,12 +703,12 @@
     }
   }
 
-  // Drops the selection outline (and resize zone) nodes straight from the DOM. Used when a
+  // Drops the selection outline (and resize zone and arrow handle) nodes straight from the DOM. Used when a
   // gesture changes the selection: a full re-render inside mousedown would
   // detach the very node being pressed, so the outline is repainted by the
   // next render (the first drag move, or the mouseup of a click) instead.
   function dropOutlineNodes() {
-    document.querySelectorAll('#sheet-svg .el-selection, #sheet-svg .el-slot-active, #sheet-svg .el-resize-handle').forEach(n => n.remove());
+    document.querySelectorAll('#sheet-svg .el-selection, #sheet-svg .el-slot-active, #sheet-svg .el-resize-handle, #sheet-svg .el-arrow-handle, #sheet-svg .el-arrow-bow-handle').forEach(n => n.remove());
     document.querySelectorAll('#sheet-svg .el-group.is-selected').forEach(n => n.classList.remove('is-selected'));
   }
   // Makes `id` the only selected element (the edit box follows on the next
@@ -1119,7 +1209,7 @@
     } else if (type === 'repeat-end') {
       return { id: uid('el'), type: 'repeat', x, y, w: REPEAT_MARK_W, h: BAR_H, kind: 'end' };
     } else if (type === 'volta') {
-      return { id: uid('el'), type: 'volta', x, y, w: BAR_UNIT * 2, h: VOLTA_H, text: '1.', fontSize: VOLTA_FONT_SIZE };
+      return { id: uid('el'), type: 'volta', x, y, w: VOLTA_W, h: VOLTA_H, text: '1.', fontSize: VOLTA_FONT_SIZE };
     } else if (type === 'arrow') {
       return { id: uid('el'), type: 'arrow', x1: x, y1: y, x2: x + 70, y2: y - 40, bow: { dx: 0, dy: 0 } };
     } else if (type === 'glyph') {
@@ -1206,7 +1296,8 @@
   // box's own auto-fit size on the next render).
   function renderTextEl(svg, el, opts) {
     const fontSize = el.fontSize;
-    const { w, h } = textBoxSize(el.text, fontSize, opts.chord);
+    const shown = opts.chord ? displayChord(el.text) : el.text;
+    const { w, h } = textBoxSize(shown, fontSize, opts.chord);
     const g = svgGroup({ cls: 'el-group' });
 
     let interactiveEl;
@@ -1221,7 +1312,7 @@
 
     const textX = opts.boxed ? el.x + w / 2 : el.x + 8;
     const draw = opts.chord ? svgChordText : svgText;
-    g.appendChild(draw(el.text || '', textX, el.y + h / 2 + fontSize * 0.35, {
+    g.appendChild(draw(shown || '', textX, el.y + h / 2 + fontSize * 0.35, {
       cls: opts.textCls, anchor: opts.boxed ? 'middle' : 'start', size: fontSize,
     }));
 
@@ -1258,7 +1349,7 @@
       e.x = Math.min(e.x, s.x);
       e.right = Math.max(e.right, s.x + s.w);
     });
-    const chordAt = s => (el.chords && el.chords[s.idx]) || '';
+    const chordAt = s => displayChord((el.chords && el.chords[s.idx]) || '');
     // How much room a chord may take: its own slot plus the empty slots after
     // it in the same bar (`Am _ F G`: the Am can run into the empty slot).
     // This only limits its size -- it never changes where the chord sits.
@@ -1268,19 +1359,15 @@
       const w = last.x + last.w - s.x;
       // Left-aligned chords start a little inside their slot, which only costs
       // room at the end of the bar (the next chord starts inside its slot too).
-      return s.n > 1 && last.k === s.n - 1 ? w - SLOT_CHORD_PAD : w;
+      // The bar's last chord may also run a little past the barline.
+      return s.n > 1 && last.k === s.n - 1 ? w - SLOT_CHORD_PAD + SLOT_CHORD_OVERHANG : w;
     };
     const gapOf = s => (s.n > 1 ? 2 : 4);
-    // One chord size per row -- the largest that fits its tightest spot --
-    // so the same chord never looks bigger in one bar than in another.
-    let chordSize = Infinity;
-    slots.forEach(s => {
-      const t = chordAt(s);
-      if (t && !barSymbol(t)) chordSize = Math.min(chordSize, slotFontSize(t, roomOf(s), h, gapOf(s)));
-    });
-    if (!isFinite(chordSize)) chordSize = 0;
     slots.forEach(s => {
       const text = chordAt(s);
+      // Each chord is as big as its own spot allows: a roomy one-chord bar
+      // keeps the full size, and only a chord squeezed into a crowded bar shrinks.
+      const chordSize = text && !barSymbol(text) ? slotFontSize(text, roomOf(s), h, gapOf(s)) : 0;
       const ext = barExtent[s.bar];
       const bar = { x: ext.x, w: ext.right - ext.x };
       const slotEl = svgRect(s.x + 1.5, s.y + 1.5, Math.max(s.w - 3, 1), Math.max(s.h - 3, 1), {
@@ -1398,24 +1485,28 @@
       markDirty(); renderSvg();
     }, null, el);
 
-    const h1 = svgCircle(el.x1, el.y1, 5, { cls: 'el-arrow-handle' });
-    wireDragAndClick(h1, (ddx, ddy) => { el.x1 = sx1 + ddx; el.y1 = sy1 + ddy; markDirty(); renderSvg(); }, null, null, el);
-    g.appendChild(h1);
+    // The handles only show while this arrow is the selected one (clicked, in
+    // the edit box), so an unselected arrow is just the line.
+    if (selectedIds.size === 1 && selectedIds.has(el.id)) {
+      const h1 = svgCircle(el.x1, el.y1, 5, { cls: 'el-arrow-handle' });
+      wireDragAndClick(h1, (ddx, ddy) => { el.x1 = sx1 + ddx; el.y1 = sy1 + ddy; markDirty(); renderSvg(); }, null, null, el);
+      g.appendChild(h1);
 
-    const h2 = svgCircle(el.x2, el.y2, 5, { cls: 'el-arrow-handle' });
-    wireDragAndClick(h2, (ddx, ddy) => { el.x2 = sx2 + ddx; el.y2 = sy2 + ddy; markDirty(); renderSvg(); }, null, null, el);
-    g.appendChild(h2);
+      const h2 = svgCircle(el.x2, el.y2, 5, { cls: 'el-arrow-handle' });
+      wireDragAndClick(h2, (ddx, ddy) => { el.x2 = sx2 + ddx; el.y2 = sy2 + ddy; markDirty(); renderSvg(); }, null, null, el);
+      g.appendChild(h2);
 
-    // Bow handle: drag away from the straight-line midpoint to curve the
-    // arrow. At (dx,dy)=(0,0) the quadratic control point sits exactly on
-    // the line between the endpoints, so the path renders perfectly straight.
-    const startBowDx = el.bow.dx, startBowDy = el.bow.dy;
-    const hb = svgCircle(cx, cy, 4, { cls: 'el-arrow-bow-handle' });
-    wireDragAndClick(hb, (ddx, ddy) => {
-      el.bow.dx = startBowDx + ddx; el.bow.dy = startBowDy + ddy;
-      markDirty(); renderSvg();
-    }, null, null, el);
-    g.appendChild(hb);
+      // Bow handle: drag away from the straight-line midpoint to curve the
+      // arrow. At (dx,dy)=(0,0) the quadratic control point sits exactly on
+      // the line between the endpoints, so the path renders perfectly straight.
+      const startBowDx = el.bow.dx, startBowDy = el.bow.dy;
+      const hb = svgCircle(cx, cy, 4, { cls: 'el-arrow-bow-handle' });
+      wireDragAndClick(hb, (ddx, ddy) => {
+        el.bow.dx = startBowDx + ddx; el.bow.dy = startBowDy + ddy;
+        markDirty(); renderSvg();
+      }, null, null, el);
+      g.appendChild(hb);
+    }
 
     svg.appendChild(g);
   }
@@ -1954,8 +2045,9 @@
 
     const titleStr = model.title || 'Untitled';
     svg.appendChild(svgText(titleStr, PAGE_W / 2, PAGE_MARGIN, { cls: 'page-title-text', anchor: 'middle', size: 22 }));
-    if (model.key) {
-      svg.appendChild(svgText(`(${model.key})`, PAGE_W / 2, PAGE_MARGIN + 22, { cls: 'page-key-text', anchor: 'middle', size: 13 }));
+    const keyStr = transposeState.semitones ? transposedKeyName() : model.key;
+    if (keyStr) {
+      svg.appendChild(svgText(`(${keyStr})`, PAGE_W / 2, PAGE_MARGIN + 22, { cls: 'page-key-text', anchor: 'middle', size: 13 }));
     }
 
     model.elements.forEach(el => renderElement(svg, el));
@@ -1966,6 +2058,7 @@
   function render() {
     document.getElementById('sheet-title').value = model.title;
     document.getElementById('sheet-key').value = model.key;
+    renderTransposeBox();
     renderSvg();
   }
 
@@ -2256,7 +2349,7 @@
   function textSchema(el) {
     return [
       { fields: [
-        { kind: 'text', id: 'text', label: 'Text', wide: true, get: e => e.text || '', set: (e, v) => { e.text = v; } },
+        { kind: 'text', id: 'text', label: 'Text', wide: true, get: e => (e.type === 'chordText' ? displayChord(e.text || '') : e.text || ''), set: (e, v) => { e.text = e.type === 'chordText' ? storeChord(v) : v; } },
         numField('Size', 'fontSize', { stepper: true, integer: true, min: LIMITS.textFont[0], max: LIMITS.textFont[1] }),
         { kind: 'select', id: 'type', label: 'Type', options: TEXT_TYPE_OPTIONS, get: e => e.type, set: (e, v) => { e.type = v; }, structural: true },
       ] },
@@ -2533,7 +2626,7 @@
           if (editBoxBuilding) return; // the box is being rebuilt around it
           if (activeSlot === slotIdx) { activeSlot = null; renderSvg(); }
         });
-        input.addEventListener('input', () => { ensureChords(el); el.chords[slotIdx] = input.value; markDirty(); renderSvg(); });
+        input.addEventListener('input', () => { ensureChords(el); el.chords[slotIdx] = storeChord(input.value); markDirty(); renderSvg(); });
         input.addEventListener('keydown', e => {
           if (e.key === 'Enter') { e.preventDefault(); input.blur(); return; }
           if (e.key !== 'Tab') return;
@@ -2543,7 +2636,7 @@
             if (next) { e.preventDefault(); focusSlot(next.rowId, next.idx); }
           }
         });
-        const sync = () => { if (document.activeElement !== input) input.value = el.chords[slotIdx] || ''; };
+        const sync = () => { if (document.activeElement !== input) input.value = displayChord(el.chords[slotIdx] || ''); };
         sync();
         editBoxSyncs.push(sync);
         boxes.appendChild(input);
@@ -3017,9 +3110,72 @@
     renderStaffBuilderSvg();
   });
 
+  /* ---------- transpose box ---------- */
+  // Above the edit box; rebuilt whenever the transposition or the sheet's key
+  // changes. Transposing only changes the view, so nothing here marks the
+  // sheet as unsaved.
+  const transposeBox = document.getElementById('transpose-box');
+  function renderTransposeBox() {
+    const t = transposeState;
+    const key = parseKey(model.key);
+    if (!key) t.semitones = 0;
+    transposeBox.textContent = '';
+    const head = mk('div', 'eb-head');
+    head.appendChild(mk('span', 'eb-head-title', 'Transpose'));
+    transposeBox.appendChild(head);
+    if (!key) {
+      transposeBox.appendChild(mk('div', 'eb-hint', 'Set the sheet’s key in the top bar to transpose.'));
+      return;
+    }
+    const apply = () => { renderTransposeBox(); renderSvg(); };
+
+    const line = mk('div', 'tr-key-line');
+    line.appendChild(mk('span', 'tr-key', `Key: ${transposedKeyName()} (${formatAmount(t.semitones)})`));
+    const change = mk('button', 'eb-btn', t.pickerOpen ? 'Close' : 'Change');
+    change.type = 'button';
+    change.addEventListener('click', () => { t.pickerOpen = !t.pickerOpen; renderTransposeBox(); });
+    line.appendChild(change);
+    transposeBox.appendChild(line);
+
+    if (t.pickerOpen) {
+      const grid = mk('div', 'tr-keys');
+      const shortSuffix = key.minor ? 'm' : '';
+      for (let s = 0; s < 12; s++) {
+        let d = (((s - key.semitone) % 12) + 12) % 12;
+        if (d > 6) d -= 12; // the shorter way round; a tritone goes up
+        const flats = d === 0 ? keyPrefersFlats(model.key)
+          : t.flatsChosen ? t.flats : semitonePrefersFlats(s, key.minor);
+        const b = mk('button', d === t.semitones ? 'eb-btn eb-btn--on' : 'eb-btn', noteName(s, flats) + shortSuffix);
+        b.type = 'button';
+        b.title = d === 0 ? 'Original key' : formatAmount(d);
+        b.addEventListener('click', () => {
+          t.semitones = d;
+          if (d && !t.flatsChosen) t.flats = semitonePrefersFlats(s, key.minor);
+          apply();
+        });
+        grid.appendChild(b);
+      }
+      transposeBox.appendChild(grid);
+    }
+
+    const acc = mk('div', 'eb-field tr-acc');
+    acc.appendChild(mk('span', 'eb-label', 'Accidentals'));
+    const seg = mk('span', 'eb-seg');
+    [['♯', false, 'Sharps'], ['♭', true, 'Flats']].forEach(([label, flats, title]) => {
+      const b = mk('button', t.semitones && t.flats === flats ? 'eb-btn eb-btn--on' : 'eb-btn', label);
+      b.type = 'button';
+      b.disabled = !t.semitones; // the original chords show exactly as written
+      b.title = t.semitones ? title : `${title} (when transposed)`;
+      b.addEventListener('click', () => { t.flats = flats; t.flatsChosen = true; apply(); });
+      seg.appendChild(b);
+    });
+    acc.appendChild(seg);
+    transposeBox.appendChild(acc);
+  }
+
   /* ---------- toolbar wiring ---------- */
   document.getElementById('sheet-title').addEventListener('input', e => { model.title = e.target.value; markDirty(); renderSvg(); });
-  document.getElementById('sheet-key').addEventListener('input', e => { model.key = e.target.value; markDirty(); renderSvg(); });
+  document.getElementById('sheet-key').addEventListener('input', e => { model.key = e.target.value; markDirty(); renderTransposeBox(); renderSvg(); });
 
   document.getElementById('save-btn').addEventListener('click', async () => {
     const status = document.getElementById('save-status');
