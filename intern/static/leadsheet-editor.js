@@ -72,6 +72,24 @@
   function defaultRhythmCells(totalUnits) {
     return Array.from({ length: totalUnits / 2 }, () => ({ type: 'rest', duration: 2 }));
   }
+  // A note staff holds up to STAFF_MAX_BARS bars sharing one time signature;
+  // its flat `cells` list runs bar after bar and no cell crosses a barline.
+  // A fresh rhythm bar or staff is filled with one rest per beat (not 16ths):
+  // 16 sixteenth rests need more width (RHYTHM_MIN_CELL_PX each) than the
+  // standard bar size, or the builder preview, has.
+  const STAFF_MAX_BARS = 4;
+  const NOTESTAFF_DEFAULT_H = 30;
+  const NOTESTAFF_DEFAULT_BAR_W = 100; // W of one 4/4 bar, so a 4-bar staff is 400 (the edit box's W, clef and key not counted)
+  const RHYTHMBAR_DEFAULT_H = 20, RHYTHMBAR_DEFAULT_W = 70; // a placed rhythm bar, W for 4/4
+  function staffBarCount(el) { return clamp(Math.round(el.bars) || 1, 1, STAFF_MAX_BARS); }
+  function staffBarUnits(el) { return barTotalUnits(el.numerator || 4, el.denominator || 4); }
+  function defaultBeatCells(numerator, denominator, bars) {
+    const beat = barBeatUnits(denominator);
+    // Only the beats that have a rest glyph (whole down to 16th); anything else
+    // falls back to 16th rests.
+    if (![2, 4, 8, 16, 32].includes(beat)) return defaultRhythmCells(barTotalUnits(numerator, denominator) * bars);
+    return Array.from({ length: numerator * bars }, () => ({ type: 'rest', duration: beat }));
+  }
   // Notes flagged short enough to beam (16th, 8th, dotted 8th).
   const BEAM_ELIGIBLE_DURATIONS = new Set([2, 4, 6]);
 
@@ -95,10 +113,12 @@
     { type: 'rest', duration: 16, label: 'Half rest' },
     { type: 'rest', duration: 32, label: 'Whole rest' },
   ];
-  function rhythmMenuOptionsFor(cells, idx) {
+  // `barUnits` (note staff only): the room counts to the end of the bar the
+  // cell is in, so a note never runs across a barline.
+  function rhythmMenuOptionsFor(cells, idx, barUnits) {
     const totalUnits = cells.reduce((s, c) => s + c.duration, 0);
     const pos = cells.slice(0, idx).reduce((s, c) => s + c.duration, 0);
-    const roomToEnd = totalUnits - pos;
+    const roomToEnd = barUnits ? barUnits - (pos % barUnits) : totalUnits - pos;
     return RHYTHM_MENU_OPTIONS.filter(o => o.duration <= roomToEnd);
   }
   // How narrow a bar can be squeezed is just every cell at its floor width
@@ -167,7 +187,10 @@
     }
     const filler = [];
     for (let rem = cursor - newEnd; rem > 0; rem -= 2) filler.push({ type: 'rest', duration: 2 });
-    return [...cells.slice(0, idx), { ...newCell }, ...filler, ...cells.slice(i)];
+    const out = [...cells.slice(0, idx), { ...newCell }, ...filler, ...cells.slice(i)];
+    // A tie needs a note on both ends: one whose next cell became a rest goes.
+    out.forEach((c, k) => { if (c.tie && !canTieCell(out, k)) delete c.tie; });
+    return out;
   }
   function rhythmCellGlyph(cell) {
     if (cell.type === 'rest') {
@@ -217,20 +240,33 @@
   // the glyphs on above/below, and the highest / lowest ink of the note itself
   // (stem tip or beam, notehead, ...). `unit` is a size reference (roughly the
   // note's staff/bar height).
+  function articulationMetrics(unit) {
+    return { gap: unit * 0.08, margin: unit * 0.1, stroke: Math.max(1.1, unit * 0.045), dotR: Math.max(1.4, unit * 0.055), accentHalfH: unit * 0.12 };
+  }
+  // How far a note's articulations reach beyond its own ink on one side, so a
+  // tie can clear them: `side` 1 = below (staccato, accent), -1 = above
+  // (fermata). 0 when there are none there.
+  function articulationDepth(articulations, unit, side) {
+    if (!articulations || !articulations.length) return 0;
+    const m = articulationMetrics(unit);
+    if (side < 0) return articulations.includes('fermata') ? m.margin + unit * 0.32 : 0;
+    let d = 0;
+    if (articulations.includes('staccato')) d += 2 * m.dotR + m.gap;
+    if (articulations.includes('accent')) d += 2 * m.accentHalfH;
+    return d ? m.margin + d : 0;
+  }
   function drawArticulations(container, anchor, articulations, unit) {
     if (!articulations || !articulations.length) return;
-    const gap = unit * 0.08;
-    const margin = unit * 0.1;
-    const stroke = Math.max(1.1, unit * 0.045);
+    const { gap, margin, stroke, dotR, accentHalfH } = articulationMetrics(unit);
 
     let y = anchor.belowY + margin; // top edge of the next glyph below; moves downward
     if (articulations.includes('staccato')) {
-      const r = Math.max(1.4, unit * 0.055);
+      const r = dotR;
       container.appendChild(svgCircle(anchor.belowX, y + r, r, { cls: 'el-artic-dot' }));
       y += 2 * r + gap;
     }
     if (articulations.includes('accent')) {
-      const w = unit * 0.34, hh = unit * 0.12;
+      const w = unit * 0.34, hh = accentHalfH;
       const cy = y + hh;
       container.appendChild(svgPath(`M ${anchor.belowX - w / 2} ${cy - hh} L ${anchor.belowX + w / 2} ${cy} L ${anchor.belowX - w / 2} ${cy + hh}`,
         { cls: 'el-artic-line', 'stroke-width': stroke }));
@@ -243,6 +279,32 @@
         { cls: 'el-artic-line', 'stroke-width': stroke }));
       container.appendChild(svgCircle(cx, base - rise * 0.22, Math.max(1.3, unit * 0.05), { cls: 'el-artic-dot' }));
     }
+  }
+
+  /* ---------- Ties ---------- */
+  // `tie: true` on a note cell joins it to the note right after it (across a
+  // barline too). It is only drawn while that next cell is a note, and picking
+  // a rest for that cell clears it (see rebuildRhythmCells).
+  function canTieCell(cells, idx) {
+    return !!cells[idx] && cells[idx].type === 'note' && !!cells[idx + 1] && cells[idx + 1].type === 'note';
+  }
+  function isTiedToNext(cells, idx) { return canTieCell(cells, idx) && !!cells[idx].tie; }
+  function toggleCellTie(cell) {
+    if (cell.tie) delete cell.tie; else cell.tie = true;
+  }
+  // A tie is a crescent, thickest in the middle, from (x1, y1) to (x2, y2),
+  // bowing down (`dir` 1) or up (-1). `unit` is a size reference (roughly the
+  // staff / bar height).
+  function drawTie(container, x1, y1, x2, y2, dir, unit) {
+    const len = x2 - x1;
+    if (len < 2) return;
+    const thick = Math.max(1.3, unit * 0.06);
+    const bulge = clamp(len * 0.25, thick + unit * 0.05, unit * 0.32);
+    const k = len * 0.28;
+    container.appendChild(svgPath(
+      `M ${x1} ${y1} C ${x1 + k} ${y1 + dir * bulge}, ${x2 - k} ${y2 + dir * bulge}, ${x2} ${y2} ` +
+      `C ${x2 - k} ${y2 + dir * (bulge - thick)}, ${x1 + k} ${y1 + dir * (bulge - thick)}, ${x1} ${y1} Z`,
+      { cls: 'el-tie' }));
   }
 
   /* ---------- Note staff (pitched notation) ---------- */
@@ -273,8 +335,9 @@
     return steps;
   }
 
-  // Key signature: a signed sharp/flat count, own to each note-staff bar
-  // (independent of the sheet's free-text Key field). The circle-of-fifths
+  // Key signature: a signed sharp/flat count, own to each note staff. A new
+  // staff starts on the sheet's key (keySignatureForKey) and can then be set
+  // apart from it in the edit box. The circle-of-fifths
   // orders below double as both "which letters are altered" and, combined
   // with a fixed per-clef glyph-position table, "where the signature is
   // drawn" -- the latter is a fixed engraving convention, not derived from
@@ -301,12 +364,48 @@
     return keySignature ? Math.abs(keySignature) * KEYSIG_GLYPH_STEP_PX + 6 : 0;
   }
   function notestaffLeadWidth(el) {
-    return NOTESTAFF_CLEF_W + notestaffKeySigWidth(el.keySignature) + 10;
+    return NOTESTAFF_CLEF_W + notestaffKeySigWidth(displayedKeySignature(el)) + 4;
   }
   // Bottom line = step 0, top line = step 8, so the full 5-line staff spans
   // el.h; el.h/8 is one staff step in pixels.
   function pitchToY(position, el) {
     return el.y + el.h - position * (el.h / 8);
+  }
+  // Where a staff's cells go, bar by bar. Every bar gets an equal share of the
+  // staff's width `w`, and its cells are spread inside it with a little air
+  // after the opening barline and before the closing one. Without that, the
+  // first head of every bar after the first sat right on the barline (a head
+  // is drawn from the start of its cell, which lies flush against it), while
+  // the last note of the bar before had a whole cell of room.
+  // Returns per-cell `widths` and `offsets` (from the staff's first bar) and
+  // the `barlines` between bars (also from there, the closing one not counted).
+  function staffBarPads(el) {
+    const size = el.h * 0.65;
+    return { left: size * 0.4, right: size * 0.2 };
+  }
+  function staffLayout(el, cells, w) {
+    const bars = splitStaffBars(cells, staffBarUnits(el));
+    const barW = w / bars.length;
+    const { left, right } = staffBarPads(el);
+    const widths = [], offsets = [], barlines = [];
+    bars.forEach((barCells, b) => {
+      const start = b * barW;
+      if (b > 0) barlines.push(start);
+      let px = start + left;
+      allocateCellWidths(barCells, Math.max(barW - left - right, 0)).forEach(cw => {
+        widths.push(cw);
+        offsets.push(px);
+        px += cw;
+      });
+    });
+    return { widths, offsets, barlines };
+  }
+  // The narrowest a staff can be squeezed: every cell of its fullest bar at
+  // its floor width (see allocateCellWidths), plus the bar padding, per bar.
+  function staffMinWidth(el) {
+    const bars = splitStaffBars(el.cells, staffBarUnits(el));
+    const { left, right } = staffBarPads(el);
+    return bars.length * (Math.max(...bars.map(b => b.length)) * RHYTHM_MIN_CELL_PX + left + right);
   }
 
   let model = JSON.parse(JSON.stringify(initialSheet));
@@ -345,7 +444,7 @@
       case 'repeat': return LIMITS.repeat;
       case 'volta': return LIMITS.volta;
       case 'rhythmbar': return { w: [rhythmBarMinWidth(el.cells), PAGE_W], h: LIMITS.rhythmbar.h };
-      case 'notestaff': return { w: [rhythmBarMinWidth(el.cells), PAGE_W - notestaffLeadWidth(el)], h: LIMITS.notestaff.h };
+      case 'notestaff': return { w: [staffMinWidth(el), PAGE_W - notestaffLeadWidth(el)], h: LIMITS.notestaff.h };
       default: return {};
     }
   }
@@ -406,16 +505,33 @@
     return lower ? name.charAt(0).toLowerCase() + name.slice(1) : name;
   }
 
+  // The root of a chord symbol: its letter and accidental. A # or b straight
+  // after the letter belongs to the root (Bb7, F#m, A#9), except before a
+  // number that is not a chord number: A#4 is A with a #4, not A# with a 4.
+  // parseChordSegments and transposeChordText both read roots through this, so
+  // drawing and transposing can't disagree.
+  const ROOT_ACCIDENTAL_NUMBERS = new Set(['5', '6', '7', '9', '11', '13', '69']);
+  function readChordRoot(s) {
+    const m = /^([A-G])([#b♯♭])?/.exec(s);
+    if (!m) return null;
+    let acc = m[2] || '';
+    if (acc) {
+      const num = /^\d+/.exec(s.slice(m[0].length));
+      if (num && !ROOT_ACCIDENTAL_NUMBERS.has(num[0])) acc = '';
+    }
+    return { letter: m[1], acc, length: 1 + acc.length };
+  }
+
   // Same reading of a chord as parseChordSegments: a root letter and its
   // accidental, then a slash bass unless the "/" is part of a number (6/9) or a
   // bracket. Everything between them (m7b5, (#11) ...) is intervals and stays.
   // Shorthand and other text without a root (-, r, N.C., x2) is left alone.
   function transposeChordText(text, semitones, flats) {
     const s = String(text || '');
-    const root = /^([A-G])([#b♯♭])?/.exec(s);
+    const root = readChordRoot(s);
     if (!root || !semitones) return s;
-    let out = noteName(noteSemitone(root[1], root[2]) + semitones, flats);
-    let rest = s.slice(root[0].length);
+    let out = noteName(noteSemitone(root.letter, root.acc) + semitones, flats);
+    let rest = s.slice(root.length);
     let depth = 0, slash = -1;
     for (let i = 0; i < rest.length; i++) {
       const c = rest[i];
@@ -473,18 +589,111 @@
     return noteName(k.semitone + t.semitones, t.flats) + k.suffix;
   }
 
+  /* ---------- note staff: key and transposing ---------- */
+  // Stored staff data is in the sheet's original key, exactly like the chords;
+  // transposing only changes what is drawn (see renderNoteStaffEl).
+  const mod12 = n => ((n % 12) + 12) % 12;
+  // The key signature (-7..7) of the major key on tonic `pc`; where two spell
+  // the same pitch (B / Cb, F# / Gb, C# / Db) `flats` picks.
+  function sigForTonic(pc, flats) {
+    const r = mod12(7 * pc);
+    if (r <= 4) return r;
+    if (r >= 8) return r - 12;
+    return flats ? r - 12 : r;
+  }
+  // The signature a sheet key ("G", "Bb", "F#m") starts a new staff on; a minor
+  // key uses its relative major's. No readable key gives C.
+  function keySignatureForKey(str) {
+    const k = parseKey(str);
+    if (!k) return 0;
+    return sigForTonic(k.minor ? k.semitone + 3 : k.semitone, keyPrefersFlats(str));
+  }
+  function transposeKeySignature(sig, semitones, flats) {
+    return sigForTonic(mod12(7 * sig) + semitones, flats);
+  }
+  // The signature drawn for a staff: transposed with the sheet, unless it's
+  // the builder's stand-in (`staged`), which always shows the sheet's own key.
+  function displayedKeySignature(el) {
+    const t = transposeState;
+    return t.semitones && !el.staged ? transposeKeySignature(el.keySignature || 0, t.semitones, t.flats) : (el.keySignature || 0);
+  }
+  // "G (1 sharp)" for a signature count, the way the Key select labels it.
+  function keySignatureLabel(sig) { return KEYSIG_OPTIONS[clamp(sig, -7, 7) + 7].label; }
+
+  const LETTERS_FROM_C = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  // A staff step's diatonic index (octave * 7 + letter counted from C) at the
+  // bottom line: E4 in treble, G2 in bass.
+  const STAFF_CLEF_DIATONIC_BASE = { treble: 30, bass: 18 };
+  function keySigAlteration(letter, sig) {
+    return alteredLettersForKeySignature(sig).has(letter) ? (sig > 0 ? 1 : -1) : 0;
+  }
+  // Moves one note of a staff from the key signature `fromSig` to `toSig`,
+  // `semitones` up, and spells it there: a letter the new signature already
+  // alters when that gives the pitch, else a natural, else a sharp or flat
+  // (flat under a flat signature, or in C when `flats`). The accidental is
+  // only set when the signature doesn't already say it. Returns the new
+  // {pitch, accidental}; the notes always stay within the staff's range.
+  function transposeStaffNote(cell, clef, fromSig, toSig, semitones, flats) {
+    const step = cell.pitch != null ? cell.pitch : STAFF_DEFAULT_PITCH;
+    const diatonic = STAFF_CLEF_DIATONIC_BASE[clef] + step;
+    const letter = LETTERS_FROM_C[diatonic % 7];
+    const oct = Math.floor(diatonic / 7);
+    const alt = cell.accidental === 'sharp' ? 1 : cell.accidental === 'flat' ? -1
+      : cell.accidental === 'natural' ? 0 : keySigAlteration(letter, fromSig);
+    const pc = mod12(oct * 12 + NOTE_SEMITONE[letter] + alt + semitones);
+
+    let newLetter = LETTERS_FROM_C.find(l => mod12(NOTE_SEMITONE[l] + keySigAlteration(l, toSig)) === pc);
+    let newAlt = newLetter ? keySigAlteration(newLetter, toSig) : 0;
+    if (!newLetter) {
+      newLetter = LETTERS_FROM_C.find(l => NOTE_SEMITONE[l] === pc);
+      if (!newLetter) {
+        const useFlats = toSig < 0 || (toSig === 0 && flats);
+        newLetter = LETTERS_FROM_C.find(l => NOTE_SEMITONE[l] === mod12(pc + (useFlats ? 1 : -1)));
+        newAlt = useFlats ? -1 : 1;
+      }
+    }
+    // The letter's own octave (a Cb or B# lands in the neighbouring one).
+    const absSemi = oct * 12 + NOTE_SEMITONE[letter] + alt + semitones;
+    const newOct = (absSemi - newAlt - NOTE_SEMITONE[newLetter]) / 12;
+    let pitch = newOct * 7 + LETTERS_FROM_C.indexOf(newLetter) - STAFF_CLEF_DIATONIC_BASE[clef];
+    while (pitch > STAFF_PITCH_MAX) pitch -= 7;
+    while (pitch < STAFF_PITCH_MIN) pitch += 7;
+    const accidental = newAlt === keySigAlteration(newLetter, toSig) ? null
+      : newAlt > 0 ? 'sharp' : newAlt < 0 ? 'flat' : 'natural';
+    return { pitch, accidental };
+  }
+  // A note of `el` as it's drawn: transposed with the sheet, else as stored.
+  function displayedStaffNote(el, cell) {
+    const t = transposeState;
+    if (!t.semitones || el.staged) return { pitch: cell.pitch != null ? cell.pitch : STAFF_DEFAULT_PITCH, accidental: cell.accidental || null };
+    return transposeStaffNote(cell, el.clef || 'treble', el.keySignature || 0, displayedKeySignature(el), t.semitones, t.flats);
+  }
+  // The other way, for what's dragged or picked on a transposed staff: a note
+  // as shown (`pitch`, `accidental`) back to what to store.
+  function storedStaffNote(el, pitch, accidental) {
+    const t = transposeState;
+    if (!t.semitones || el.staged) return { pitch, accidental };
+    return transposeStaffNote({ pitch, accidental }, el.clef || 'treble', displayedKeySignature(el), el.keySignature || 0,
+      -t.semitones, keyPrefersFlats(model.key));
+  }
+  // A signature as picked in the edit box (where it reads transposed) back to what to store.
+  function storedKeySignature(el, shown) {
+    const t = transposeState;
+    return t.semitones && !el.staged ? transposeKeySignature(shown, -t.semitones, keyPrefersFlats(model.key)) : shown;
+  }
+
   // Splits a chord symbol into runs, the way it's engraved on a real chart.
   // Each run has a `kind` (see CHORD_RUN_STYLE): `base` -- the root letter,
   // quality words (m, maj, dim, sus, add...); `acc` -- the root's accidental,
   // raised and a bit smaller; `sup` -- raised: extension numbers and altered
   // tones (F#m7 -> F + ^# + m + ^7,
-  // Cm7b5 -> C + m + ^7b5, C7(#11) -> C + ^7(#11)); `bass` -- a slash bass
+  // Cm7b5 -> C + m + ^7b5, C7(#11) -> C + ^7(#11), Ao7 -> A + ^o7); `bass` -- a slash bass
   // note, smaller and dropped a little (Bb7/D -> B + ^b + ^7 + /D); `bassSup`
   // -- that bass note's own accidental, raised within the small run.
   // The stored text stays plain; this only affects how it's drawn.
   function parseChordSegments(text) {
     const s = String(text || '');
-    const root = /^[A-G]/.exec(s);
+    const root = readChordRoot(s);
     if (!root) return s ? [{ text: s, kind: 'base' }] : []; // N.C., %, x2...
     const segs = [];
     const push = (t, kind) => {
@@ -493,10 +702,9 @@
       if (last && last.kind === kind) last.text += t;
       else segs.push({ text: t, kind });
     };
-    push(root[0], 'base');
-    let i = 1;
-    const acc = /^[#b♯♭]/.exec(s.slice(i));
-    if (acc) { push(acc[0], 'acc'); i += 1; }
+    push(root.letter, 'base');
+    if (root.acc) push(root.acc, 'acc');
+    let i = root.length;
     while (i < s.length) {
       const rest = s.slice(i);
       if (rest[0] === '/' && !/^\/\d/.test(rest)) { // slash bass; "6/9" is not one
@@ -508,7 +716,8 @@
         push(s.slice(i), 'bass');
         break;
       }
-      let m = /^\([^)]*\)/.exec(rest) || /^[#b♯♭]?\d+(?:\/\d+)?/.exec(rest);
+      // "o" is the diminished sign (Ao7); not the o of a word like "Coda".
+      let m = /^\([^)]*\)/.exec(rest) || /^o(?![A-Za-z])/.exec(rest) || /^[#b♯♭]?\d+(?:\/\d+)?/.exec(rest);
       // "+"/"-" only count as an alteration after a number ("7-9"); before one
       // they're the chord's quality ("C-7"), which stays on the baseline.
       if (!m && /[\d)]/.test(s[i - 1])) m = /^[+-]\d+(?:\/\d+)?/.exec(rest);
@@ -916,7 +1125,10 @@
     const row = document.createElement('div');
     row.className = 'rhythm-menu-row';
     row.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    const sync = () => items.forEach(it => it.btn.classList.toggle('rhythm-menu-item--on', it.isOn()));
+    const sync = () => items.forEach(it => {
+      it.btn.classList.toggle('rhythm-menu-item--on', it.isOn());
+      it.btn.disabled = !!(it.disabled && it.disabled());
+    });
     items.forEach(it => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -938,6 +1150,11 @@
     menu.appendChild(heading);
     menu.appendChild(row);
   }
+  function tieIcon() {
+    const svg = svgEl('svg', { width: 28, height: 16, viewBox: '0 0 28 16', class: 'rhythm-menu-icon' });
+    drawTie(svg, 3, 3, 25, 3, 1, 44);
+    return svg;
+  }
   function articulationIcon(kind) {
     const svg = svgEl('svg', { width: 28, height: 16, viewBox: '0 0 28 16', class: 'rhythm-menu-icon' });
     drawArticulations(svg, { aboveX: 14, aboveY: 15, belowX: 14, belowY: 0 }, [kind], 34);
@@ -953,15 +1170,19 @@
 
   // `opts.onChange()` is called after an in-place change to the cell
   // (articulation / accidental) so the caller can mark dirty and re-render;
-  // `opts.accidentals` adds the accidental section (note staff only). Both
-  // sections apply to notes only -- a rest just gets the duration grid.
+  // `opts.accidentals` adds the accidental section (note staff only), reading
+  // and writing through `opts.accidentalGet()` / `opts.accidentalSet(value)`
+  // when given (a transposed staff shows a different accidental than it
+  // stores); `opts.barUnits` keeps notes inside their bar (see
+  // rhythmMenuOptionsFor). The sections apply to notes only -- a rest just
+  // gets the duration grid.
   function openRhythmMenu(clientX, clientY, cells, idx, onApply, opts = {}) {
     closeRhythmMenu();
     const menu = document.createElement('div');
     menu.className = 'rhythm-menu';
     const prior = cells[idx];
     // Which items appear is set in the edit box (see NOTE_MENU_ITEMS).
-    rhythmMenuOptionsFor(cells, idx).filter(opt => isMenuItemOn(`${opt.type}-${opt.duration}`)).forEach(opt => {
+    rhythmMenuOptionsFor(cells, idx, opts.barUnits).filter(opt => isMenuItemOn(`${opt.type}-${opt.duration}`)).forEach(opt => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'rhythm-menu-item';
@@ -976,8 +1197,9 @@
       btn.addEventListener('click', () => {
         const next = rebuildRhythmCells(cells, idx, opt);
         // Changing one note to another keeps its articulations; a rest has none.
-        if (opt.type === 'note' && prior.type === 'note' && prior.articulations) {
-          next[idx].articulations = [...prior.articulations];
+        if (opt.type === 'note' && prior.type === 'note') {
+          if (prior.articulations) next[idx].articulations = [...prior.articulations];
+          if (prior.tie) next[idx].tie = true;
         }
         onApply(next);
         closeRhythmMenu();
@@ -995,13 +1217,25 @@
           onClick: () => { toggleCellArticulation(prior, k.value); changed(); },
         })));
       }
+      if (isMenuItemOn('tie')) {
+        addMenuToggleSection(menu, 'Tie', 3, [{
+          glyph: tieIcon(),
+          label: 'Tie to next',
+          isOn: () => isTiedToNext(cells, idx),
+          disabled: () => !canTieCell(cells, idx),
+          onClick: () => { toggleCellTie(prior); changed(); },
+        }]);
+      }
       const accidentals = ACCIDENTAL_MENU_OPTIONS.filter(a => isMenuItemOn(`acc-${a.value || 'default'}`));
       if (opts.accidentals && accidentals.length) {
         addMenuToggleSection(menu, 'Accidental', Math.min(accidentals.length, 4), accidentals.map(a => ({
           glyph: a.code,
           label: a.label,
-          isOn: () => (prior.accidental || null) === a.value,
-          onClick: () => { prior.accidental = a.value; changed(); },
+          isOn: () => (opts.accidentalGet ? opts.accidentalGet() : prior.accidental || null) === a.value,
+          onClick: () => {
+            if (opts.accidentalSet) opts.accidentalSet(a.value); else prior.accidental = a.value;
+            changed();
+          },
         })));
       }
     }
@@ -1031,19 +1265,39 @@
   // accidental; changing an existing note's duration keeps its pitch and
   // accidental (and, via openRhythmMenu, its articulations) as-is. Clicking or
   // right-clicking a placed note opens this (see renderStaffCells).
-  function openStaffMenu(clientX, clientY, cells, idx, onApply, onChange) {
+  // `staffEl` (a placed staff, not the builder's) keeps a transposed staff
+  // working in the key it shows: a fresh note lands on the middle line as
+  // drawn, and the accidental picked is the one seen, stored back in the
+  // original key (see storedStaffNote).
+  function openStaffMenu(clientX, clientY, cells, idx, onApply, onChange, staffEl) {
     const prior = cells[idx];
+    const opts = { onChange, accidentals: true };
+    if (staffEl) {
+      opts.barUnits = staffBarUnits(staffEl);
+      opts.accidentalGet = () => displayedStaffNote(staffEl, prior).accidental;
+      opts.accidentalSet = value => {
+        const stored = storedStaffNote(staffEl, displayedStaffNote(staffEl, prior).pitch, value);
+        prior.pitch = stored.pitch;
+        prior.accidental = stored.accidental;
+      };
+    }
     openRhythmMenu(clientX, clientY, cells, idx, newCells => {
       // Read at pick time, not menu-open time: the accidental toggle in the
       // same menu edits `prior` in place before a duration is chosen.
       const priorPitch = prior.pitch, priorAccidental = prior.accidental;
       const nc = newCells[idx];
       if (nc.type === 'note') {
-        nc.pitch = priorPitch != null ? priorPitch : STAFF_DEFAULT_PITCH;
-        nc.accidental = priorPitch != null ? (priorAccidental != null ? priorAccidental : null) : null;
+        if (priorPitch != null) {
+          nc.pitch = priorPitch;
+          nc.accidental = priorAccidental != null ? priorAccidental : null;
+        } else {
+          const fresh = staffEl ? storedStaffNote(staffEl, STAFF_DEFAULT_PITCH, null) : { pitch: STAFF_DEFAULT_PITCH, accidental: null };
+          nc.pitch = fresh.pitch;
+          nc.accidental = fresh.accidental;
+        }
       }
       onApply(newCells);
-    }, { onChange, accidentals: true });
+    }, opts);
   }
 
   // `chord`: size for a chord symbol's raised numbers (see parseChordSegments).
@@ -1218,19 +1472,25 @@
       const totalUnits = opts.cells.reduce((s, c) => s + c.duration, 0);
       return {
         id: uid('el'), type: 'rhythmbar', x, y,
-        w: totalUnits * 10.5, h: 28, // 10.5px/unit matches the old 16-slot/336px default look
+        // Other time signatures scale with the bar; never narrower than the cells need.
+        w: Math.max(RHYTHMBAR_DEFAULT_W * totalUnits / 32, rhythmBarMinWidth(opts.cells)), h: RHYTHMBAR_DEFAULT_H,
         numerator: opts.numerator || 4, denominator: opts.denominator || 4,
         cells: JSON.parse(JSON.stringify(opts.cells)),
       };
     } else if (type === 'notestaff') {
       const totalUnits = opts.cells.reduce((s, c) => s + c.duration, 0);
-      return {
+      const el = {
         id: uid('el'), type: 'notestaff', x, y,
-        w: totalUnits * 10.5, h: 40,
+        w: 0, h: NOTESTAFF_DEFAULT_H,
         numerator: opts.numerator || 4, denominator: opts.denominator || 4,
+        bars: clamp(Math.round(opts.bars) || 1, 1, STAFF_MAX_BARS),
         clef: opts.clef || 'treble', keySignature: opts.keySignature || 0,
         cells: JSON.parse(JSON.stringify(opts.cells)),
       };
+      // The width follows the bars: NOTESTAFF_DEFAULT_BAR_W per 4/4 bar (other
+      // time signatures scale with the length of the bar).
+      el.w = clamp(NOTESTAFF_DEFAULT_BAR_W * totalUnits / 32, staffMinWidth(el), ROW_MAX_W - notestaffLeadWidth(el));
+      return el;
     }
     return null;
   }
@@ -1241,6 +1501,7 @@
     // A dropped row is kept within the page margins (a full-width row can
     // only sit at the left margin).
     if (el.type === 'row') el.x = clamp(el.x, PAGE_MARGIN, PAGE_W - PAGE_MARGIN - el.w);
+    if (el.type === 'notestaff') el.x = clamp(el.x, PAGE_MARGIN, PAGE_W - PAGE_MARGIN - notestaffLeadWidth(el) - el.w);
     model.elements.push(el);
     markDirty();
     render();
@@ -1733,13 +1994,22 @@
       }
     });
 
+    // A tie under the slashes, from one note to the next (past its dot).
+    cells.forEach((cell, i) => {
+      if (!isTiedToNext(cells, i)) return;
+      const dotted = cell.duration === 6 || cell.duration === 12 || cell.duration === 24 || cell.duration === 48;
+      const depth = Math.max(articulationDepth(cell.articulations, h * 1.2, 1), articulationDepth(cells[i + 1].articulations, h * 1.2, 1));
+      const tieY = y + h * 0.05 + headW * 0.38 + (depth ? h * 0.05 + depth : h * 0.08);
+      drawTie(container, x + positionsPx[i] + headW * 0.8 + (dotted ? h * 0.25 : 0), tieY, x + positionsPx[i + 1] + headW * 0.2, tieY, 1, h * 1.2);
+    });
+
     return { topY: beamY - beamThick - 4, bottomY: y + h * 0.4 };
   }
 
   function renderRhythmBarEl(svg, el) {
     const g = svgGroup({ cls: 'el-group' });
     const startX = el.x, startY = el.y;
-    const { bottomY } = renderRhythmCells(g, el.cells, el.x, el.y, el.w, el.h,
+    renderRhythmCells(g, el.cells, el.x, el.y, el.w, el.h,
       (idx, clientX, clientY) => openRhythmMenu(clientX, clientY, el.cells, idx, newCells => {
         el.cells = newCells; markDirty(); renderSvg();
       }, { onChange: () => { markDirty(); renderSvg(); } }),
@@ -1748,8 +2018,9 @@
 
     // Width and height are independent -- dragging sideways spaces the cells
     // out without changing note size; dragging up/down scales the notes and
-    // stems without changing the bar's overall width.
-    addResizeHandle(g, el.x + el.w, bottomY, sizeDrag(el), el);
+    // stems without changing the bar's overall width. The grab zone sits on the
+    // bottom-right corner of the selection outline (see elementBounds).
+    addResizeHandle(g, el.x + el.w, el.y + el.h, sizeDrag(el), el);
 
     svg.appendChild(g);
   }
@@ -1780,7 +2051,7 @@
   }
 
   function drawKeySignature(container, el) {
-    const k = el.keySignature;
+    const k = displayedKeySignature(el);
     if (!k) return;
     const kind = k > 0 ? 'sharp' : 'flat';
     const positions = KEYSIG_GLYPH_POSITIONS[el.clef][kind].slice(0, Math.abs(k));
@@ -1790,6 +2061,16 @@
         cls: 'el-notestaff-keysig', anchor: 'middle', size: el.h * 0.65,
       }));
     });
+  }
+
+  // A vertical line across the staff at every bar boundary of `cells` (laid
+  // out from `x` over width `w`, as renderStaffCells does), and one closing
+  // the last bar.
+  function drawStaffBarlines(container, el, x, w, cells) {
+    staffLayout(el, cells, w).barlines.forEach(px => {
+      container.appendChild(svgLine(x + px, el.y, x + px, el.y + el.h, { cls: 'el-staff-barline' }));
+    });
+    container.appendChild(svgLine(x + w, el.y, x + w, el.y + el.h, { cls: 'el-staff-barline' }));
   }
 
   function drawLedgerLines(container, el, cx, position, halfLen) {
@@ -1822,9 +2103,7 @@
   // dragging (re-pitch, snapped to the staff-step grid).
   function renderStaffCells(container, cells, x, y, w, el, callbacks) {
     const totalUnits = cells.reduce((s, c) => s + c.duration, 0);
-    const cellWidths = allocateCellWidths(cells, w);
-    let cursorPx = 0;
-    const positionsPx = cellWidths.map(cw => { const p = cursorPx; cursorPx += cw; return p; });
+    const { widths: cellWidths, offsets: positionsPx } = staffLayout(el, cells, w);
     let cursor = 0;
     const positions = cells.map(c => { const p = cursor; cursor += c.duration; return p; });
     const { runOf } = computeBeamRuns(cells, positions, barBeatUnits(el.denominator || 4));
@@ -1836,7 +2115,7 @@
     const midlineY = pitchToY(4, el);
     const stemHalf = NOTESTAFF_STEM_W / 2;
 
-    const slotW = 2 * w / totalUnits;
+    const slotW = 2 * cellWidths.reduce((s, cw) => s + cw, 0) / totalUnits; // a 16th's share of the room
     const noteCx = k => x + positionsPx[k] + Math.min(cellWidths[k], slotW) / 2;
     const restCx = k => x + positionsPx[k] + cellWidths[k] / 2;
     const pitchOf = k => (cells[k].pitch != null ? cells[k].pitch : STAFF_DEFAULT_PITCH);
@@ -1885,6 +2164,7 @@
     // and lowest ink -- the stem tip / beam on whichever side the stem points,
     // else the notehead -- and the x to center on at each end.
     const articulationAnchor = new Map();
+    const stemUpAt = new Map(); // which way each note's stem points (a tie bows the other way)
     const headTopY = k => pitchToY(pitchOf(k), el) - el.h / 8;
     const headBottomY = k => pitchToY(pitchOf(k), el) + el.h / 8;
     cells.forEach((cell, i) => {
@@ -1913,6 +2193,7 @@
         container.appendChild(svgText(AUG_DOT, cx + halfW + noteSize * 0.1, dotY, { cls: 'el-glyph-text', size: noteSize }));
       }
       if (cell.duration === 32 || cell.duration === 48) { // whole notes: no stem
+        stemUpAt.set(i, pitch < 4);
         articulationAnchor.set(i, { aboveX: cx, aboveY: headTopY(i), belowX: cx, belowY: headBottomY(i) });
         return;
       }
@@ -1924,6 +2205,7 @@
         const runCells = cells.slice(run.start, run.end + 1);
         const avgPitch = runCells.reduce((s, c, k) => s + pitchOf(run.start + k), 0) / runCells.length;
         const stemUp = avgPitch < 4;
+        for (let k = run.start; k <= run.end; k++) stemUpAt.set(k, stemUp);
         const extremePitch = stemUp
           ? Math.max(...runCells.map((c, k) => pitchOf(run.start + k)))
           : Math.min(...runCells.map((c, k) => pitchOf(run.start + k)));
@@ -1965,6 +2247,7 @@
         });
       } else {
         const stemUp = pitch < 4;
+        stemUpAt.set(i, stemUp);
         const stemX = stemXOf(i, stemUp);
         const stemTipY = stemUp ? noteY - stemLen : noteY + stemLen;
         container.appendChild(svgLine(stemX, stemStartYOf(i, stemUp), stemX, stemTipY, { cls: 'el-notegroup-stem' }));
@@ -1984,6 +2267,22 @@
       drawArticulations(container, a, cells[i].articulations, el.h * 0.85);
     });
 
+    // A tie runs from a note to the one after it, on the side opposite its
+    // stem, starting after its augmentation dot and stopping short of the next
+    // note's accidental.
+    cells.forEach((cell, i) => {
+      if (!isTiedToNext(cells, i)) return;
+      const next = cells[i + 1];
+      const dir = stemUpAt.get(i) ? 1 : -1;
+      const dotted = cell.duration === 6 || cell.duration === 12 || cell.duration === 24 || cell.duration === 48;
+      const x1 = noteCx(i) + halfWOf(i) * 0.5 + (dotted ? noteSize * 0.3 : 0);
+      const x2 = noteCx(i + 1) - (next.accidental ? halfWOf(i + 1) + noteSize * 0.5 : halfWOf(i + 1) * 0.5);
+      // Just off the heads, or past whatever articulations sit on that side.
+      const depth = Math.max(articulationDepth(cell.articulations, el.h * 0.85, dir), articulationDepth(next.articulations, el.h * 0.85, dir));
+      const edge = depth ? el.h / 8 + depth : el.h * 0.1;
+      drawTie(container, x1, pitchToY(pitchOf(i), el) + dir * edge, x2, pitchToY(pitchOf(i + 1), el) + dir * edge, dir, el.h);
+    });
+
     return {
       topY: pitchToY(STAFF_PITCH_MAX, el) - el.h * 0.3,
       bottomY: pitchToY(STAFF_PITCH_MIN, el) + el.h * 0.3,
@@ -1999,16 +2298,31 @@
     drawStaffLines(g, el);
     drawClef(g, el);
     drawKeySignature(g, el);
+    drawStaffBarlines(g, el, el.x + leadW, el.w, el.cells);
 
-    const { bottomY } = renderStaffCells(g, el.cells, el.x + leadW, el.y, el.w, el, {
+    // Transposed with the sheet, the notes are drawn from copies with the
+    // pitch and accidental as they read now; the stored cells stay as they
+    // were written. A drag or a menu pick on a copy goes back through
+    // storedStaffNote.
+    const shown = el.cells.map(c => {
+      if (c.type !== 'note') return c;
+      const n = displayedStaffNote(el, c);
+      return { ...c, pitch: n.pitch, accidental: n.accidental };
+    });
+
+    renderStaffCells(g, shown, el.x + leadW, el.y, el.w, el, {
       onCellMenu: (idx, clientX, clientY) => {
         openStaffMenu(clientX, clientY, el.cells, idx,
           newCells => { el.cells = newCells; markDirty(); renderSvg(); },
-          () => { markDirty(); renderSvg(); });
+          () => { markDirty(); renderSvg(); }, el);
       },
       onNoteDrag: (idx, ddy, startPitch) => {
         const deltaSteps = Math.round(-ddy / (el.h / 8));
-        el.cells[idx].pitch = clamp(startPitch + deltaSteps, STAFF_PITCH_MIN, STAFF_PITCH_MAX);
+        const pitch = clamp(startPitch + deltaSteps, STAFF_PITCH_MIN, STAFF_PITCH_MAX);
+        const stored = storedStaffNote(el, pitch, shown[idx].accidental);
+        el.cells[idx].pitch = stored.pitch;
+        // Untransposed, the accidental is left exactly as it was.
+        if (transposeState.semitones) el.cells[idx].accidental = stored.accidental;
         markDirty(); renderSvg();
       },
       onMove: moveTo,
@@ -2016,8 +2330,10 @@
 
     addMoveHandle(g, el.x - 8, el.y + el.h / 2, moveTo, el);
 
-    // Same as the rhythm bar: width re-spaces cells, height rescales the notes and staff.
-    addResizeHandle(g, el.x + leadW + el.w, bottomY, sizeDrag(el), el);
+    // Same as the rhythm bar: width re-spaces cells, height rescales the notes
+    // and staff. The grab zone sits on the bottom-right corner of the
+    // selection outline (see elementBounds), where it is looked for.
+    addResizeHandle(g, el.x + leadW + el.w, el.y + el.h * 1.4, sizeDrag(el), el);
 
     svg.appendChild(g);
   }
@@ -2045,9 +2361,13 @@
 
     const titleStr = model.title || 'Untitled';
     svg.appendChild(svgText(titleStr, PAGE_W / 2, PAGE_MARGIN, { cls: 'page-title-text', anchor: 'middle', size: 22 }));
+    const artistStr = String(model.artist || '').trim();
+    if (artistStr) {
+      svg.appendChild(svgText(artistStr, PAGE_W / 2, PAGE_MARGIN + 22, { cls: 'page-key-text', anchor: 'middle', size: 13 }));
+    }
     const keyStr = transposeState.semitones ? transposedKeyName() : model.key;
     if (keyStr) {
-      svg.appendChild(svgText(`(${keyStr})`, PAGE_W / 2, PAGE_MARGIN + 22, { cls: 'page-key-text', anchor: 'middle', size: 13 }));
+      svg.appendChild(svgText(`Key: ${keyStr}`, PAGE_W - PAGE_MARGIN, PAGE_MARGIN, { cls: 'page-key-text', anchor: 'end', size: 15 }));
     }
 
     model.elements.forEach(el => renderElement(svg, el));
@@ -2057,6 +2377,7 @@
 
   function render() {
     document.getElementById('sheet-title').value = model.title;
+    document.getElementById('sheet-artist').value = model.artist || '';
     document.getElementById('sheet-key').value = model.key;
     renderTransposeBox();
     renderSvg();
@@ -2075,16 +2396,18 @@
   // ones are on is chosen in the edit box, so rarely used items can live here
   // without cluttering the menu: give a new item `defaultOn: false` and it
   // stays hidden until someone ticks it. Ids: `note-<dur>` / `rest-<dur>`
-  // (durations, matching RHYTHM_MENU_OPTIONS), `artic-<kind>`, `acc-<value>`.
+  // (durations, matching RHYTHM_MENU_OPTIONS), `artic-<kind>`, `tie`, `acc-<value>`.
   const NOTE_MENU_GROUPS = [
     { id: 'duration', label: 'Notes' },
     { id: 'rest', label: 'Rests' },
     { id: 'articulation', label: 'Articulations' },
+    { id: 'tie', label: 'Tie' },
     { id: 'accidental', label: 'Accidentals (note staff only)' },
   ];
   const NOTE_MENU_ITEMS = [
     ...RHYTHM_MENU_OPTIONS.map(o => ({ id: `${o.type}-${o.duration}`, group: o.type === 'note' ? 'duration' : 'rest', label: o.label, defaultOn: true })),
     ...ARTICULATION_KINDS.map(k => ({ id: `artic-${k.value}`, group: 'articulation', label: k.label, defaultOn: true })),
+    { id: 'tie', group: 'tie', label: 'Tie to next note', defaultOn: true },
     ...ACCIDENTAL_MENU_OPTIONS.map(a => ({ id: `acc-${a.value || 'default'}`, group: 'accidental', label: a.label, defaultOn: true })),
   ];
   const NOTE_MENU_BY_ID = Object.fromEntries(NOTE_MENU_ITEMS.map(i => [i.id, i]));
@@ -2192,16 +2515,35 @@
     return out;
   }
   // Shared by the rhythm bar and the note staff. The width follows the bar's
-  // length, so the spacing per beat stays as it was.
+  // length, so the spacing per beat stays as it was. A staff refits each of
+  // its bars on its own, so a note never ends up across a barline.
   function setBarTimeSig(el, num, den) {
+    const bars = el.type === 'notestaff' ? staffBarCount(el) : 1;
     const oldUnits = barTotalUnits(el.numerator || 4, el.denominator || 4);
     el.numerator = clamp(Math.round(num) || 4, 1, 32);
     el.denominator = den;
     const newUnits = barTotalUnits(el.numerator, el.denominator);
-    el.cells = refitCells(el.cells, newUnits);
+    if (bars === 1 && el.type !== 'notestaff') {
+      el.cells = refitCells(el.cells, newUnits);
+    } else {
+      const perBar = splitStaffBars(el.cells, oldUnits);
+      el.cells = [];
+      for (let b = 0; b < bars; b++) el.cells.push(...refitCells(perBar[b] || [], newUnits));
+    }
     applySize(el, el.w * newUnits / oldUnits, null);
   }
-  // Refills the bar with notes of `unit` 32nds each (0 = all rests).
+  // A staff's flat cell list cut into bars of `barUnits` (no cell crosses a boundary).
+  function splitStaffBars(cells, barUnits) {
+    const bars = [[]];
+    let used = 0;
+    cells.forEach(c => {
+      if (used >= barUnits) { bars.push([]); used = 0; }
+      bars[bars.length - 1].push(c);
+      used += c.duration;
+    });
+    return bars;
+  }
+  // Refills the bar(s) with notes of `unit` 32nds each (0 = all rests).
   function fillCells(el, unit) {
     const total = barTotalUnits(el.numerator || 4, el.denominator || 4);
     const staff = el.type === 'notestaff';
@@ -2213,7 +2555,29 @@
       }
     }
     for (; used < total; used += 2) cells.push({ type: 'rest', duration: 2 });
-    el.cells = cells;
+    if (!unit) cells.splice(0, cells.length, ...defaultBeatCells(el.numerator || 4, el.denominator || 4, 1));
+    if (!staff) { el.cells = cells; return; }
+    // Every bar gets the same fill. The pitch is the middle line as drawn, so
+    // a transposed staff doesn't jump.
+    const first = storedStaffNote(el, STAFF_DEFAULT_PITCH, null);
+    el.cells = [];
+    for (let b = 0; b < staffBarCount(el); b++) {
+      cells.forEach(c => el.cells.push(c.type === 'note' ? { ...c, pitch: first.pitch, accidental: first.accidental } : { ...c }));
+    }
+  }
+  // Changes how many bars a staff has: new bars start as rests, dropped ones
+  // take their notes with them, and the width follows so each bar keeps its size.
+  function setStaffBars(el, n) {
+    const oldBars = staffBarCount(el);
+    const bars = clamp(Math.round(n) || 1, 1, STAFF_MAX_BARS);
+    const barUnits = staffBarUnits(el);
+    const perBar = splitStaffBars(el.cells, barUnits);
+    el.cells = [];
+    for (let b = 0; b < bars; b++) {
+      el.cells.push(...(perBar[b] || defaultBeatCells(el.numerator || 4, el.denominator || 4, 1)));
+    }
+    el.bars = bars;
+    applySize(el, el.w * bars / oldBars, null);
   }
   // Moves every note by `steps` staff steps (7 = an octave), as far as the
   // staff allows, keeping the intervals between them.
@@ -2443,12 +2807,17 @@
       actionsSection(),
     ],
     notestaff: el => [
+      { title: 'Bars', fields: [
+        numField('Bars', 'bars', { stepper: true, integer: true, min: 1, max: STAFF_MAX_BARS, get: e => staffBarCount(e), set: setStaffBars, structural: true }),
+      ] },
       ...barSections(el),
       { title: 'Clef & key', fields: [
         { kind: 'select', id: 'clef', label: 'Clef', options: [{ value: 'treble', label: 'Treble' }, { value: 'bass', label: 'Bass' }],
           get: e => e.clef || 'treble', set: (e, v) => { e.clef = v; } },
         { kind: 'select', id: 'keySignature', label: 'Key', options: KEYSIG_OPTIONS,
-          get: e => e.keySignature || 0, set: (e, v) => { e.keySignature = v; applySize(e, e.w, null); } },
+          // Reads and writes the key as it shows, so on a transposed sheet it
+          // matches the signature on the page.
+          get: e => displayedKeySignature(e), set: (e, v) => { e.keySignature = storedKeySignature(e, v); applySize(e, e.w, null); } },
       ] },
       { title: 'Transpose notes', fields: [{ kind: 'buttons', items: [
         { label: '− step', onClick: e => transposeStaff(e, -1) },
@@ -2629,6 +2998,20 @@
         input.addEventListener('input', () => { ensureChords(el); el.chords[slotIdx] = storeChord(input.value); markDirty(); renderSvg(); });
         input.addEventListener('keydown', e => {
           if (e.key === 'Enter') { e.preventDefault(); input.blur(); return; }
+          // Cmd/Ctrl + / -: one more / fewer box in this bar (same as its - / +).
+          if ((e.metaKey || e.ctrlKey) && !e.altKey && /^[-+=_]$/.test(e.key)) {
+            e.preventDefault(); // not the browser's zoom
+            const next = clamp(n + (e.key === '-' || e.key === '_' ? -1 : 1), 0, ROW_MAX_CHORDS);
+            if (next === n) return;
+            setRowBarChords(el, bar, next);
+            markDirty(); renderEditBox();
+            // renderEditBox keeps the cursor in this box; if it was the one removed, go to the bar's last.
+            const at = slotIdx - k + Math.min(k, next - 1);
+            if (next > 0 && k >= next) focusEditField(`slot-${at}`);
+            activeSlot = next > 0 ? at : null;
+            renderSvg();
+            return;
+          }
           if (e.key !== 'Tab') return;
           const dir = e.shiftKey ? -1 : 1;
           if ((dir < 0 && slotIdx === 0) || (dir > 0 && slotIdx === total - 1)) {
@@ -2660,7 +3043,7 @@
       list.appendChild(line);
     });
     wrap.appendChild(list);
-    wrap.appendChild(mk('p', 'eb-hint', 'The - / + on each line changes that bar only; "Chords / bar (all)" above sets every bar. Type - for a rest as long as the box, r for a repeat-bar sign. Tab moves to the next box.'));
+    wrap.appendChild(mk('p', 'eb-hint', 'The - / + on each line changes that bar only; "Chords / bar (all)" above sets every bar. Type - for a rest as long as the box, r for a repeat-bar sign. Tab moves to the next box; Cmd/Ctrl + or - adds or removes a box in the bar you are typing in.'));
     return wrap;
   }
 
@@ -2986,7 +3369,7 @@
   // all rests. The time signature fields control the bar's total length and
   // beat grouping (for beaming); changing either resets the builder.
   let builderNumerator = 4, builderDenominator = 4;
-  let builderCells = defaultRhythmCells(barTotalUnits(builderNumerator, builderDenominator));
+  let builderCells = defaultBeatCells(builderNumerator, builderDenominator, 1);
   const BUILDER_H = 20;
   const BUILDER_UNIT_PX = 7.5; // matches the old fixed 16-slot/240px builder width at 4/4
 
@@ -3017,7 +3400,7 @@
     });
   });
   document.getElementById('rhythm-builder-reset').addEventListener('click', () => {
-    builderCells = defaultRhythmCells(barTotalUnits(builderNumerator, builderDenominator));
+    builderCells = defaultBeatCells(builderNumerator, builderDenominator, 1);
     renderBuilderSvg();
   });
   function wireTimeSigInput(id, apply) {
@@ -3025,7 +3408,7 @@
       const v = clamp(parseInt(e.target.value, 10) || 4, 1, 32);
       e.target.value = v;
       apply(v);
-      builderCells = defaultRhythmCells(barTotalUnits(builderNumerator, builderDenominator));
+      builderCells = defaultBeatCells(builderNumerator, builderDenominator, 1);
       renderBuilderSvg();
     });
   }
@@ -3041,29 +3424,39 @@
   // here.
   let staffBuilderNumerator = 4, staffBuilderDenominator = 4;
   let staffBuilderClef = 'treble';
-  let staffBuilderKeySignature = 0;
-  let staffBuilderCells = defaultRhythmCells(barTotalUnits(staffBuilderNumerator, staffBuilderDenominator));
+  let staffBuilderBars = 1;
+  // The key isn't set here: a new staff starts on the sheet's key (see
+  // keySignatureForKey) and is changed afterwards in its edit box.
+  let staffBuilderCells = defaultBeatCells(staffBuilderNumerator, staffBuilderDenominator, staffBuilderBars);
   const STAFF_BUILDER_H = 40;
-  const STAFF_BUILDER_UNIT_PX = 7.5;
+  const STAFF_BUILDER_VIEW_W = 300; // the whole drawing is this wide, whatever the bars or time signature
+  const STAFF_BUILDER_VIEW_H = 120;
+  function resetStaffBuilderCells() {
+    staffBuilderCells = defaultBeatCells(staffBuilderNumerator, staffBuilderDenominator, staffBuilderBars);
+  }
 
   function renderStaffBuilderSvg() {
     const svg = document.getElementById('notestaff-builder-svg');
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    const builderW = barTotalUnits(staffBuilderNumerator, staffBuilderDenominator) * STAFF_BUILDER_UNIT_PX;
     const builderEl = {
-      x: 10, y: 40, h: STAFF_BUILDER_H, w: builderW,
-      clef: staffBuilderClef, keySignature: staffBuilderKeySignature, denominator: staffBuilderDenominator,
+      x: 10, y: 40, h: STAFF_BUILDER_H, w: 0, staged: true,
+      clef: staffBuilderClef, keySignature: keySignatureForKey(model.key),
+      numerator: staffBuilderNumerator, denominator: staffBuilderDenominator, bars: staffBuilderBars,
     };
     const leadW = notestaffLeadWidth(builderEl);
+    const builderW = STAFF_BUILDER_VIEW_W - builderEl.x - leadW - 10;
+    builderEl.w = builderW;
+    document.getElementById('staff-key-label').textContent = `Key: ${keySignatureLabel(builderEl.keySignature)}${model.key ? '' : ' (no song key)'}`;
 
     drawStaffLines(svg, builderEl);
     drawClef(svg, builderEl);
     drawKeySignature(svg, builderEl);
+    drawStaffBarlines(svg, builderEl, builderEl.x + leadW, builderW, staffBuilderCells);
     renderStaffCells(svg, staffBuilderCells, builderEl.x + leadW, builderEl.y, builderW, builderEl, {
       onCellMenu: (idx, clientX, clientY) => {
         openStaffMenu(clientX, clientY, staffBuilderCells, idx,
           newCells => { staffBuilderCells = newCells; renderStaffBuilderSvg(); },
-          renderStaffBuilderSvg);
+          renderStaffBuilderSvg, builderEl); // `staged`: stays in the sheet's own key, but its bars are kept
       },
       onNoteDrag: (idx, ddy, startPitch) => {
         const deltaSteps = Math.round(-ddy / (STAFF_BUILDER_H / 8));
@@ -3072,10 +3465,9 @@
       },
     });
 
-    const vbW = leadW + builderW + 14;
-    svg.setAttribute('viewBox', `0 0 ${vbW} 120`);
-    svg.setAttribute('width', vbW);
-    svg.setAttribute('height', 120);
+    svg.setAttribute('viewBox', `0 0 ${STAFF_BUILDER_VIEW_W} ${STAFF_BUILDER_VIEW_H}`);
+    svg.setAttribute('width', STAFF_BUILDER_VIEW_W);
+    svg.setAttribute('height', STAFF_BUILDER_VIEW_H);
     svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
   }
   renderStaffBuilderSvg();
@@ -3083,11 +3475,11 @@
   document.getElementById('staff-builder-drag').addEventListener('dragstart', e => {
     startPlacementDrag(e, {
       type: 'notestaff', cells: staffBuilderCells, numerator: staffBuilderNumerator, denominator: staffBuilderDenominator,
-      clef: staffBuilderClef, keySignature: staffBuilderKeySignature,
+      bars: staffBuilderBars, clef: staffBuilderClef, keySignature: keySignatureForKey(model.key),
     });
   });
   document.getElementById('staff-builder-reset').addEventListener('click', () => {
-    staffBuilderCells = defaultRhythmCells(barTotalUnits(staffBuilderNumerator, staffBuilderDenominator));
+    resetStaffBuilderCells();
     renderStaffBuilderSvg();
   });
   function wireStaffTimeSigInput(id, apply) {
@@ -3095,18 +3487,20 @@
       const v = clamp(parseInt(e.target.value, 10) || 4, 1, 32);
       e.target.value = v;
       apply(v);
-      staffBuilderCells = defaultRhythmCells(barTotalUnits(staffBuilderNumerator, staffBuilderDenominator));
+      resetStaffBuilderCells();
       renderStaffBuilderSvg();
     });
   }
   wireStaffTimeSigInput('staff-time-num', v => { staffBuilderNumerator = v; });
   wireStaffTimeSigInput('staff-time-den', v => { staffBuilderDenominator = v; });
-  document.getElementById('staff-clef').addEventListener('change', e => {
-    staffBuilderClef = e.target.value;
+  document.getElementById('staff-bars').addEventListener('change', e => {
+    staffBuilderBars = clamp(parseInt(e.target.value, 10) || 1, 1, STAFF_MAX_BARS);
+    e.target.value = staffBuilderBars;
+    resetStaffBuilderCells();
     renderStaffBuilderSvg();
   });
-  document.getElementById('staff-keysig').addEventListener('change', e => {
-    staffBuilderKeySignature = parseInt(e.target.value, 10) || 0;
+  document.getElementById('staff-clef').addEventListener('change', e => {
+    staffBuilderClef = e.target.value;
     renderStaffBuilderSvg();
   });
 
@@ -3175,7 +3569,8 @@
 
   /* ---------- toolbar wiring ---------- */
   document.getElementById('sheet-title').addEventListener('input', e => { model.title = e.target.value; markDirty(); renderSvg(); });
-  document.getElementById('sheet-key').addEventListener('input', e => { model.key = e.target.value; markDirty(); renderTransposeBox(); renderSvg(); });
+  document.getElementById('sheet-artist').addEventListener('input', e => { model.artist = e.target.value; markDirty(); renderSvg(); });
+  document.getElementById('sheet-key').addEventListener('input', e => { model.key = e.target.value; markDirty(); renderTransposeBox(); renderStaffBuilderSvg(); renderSvg(); });
 
   document.getElementById('save-btn').addEventListener('click', async () => {
     const status = document.getElementById('save-status');
