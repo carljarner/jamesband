@@ -1409,29 +1409,6 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   text-decoration: none;
 }
 
-.leadsheet-card__delete {
-  position: absolute;
-  top: 0.6rem;
-  right: 0.6rem;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border-radius: 50%;
-  border: 1px solid var(--text-dim);
-  background: var(--surface);
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.leadsheet-card:hover .leadsheet-card__delete { opacity: 1; }
-.leadsheet-card__delete:hover { background: var(--accent); border-color: var(--accent); color: #12130f; }
-
 /* ---------- Lead sheet editor ---------- */
 @font-face {
   font-family: 'MuseJazzText';
@@ -1458,6 +1435,7 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 }
 
 .editor-title-input { width: 260px; }
+.editor-artist-input { width: 200px; }
 .editor-key-input { width: 90px; }
 
 .editor-toolbar__actions {
@@ -1661,6 +1639,12 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   margin-bottom: 0.6rem;
 }
 
+.staff-builder-key {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-bottom: 0.3rem;
+}
+
 #notestaff-builder-svg {
   display: block;
   width: 100%;
@@ -1794,6 +1778,7 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 }
 
 .rhythm-menu-item:hover { border-color: var(--accent-2); background: rgba(79,215,209,0.12); }
+.rhythm-menu-item:disabled { opacity: 0.35; pointer-events: none; }
 
 .rhythm-menu-glyph {
   font-family: 'MuseJazz', serif;
@@ -1827,6 +1812,7 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .rhythm-menu-icon { display: block; overflow: visible; }
 .rhythm-menu-icon .el-artic-line { stroke: var(--text); }
 .rhythm-menu-icon .el-artic-dot { fill: var(--text); }
+.rhythm-menu-icon .el-tie { fill: var(--text); }
 
 .rhythm-menu-label {
   font-size: 0.62rem;
@@ -2066,6 +2052,7 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 /* Drawn lines sit above the hit rects, so they must not swallow the mouse. */
 .el-artic-line { stroke: #1a1815; fill: none; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .el-artic-dot { fill: #1a1815; pointer-events: none; }
+.el-tie { fill: #1a1815; pointer-events: none; }
 
 .el-notegroup-stem { stroke: #1a1815; stroke-width: 1.5; pointer-events: none; }
 .el-notegroup-beam { stroke: #1a1815; pointer-events: none; }
@@ -2073,6 +2060,7 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 
 .el-staff-line { stroke: #1a1815; stroke-width: 1; pointer-events: none; }
 .el-ledger-line { stroke: #1a1815; stroke-width: 1; pointer-events: none; }
+.el-staff-barline { stroke: #1a1815; stroke-width: 1.2; pointer-events: none; }
 .el-notestaff-clef,
 .el-notestaff-keysig,
 .el-notestaff-accidental,

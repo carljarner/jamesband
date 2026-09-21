@@ -52,6 +52,7 @@ def _clean_doc(leadsheet_id: str, doc: dict) -> dict:
     return {
         "id": leadsheet_id,
         "title": title,
+        "artist": str(doc.get("artist") or "").strip(),
         "key": str(doc.get("key") or "").strip(),
         "updated_at": _now(),
         "elements": elements,

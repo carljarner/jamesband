@@ -7,6 +7,7 @@
 <div class="editor-toolbar no-print">
   <div class="editor-toolbar__fields">
     <input type="text" id="sheet-title" class="editor-title-input" placeholder="Song title" />
+    <input type="text" id="sheet-artist" class="editor-artist-input" placeholder="Artist" />
     <input type="text" id="sheet-key" class="editor-key-input" placeholder="Key" />
   </div>
   <div class="editor-toolbar__actions">
@@ -123,26 +124,11 @@
             <option value="bass">Bass</option>
           </select>
         </label>
-        <label>Key
-          <select id="staff-keysig">
-            <option value="-7">Cb (7 flats)</option>
-            <option value="-6">Gb (6 flats)</option>
-            <option value="-5">Db (5 flats)</option>
-            <option value="-4">Ab (4 flats)</option>
-            <option value="-3">Eb (3 flats)</option>
-            <option value="-2">Bb (2 flats)</option>
-            <option value="-1">F (1 flat)</option>
-            <option value="0" selected>C (none)</option>
-            <option value="1">G (1 sharp)</option>
-            <option value="2">D (2 sharps)</option>
-            <option value="3">A (3 sharps)</option>
-            <option value="4">E (4 sharps)</option>
-            <option value="5">B (5 sharps)</option>
-            <option value="6">F# (6 sharps)</option>
-            <option value="7">C# (7 sharps)</option>
-          </select>
+        <label>Bars
+          <input type="number" id="staff-bars" min="1" max="4" value="1" />
         </label>
       </div>
+      <div id="staff-key-label" class="staff-builder-key" title="A new staff starts on the sheet's key. Change a placed staff's key in its edit box."></div>
       <svg id="notestaff-builder-svg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div class="staff-builder-controls">
         <span id="staff-builder-drag" class="staff-builder-drag" draggable="true" title="Drag this note staff onto the page">&#9834; drag to page</span>

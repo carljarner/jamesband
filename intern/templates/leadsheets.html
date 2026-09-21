@@ -21,7 +21,6 @@
         {% if sheet.key %}<span class="setlist-card__date">{{ sheet.key }}</span>{% endif %}
       </div>
     </a>
-    <button type="button" class="leadsheet-card__delete" data-id="{{ sheet.id }}" data-title="{{ sheet.title }}" title="Delete">&times;</button>
   </li>
   {% endfor %}
 </ul>
@@ -43,15 +42,6 @@
   </div>
 </div>
 
-<div id="confirm-modal" class="modal-overlay" hidden>
-  <div class="modal-box">
-    <p>Delete &ldquo;<span id="confirm-title"></span>&rdquo;?</p>
-    <div class="modal-actions">
-      <button type="button" id="confirm-cancel">Cancel</button>
-      <button type="button" id="confirm-ok" class="danger">Delete</button>
-    </div>
-  </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -108,28 +98,6 @@
     };
     reader.readAsText(file);
     importFile.value = '';
-  });
-
-  const confirmModal = document.getElementById('confirm-modal');
-  const confirmTitle = document.getElementById('confirm-title');
-  let pendingDeleteId = null;
-
-  document.querySelectorAll('.leadsheet-card__delete').forEach(btn => {
-    btn.addEventListener('click', () => {
-      pendingDeleteId = btn.dataset.id;
-      confirmTitle.textContent = btn.dataset.title;
-      confirmModal.hidden = false;
-    });
-  });
-  document.getElementById('confirm-cancel').addEventListener('click', () => { confirmModal.hidden = true; });
-  confirmModal.addEventListener('click', e => { if (e.target === confirmModal) confirmModal.hidden = true; });
-
-  document.getElementById('confirm-ok').addEventListener('click', async () => {
-    if (!pendingDeleteId) return;
-    confirmModal.hidden = true;
-    const resp = await fetch(`/leadsheets/${pendingDeleteId}/delete`, { method: 'POST' });
-    if (resp.ok) location.reload();
-    else alert('Failed to delete: ' + await resp.text());
   });
 </script>
 {% endblock %}
