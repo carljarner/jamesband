@@ -19,7 +19,7 @@
   const REST_SIZE = 0.6; // a "-" rest's glyph size as a fraction of the row height; full size dwarfs the chords
   const SLOT_CHORD_PAD = 5; // gap between a slot's left edge and the chord in it, in bars with several slots
   const SLOT_CHORD_OVERHANG = 4; // how far the last chord of a crowded bar may run past its barline
-  const VOLTA_W = 80, VOLTA_H = 14, VOLTA_FONT_SIZE = 8;
+  const VOLTA_W = 50, VOLTA_H = 14, VOLTA_FONT_SIZE = 8;
   // Starting font sizes for new text boxes: the averages from the test sheet.
   const TITLE_FONT_SIZE = 17, CHORD_FONT_SIZE = 14, TEXT_FONT_SIZE = 12;
 
@@ -32,6 +32,10 @@
   };
   const AUG_DOT = '\uECB7';
   const SIMILE_MARK = '\uE500';
+  // A free-floating glyph (currently just the fermata tile) is drawn a bit
+  // wider and shorter than its font glyph, so it reads better sitting over a
+  // chord than the font's own proportions do.
+  const GLYPH_SCALE_X = 1.15, GLYPH_SCALE_Y = 0.8;
   const REST_CODES = {
     whole: '\uE4E3', half: '\uE4E4', quarter: '\uE4E5', '8th': '\uE4E6', '16th': '\uE4E7',
   };
@@ -72,6 +76,22 @@
   function defaultRhythmCells(totalUnits) {
     return Array.from({ length: totalUnits / 2 }, () => ({ type: 'rest', duration: 2 }));
   }
+  // A triplet (or any "N in the time of N-1" tuplet -- only N=3 is offered
+  // today): a single cell in the flat `cells` array, so every place that
+  // already treats a cell as an opaque `{ duration }` -- bar-total math,
+  // allocateCellWidths' weighting, rebuildRhythmCells' splicing/padding,
+  // splitStaffBars -- keeps working unchanged. `unit` is the notated shape
+  // of each sub-note (4 = eighth, 8 = quarter -- the same duration values a
+  // plain note of that shape already uses, so the existing glyph code needs
+  // no new cases for them); `duration` (= unit * 2) is what the group's
+  // *own* slot is worth in the bar, i.e. what two plain notes of that shape
+  // would normally take. Starts filled with rests, same as a fresh bar.
+  function makeTupletCell(unit, count = 3) {
+    return {
+      type: 'tuplet', unit, count, duration: unit * 2,
+      cells: Array.from({ length: count }, () => ({ type: 'rest', duration: unit })),
+    };
+  }
   // A note staff holds up to STAFF_MAX_BARS bars sharing one time signature;
   // its flat `cells` list runs bar after bar and no cell crosses a barline.
   // A fresh rhythm bar or staff is filled with one rest per beat (not 16ths):
@@ -109,9 +129,13 @@
     { type: 'note', duration: 48, label: 'Dotted whole' },
     { type: 'rest', duration: 2, label: '16th rest' },
     { type: 'rest', duration: 4, label: '8th rest' },
+    { type: 'rest', duration: 6, label: 'Dotted 8th rest' },
     { type: 'rest', duration: 8, label: 'Quarter rest' },
+    { type: 'rest', duration: 12, label: 'Dotted quarter rest' },
     { type: 'rest', duration: 16, label: 'Half rest' },
     { type: 'rest', duration: 32, label: 'Whole rest' },
+    { type: 'triplet', unit: 4, duration: 8, label: 'Eighth-note triplet' },
+    { type: 'triplet', unit: 8, duration: 16, label: 'Quarter-note triplet' },
   ];
   // `barUnits` (note staff only): the room counts to the end of the bar the
   // cell is in, so a note never runs across a barline.
@@ -123,10 +147,13 @@
   }
   // How narrow a bar can be squeezed is just every cell at its floor width
   // (see allocateCellWidths below) -- below that, cells would have to
-  // overlap their neighbors to fit.
+  // overlap their neighbors to fit. A tuplet cell is one array entry but
+  // draws `count` noteheads side by side, so it needs `count` floors' worth
+  // of room, not one.
   const RHYTHM_MIN_CELL_PX = 8;
+  function cellFloorSlots(cell) { return cell.type === 'tuplet' ? cell.cells.length : 1; }
   function rhythmBarMinWidth(cells) {
-    return cells.length * RHYTHM_MIN_CELL_PX;
+    return cells.reduce((s, c) => s + cellFloorSlots(c), 0) * RHYTHM_MIN_CELL_PX;
   }
 
   // Splits a bar's total pixel width `w` across its cells. While there's
@@ -143,12 +170,14 @@
   // Standard "water-filling" allocation.
   function allocateCellWidths(cells, w) {
     const n = cells.length;
-    const floor = RHYTHM_MIN_CELL_PX;
+    // A tuplet cell needs `count` floors' worth of room (see cellFloorSlots),
+    // everything else just one.
+    const floors = cells.map(c => cellFloorSlots(c) * RHYTHM_MIN_CELL_PX);
     const weights = cells.map(c => c.duration);
     const totalWeight = weights.reduce((s, d) => s + d, 0);
 
     const proportional = weights.map(wt => (wt / totalWeight) * w);
-    if (proportional.every(pw => pw >= floor - 1e-6)) return proportional;
+    if (proportional.every((pw, i) => pw >= floors[i] - 1e-6)) return proportional;
 
     const result = new Array(n).fill(0);
     const active = new Set(cells.map((_, i) => i));
@@ -159,9 +188,9 @@
       changed = false;
       for (const i of Array.from(active)) {
         const share = (weights[i] / remainingWeight) * remaining;
-        if (share <= floor) {
-          result[i] = floor;
-          remaining -= floor;
+        if (share <= floors[i]) {
+          result[i] = floors[i];
+          remaining -= floors[i];
           remainingWeight -= weights[i];
           active.delete(i);
           changed = true;
@@ -197,7 +226,9 @@
       switch (cell.duration) {
         case 2: return REST_CODES['16th'];
         case 4: return REST_CODES['8th'];
+        case 6: return REST_CODES['8th'] + AUG_DOT;
         case 8: return REST_CODES.quarter;
+        case 12: return REST_CODES.quarter + AUG_DOT;
         case 16: return REST_CODES.half;
         case 32: return REST_CODES.whole;
         default: return REST_CODES['16th'];
@@ -307,6 +338,31 @@
       { cls: 'el-tie' }));
   }
 
+  /* ---------- Tuplet grouping marks ---------- */
+  // A run of tuplet sub-notes that's beamed together (an eighth-note
+  // triplet whose 3 slots are all notes) reads as one group from the beam
+  // alone -- it just needs the "3" centered over it, no bracket. `y` is the
+  // beam's own y; the number sits just clear of it on the beam's outer side
+  // (`dir` 1 = below the beam, -1 = above, matching a stem pointing that way).
+  function drawTupletNumber(container, x1, x2, y, dir, numberSize) {
+    container.appendChild(svgText('3', (x1 + x2) / 2, y + dir * numberSize * 0.55, { cls: 'el-tuplet-number', anchor: 'middle', size: numberSize }));
+  }
+  // Anything else (a quarter-note triplet, never beam-eligible, or any
+  // triplet with a rest in it) gets a real bracket instead: two short
+  // horizontal strokes in from the group's outer x's, leaving a gap at the
+  // middle for the "3", each end bent toward the notes with a short tick.
+  // `dir` 1 draws it below the notes (ticks pointing up into them), -1
+  // above (ticks pointing down).
+  function drawTupletBracket(container, x1, x2, y, dir, tickLen, numberSize) {
+    const gap = Math.min((x2 - x1) * 0.34, numberSize * 1.3);
+    const midL = (x1 + x2) / 2 - gap / 2, midR = (x1 + x2) / 2 + gap / 2;
+    if (midL > x1) container.appendChild(svgLine(x1, y, midL, y, { cls: 'el-tuplet-bracket' }));
+    if (x2 > midR) container.appendChild(svgLine(midR, y, x2, y, { cls: 'el-tuplet-bracket' }));
+    container.appendChild(svgLine(x1, y, x1, y - dir * tickLen, { cls: 'el-tuplet-bracket' }));
+    container.appendChild(svgLine(x2, y, x2, y - dir * tickLen, { cls: 'el-tuplet-bracket' }));
+    container.appendChild(svgText('3', (x1 + x2) / 2, y + dir * numberSize * 0.3, { cls: 'el-tuplet-number', anchor: 'middle', size: numberSize }));
+  }
+
   /* ---------- Note staff (pitched notation) ---------- */
   // A staff position is a clef-independent integer step: 0 = bottom line, 1
   // = space above it, 2 = next line, ... 8 = top line (even = line, odd =
@@ -405,7 +461,8 @@
   function staffMinWidth(el) {
     const bars = splitStaffBars(el.cells, staffBarUnits(el));
     const { left, right } = staffBarPads(el);
-    return bars.length * (Math.max(...bars.map(b => b.length)) * RHYTHM_MIN_CELL_PX + left + right);
+    const floorSlots = bars.map(b => b.reduce((s, c) => s + cellFloorSlots(c), 0));
+    return bars.length * (Math.max(...floorSlots) * RHYTHM_MIN_CELL_PX + left + right);
   }
 
   let model = JSON.parse(JSON.stringify(initialSheet));
@@ -528,8 +585,18 @@
   // Shorthand and other text without a root (-, r, N.C., x2) is left alone.
   function transposeChordText(text, semitones, flats) {
     const s = String(text || '');
+    if (!semitones) return s;
+    // A chord box holding just a new bass note ("/d") means "same chord as
+    // last written, new bass" -- there's no root to read, but the bass note
+    // itself is still a real note and needs transposing like any other.
+    if (s[0] === '/') {
+      const bass = /^\/([A-Ga-g])([#b♯♭])?/.exec(s);
+      if (!bass) return s;
+      return '/' + noteName(noteSemitone(bass[1], bass[2]) + semitones, flats, bass[1] === bass[1].toLowerCase())
+        + s.slice(bass[0].length);
+    }
     const root = readChordRoot(s);
-    if (!root || !semitones) return s;
+    if (!root) return s;
     let out = noteName(noteSemitone(root.letter, root.acc) + semitones, flats);
     let rest = s.slice(root.length);
     let depth = 0, slash = -1;
@@ -693,8 +760,6 @@
   // The stored text stays plain; this only affects how it's drawn.
   function parseChordSegments(text) {
     const s = String(text || '');
-    const root = readChordRoot(s);
-    if (!root) return s ? [{ text: s, kind: 'base' }] : []; // N.C., %, x2...
     const segs = [];
     const push = (t, kind) => {
       if (!t) return;
@@ -702,6 +767,20 @@
       if (last && last.kind === kind) last.text += t;
       else segs.push({ text: t, kind });
     };
+    // A chord box holding just a new bass note ("/d") means "same chord as
+    // last written, new bass" -- draw it in the same raised/smaller bass
+    // style as a slash bass following a root (see the loop below).
+    if (s[0] === '/') {
+      const bass = /^\/[A-Ga-g]?/.exec(s)[0];
+      push(bass, 'bass');
+      let i = bass.length;
+      const bacc = /^[#b♯♭]/.exec(s.slice(i));
+      if (bacc) { push(bacc[0], 'bassSup'); i += 1; }
+      push(s.slice(i), 'bass');
+      return segs;
+    }
+    const root = readChordRoot(s);
+    if (!root) return s ? [{ text: s, kind: 'base' }] : []; // N.C., %, x2...
     push(root.letter, 'base');
     if (root.acc) push(root.acc, 'acc');
     let i = root.length;
@@ -876,8 +955,8 @@
       case 'row': case 'repeat': case 'volta':
         return { x: el.x, y: el.y, w: el.w, h: el.h };
       case 'glyph': {
-        const w = Math.max(20, measureTextWidth(el.code, el.fontSize, 'MuseJazz'));
-        return { x: el.x, y: el.y - el.fontSize * 0.75, w, h: el.fontSize };
+        const { w, h } = glyphSize(el);
+        return { x: el.x, y: el.y - h * 0.75, w, h };
       }
       case 'arrow': {
         const { cx, cy } = arrowControlPoint(el);
@@ -1188,14 +1267,16 @@
       btn.className = 'rhythm-menu-item';
       const glyph = document.createElement('span');
       glyph.className = 'rhythm-menu-glyph';
-      glyph.textContent = rhythmCellGlyph(opt);
+      // A tuplet option isn't a plain note/rest cell (rhythmCellGlyph doesn't
+      // know its shape) -- show the plain note of that shape instead.
+      glyph.textContent = opt.type === 'triplet' ? NOTE_CODES[opt.unit === 4 ? '8th' : 'quarter'] : rhythmCellGlyph(opt);
       const label = document.createElement('span');
       label.className = 'rhythm-menu-label';
       label.textContent = opt.label;
       btn.appendChild(glyph);
       btn.appendChild(label);
       btn.addEventListener('click', () => {
-        const next = rebuildRhythmCells(cells, idx, opt);
+        const next = rebuildRhythmCells(cells, idx, opt.type === 'triplet' ? makeTupletCell(opt.unit) : opt);
         // Changing one note to another keeps its articulations; a rest has none.
         if (opt.type === 'note' && prior.type === 'note') {
           if (prior.articulations) next[idx].articulations = [...prior.articulations];
@@ -1300,6 +1381,117 @@
     }, opts);
   }
 
+  // The restricted menu for one slot of a placed tuplet (see renderTupletGroupRhythm
+  // / renderTupletGroupStaff). Unlike the normal cell menu, a slot's duration
+  // can never change -- that's what keeps the group's equal parts adding up
+  // to its own slot -- so this offers only a note/rest toggle at the
+  // tuplet's own `unit`, the same articulation/accidental sections as the
+  // normal menu (no tie: ties into/out of a tuplet aren't supported), and a
+  // "Remove triplet" action that hands off to `onRemove` -- the caller
+  // replaces the *whole* tuplet cell with a plain rest of its total
+  // duration (see rebuildRhythmCells). `onChange` is called after every
+  // edit (mutations are all in place, on `tupletCell.cells[subIdx]`).
+  function openTupletSlotMenu(clientX, clientY, tupletCell, subIdx, onChange, onRemove, opts = {}) {
+    closeRhythmMenu();
+    const menu = document.createElement('div');
+    menu.className = 'rhythm-menu';
+    const subCells = tupletCell.cells;
+    const prior = subCells[subIdx];
+    RHYTHM_MENU_OPTIONS.filter(o => (o.type === 'note' || o.type === 'rest') && o.duration === tupletCell.unit)
+      .filter(opt => isMenuItemOn(`${opt.type}-${opt.duration}`)).forEach(opt => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'rhythm-menu-item';
+        const glyph = document.createElement('span');
+        glyph.className = 'rhythm-menu-glyph';
+        glyph.textContent = rhythmCellGlyph(opt);
+        const label = document.createElement('span');
+        label.className = 'rhythm-menu-label';
+        label.textContent = opt.label;
+        btn.appendChild(glyph);
+        btn.appendChild(label);
+        btn.addEventListener('click', () => {
+          const next = { ...opt };
+          if (opt.type === 'note') {
+            if (prior.type === 'note' && prior.articulations) next.articulations = [...prior.articulations];
+            if (opts.onNotePick) opts.onNotePick(next);
+          }
+          subCells[subIdx] = next;
+          onChange();
+          closeRhythmMenu();
+        });
+        menu.appendChild(btn);
+      });
+    if (prior.type === 'note') {
+      const artics = ARTICULATION_KINDS.filter(k => isMenuItemOn(`artic-${k.value}`));
+      if (artics.length) {
+        addMenuToggleSection(menu, 'Articulation', Math.min(artics.length, 3), artics.map(k => ({
+          glyph: articulationIcon(k.value),
+          label: k.label,
+          isOn: () => cellHasArticulation(prior, k.value),
+          onClick: () => { toggleCellArticulation(prior, k.value); onChange(); },
+        })));
+      }
+      const accidentals = ACCIDENTAL_MENU_OPTIONS.filter(a => isMenuItemOn(`acc-${a.value || 'default'}`));
+      if (opts.accidentals && accidentals.length) {
+        addMenuToggleSection(menu, 'Accidental', Math.min(accidentals.length, 4), accidentals.map(a => ({
+          glyph: a.code,
+          label: a.label,
+          isOn: () => (opts.accidentalGet ? opts.accidentalGet() : prior.accidental || null) === a.value,
+          onClick: () => {
+            if (opts.accidentalSet) opts.accidentalSet(a.value); else prior.accidental = a.value;
+            onChange();
+          },
+        })));
+      }
+    }
+    addMenuToggleSection(menu, 'Triplet', 1, [{
+      glyph: '×',
+      label: 'Remove triplet',
+      isOn: () => false,
+      onClick: () => { closeRhythmMenu(); onRemove(); },
+    }]);
+    document.body.appendChild(menu);
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    const offset = 36;
+    let left = clientX + offset;
+    if (left + mw > window.innerWidth - 4) left = clientX - offset - mw;
+    left = clamp(left, 4, window.innerWidth - mw - 4);
+    const top = clamp(clientY - 24, 4, window.innerHeight - mh - 4);
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    activeRhythmMenu = menu;
+  }
+
+  // Wraps openTupletSlotMenu the same way openStaffMenu wraps openRhythmMenu:
+  // a fresh note (the slot was a rest) defaults to the middle line, an
+  // existing note keeps its pitch/accidental across a rest<->note toggle,
+  // and the accidental section reads/writes through the staff's own
+  // transposition (see displayedStaffNote/storedStaffNote).
+  function openTupletStaffSlotMenu(clientX, clientY, tupletCell, subIdx, onChange, onRemove, staffEl) {
+    const prior = tupletCell.cells[subIdx];
+    const opts = { accidentals: true };
+    if (staffEl) {
+      opts.accidentalGet = () => displayedStaffNote(staffEl, prior).accidental;
+      opts.accidentalSet = value => {
+        const stored = storedStaffNote(staffEl, displayedStaffNote(staffEl, prior).pitch, value);
+        prior.pitch = stored.pitch;
+        prior.accidental = stored.accidental;
+      };
+    }
+    opts.onNotePick = nc => {
+      if (prior.pitch != null) {
+        nc.pitch = prior.pitch;
+        nc.accidental = prior.accidental != null ? prior.accidental : null;
+      } else {
+        const fresh = staffEl ? storedStaffNote(staffEl, STAFF_DEFAULT_PITCH, null) : { pitch: STAFF_DEFAULT_PITCH, accidental: null };
+        nc.pitch = fresh.pitch;
+        nc.accidental = fresh.accidental;
+      }
+    };
+    openTupletSlotMenu(clientX, clientY, tupletCell, subIdx, onChange, onRemove, opts);
+  }
+
   // `chord`: size for a chord symbol's raised numbers (see parseChordSegments).
   function textBoxSize(text, fontSize, chord) {
     const w = Math.max(50, (chord ? measureChordWidth(text, fontSize) : measureTextWidth(text, fontSize)) + 16);
@@ -1377,12 +1569,32 @@
   // Shorthand typed into a chord box that is drawn as a symbol instead of
   // text: "-" is a rest as long as the box (see restForSlots), "r" a
   // repeat-previous-bar sign spanning the whole bar. `n` is how many boxes
-  // share the bar. The stored text stays what was typed.
+  // share the bar. The stored text stays what was typed. (A chord with a
+  // trailing "-", "Am-", is a tie to the next chord instead; see chordTie.)
   function barSymbol(text, n) {
     const t = String(text || '').trim().toLowerCase();
     if (t === '-') return { ...restForSlots(n || 1), across: 'slot' };
     if (t === 'r') return { code: SIMILE_MARK, rise: 0, across: 'bar' };
     return null;
+  }
+
+  // A chord typed with a trailing "-" ("Am-") is tied to the next chord in its
+  // row. `chord` is the text to draw (the dash dropped); a "-" alone is a rest,
+  // and one inside a chord ("C-7", "Bb7-9") is part of it.
+  function chordTie(text) {
+    const s = String(text || '').trim();
+    const m = /^(.*\S)-$/.exec(s);
+    if (m && readChordRoot(m[1])) return { chord: m[1], tied: true };
+    return { chord: s, tied: false };
+  }
+
+  // Where a chord drawn in slot `s` runs horizontally: from its left edge
+  // (`x1`) to its right (`x2`). In a bar with several slots it starts at the
+  // slot's left edge; in a one-slot bar it is centred.
+  function chordSlotSpan(text, s, size) {
+    const w = measureChordWidth(text, size);
+    const x1 = s.n > 1 ? s.x + SLOT_CHORD_PAD : s.x + s.w / 2 - w / 2;
+    return { x1, x2: x1 + w };
   }
 
   // Draws a slot's content: the chord, or, if it's shorthand for a symbol, that
@@ -1467,7 +1679,7 @@
     } else if (type === 'arrow') {
       return { id: uid('el'), type: 'arrow', x1: x, y1: y, x2: x + 70, y2: y - 40, bow: { dx: 0, dy: 0 } };
     } else if (type === 'glyph') {
-      return { id: uid('el'), type: 'glyph', x, y, code: opts.code || SIMILE_MARK, fontSize: 28 };
+      return { id: uid('el'), type: 'glyph', x, y, code: opts.code || SIMILE_MARK, fontSize: 20 };
     } else if (type === 'rhythmbar') {
       const totalUnits = opts.cells.reduce((s, c) => s + c.duration, 0);
       return {
@@ -1624,11 +1836,14 @@
       return s.n > 1 && last.k === s.n - 1 ? w - SLOT_CHORD_PAD + SLOT_CHORD_OVERHANG : w;
     };
     const gapOf = s => (s.n > 1 ? 2 : 4);
+    const drawn = []; // per slot: where its chord was drawn, for the ties below
     slots.forEach(s => {
-      const text = chordAt(s);
+      const tie = chordTie(chordAt(s));
+      const text = tie.chord;
       // Each chord is as big as its own spot allows: a roomy one-chord bar
       // keeps the full size, and only a chord squeezed into a crowded bar shrinks.
       const chordSize = text && !barSymbol(text) ? slotFontSize(text, roomOf(s), h, gapOf(s)) : 0;
+      if (chordSize) drawn[s.idx] = { tied: tie.tied, size: chordSize, ...chordSlotSpan(text, s, chordSize) };
       const ext = barExtent[s.bar];
       const bar = { x: ext.x, w: ext.right - ext.x };
       const slotEl = svgRect(s.x + 1.5, s.y + 1.5, Math.max(s.w - 3, 1), Math.max(s.h - 3, 1), {
@@ -1637,6 +1852,26 @@
       g.appendChild(slotEl);
       wireDragAndClick(slotEl, dragRow, () => focusSlot(el.id, s.idx), el);
       if (text) drawSlotContent(g, text, s, bar, h, chordSize, s.n);
+    });
+
+    // A chord typed "Am-" is tied to the next chord in the row (across
+    // barlines, over empty boxes); the tie bows down under the baseline. It
+    // isn't drawn when nothing but a rest or a repeat sign follows.
+    slots.forEach(s => {
+      const from = drawn[s.idx];
+      if (!from || !from.tied) return;
+      let next = null;
+      for (let j = s.idx + 1; j < slots.length && !next; j++) {
+        const t = chordAt(slots[j]);
+        if (!t) continue;
+        if (barSymbol(t)) break;
+        next = drawn[j];
+      }
+      if (!next) return;
+      const y = s.y + h / 2 + from.size * 0.35 + from.size * 0.12;
+      // It starts a little under the first chord, so it is wide even between
+      // neighbouring chords, and ends just short of the next one.
+      drawTie(g, from.x2 - from.size * 0.4, y, next.x1 - 2, y, 1, h * 1.4);
     });
 
     for (let i = 0; i <= n; i++) {
@@ -1772,14 +2007,25 @@
     svg.appendChild(g);
   }
 
+  // A glyph element's footprint after the wider/shorter scaling applied when
+  // it's drawn (see GLYPH_SCALE_X/Y) -- used for both the render and its hit
+  // box / bounds, so they stay in step with what's actually on the page.
+  function glyphSize(el) {
+    const w = Math.max(20, measureTextWidth(el.code, el.fontSize, 'MuseJazz') * GLYPH_SCALE_X);
+    const h = el.fontSize * GLYPH_SCALE_Y;
+    return { w, h };
+  }
   function renderGlyphEl(svg, el) {
     const size = el.fontSize;
-    const w = Math.max(20, measureTextWidth(el.code, size, 'MuseJazz'));
-    const h = size;
+    const { w, h } = glyphSize(el);
     const g = svgGroup({ cls: 'el-group' });
     const hit = svgRect(el.x, el.y - h * 0.75, w, h, { cls: 'el-glyph-hit' });
     g.appendChild(hit);
-    g.appendChild(svgText(el.code, el.x, el.y, { cls: 'el-glyph-text', size }));
+    // Scaled around (el.x, el.y) -- its left edge / baseline -- so widening
+    // and shortening it doesn't shift where it sits.
+    const text = svgText(el.code, el.x, el.y, { cls: 'el-glyph-text', size });
+    text.setAttribute('transform', `translate(${el.x} ${el.y}) scale(${GLYPH_SCALE_X} ${GLYPH_SCALE_Y}) translate(${-el.x} ${-el.y})`);
+    g.appendChild(text);
     const startX = el.x, startY = el.y;
     wireDragAndClick(hit, (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); }, null, el);
 
@@ -1869,6 +2115,61 @@
     return { runs, runOf };
   }
 
+  // Draws one tuplet group inside a rhythm bar: `cell.cells.length` (3, in
+  // v1) equal-width slots spanning `[x, x+w)`, each with its own hit-rect
+  // wired the same way a plain cell's is -- a drag still moves the whole
+  // bar, a click opens that slot's own restricted menu via
+  // `onSlotClick(subIdx, clientX, clientY)`. Beamed together (with a plain
+  // "3" over the beam) when every slot is a note of a beam-eligible shape;
+  // bracketed (with a "3" in its gap) otherwise -- a quarter-note triplet
+  // is never beam-eligible, and a beam is never drawn over a rest.
+  function renderTupletGroupRhythm(container, cell, x, w, y, h, onSlotClick, onCellDrag, moveEl) {
+    const n = cell.cells.length;
+    const slotW = w / n;
+    const headW = h * 0.33;
+    const stemLen = h * 0.68;
+    const beamThick = h * 0.16;
+    const beamY = y - stemLen;
+    const slotX = k => x + k * slotW;
+
+    cell.cells.forEach((sub, k) => {
+      const hit = svgRect(slotX(k), beamY - beamThick - 4, slotW, (y - beamY) + beamThick + h * 0.9, { cls: 'el-rhythm-cell-hit' });
+      container.appendChild(hit);
+      if (onCellDrag) wireDragAndClick(hit, onCellDrag, (clientX, clientY) => onSlotClick(k, clientX, clientY), moveEl);
+      else hit.addEventListener('click', e => onSlotClick(k, e.clientX, e.clientY));
+    });
+
+    const beamed = cell.cells.every(sub => sub.type === 'note') && BEAM_ELIGIBLE_DURATIONS.has(cell.unit);
+    if (beamed) {
+      const stemXs = [];
+      cell.cells.forEach((sub, k) => {
+        const nx = slotX(k);
+        const noteY = y + h * 0.05;
+        const { stemX, stemY } = drawNoteheadSlash(container, nx, noteY, headW, h);
+        stemXs.push(stemX);
+        container.appendChild(svgLine(stemX, stemY, stemX, beamY, { cls: 'el-notegroup-stem' }));
+        drawArticulations(container, {
+          aboveX: stemX, aboveY: beamY - beamThick / 2,
+          belowX: nx + headW / 2, belowY: noteY + headW * 0.38 + h * 0.05,
+        }, sub.articulations, h * 1.2);
+      });
+      const primary = svgLine(stemXs[0], beamY, stemXs[stemXs.length - 1], beamY, { cls: 'el-notegroup-beam' });
+      primary.setAttribute('stroke-width', beamThick);
+      container.appendChild(primary);
+      drawTupletNumber(container, stemXs[0], stemXs[stemXs.length - 1], beamY, -1, h * 0.55);
+    } else {
+      cell.cells.forEach((sub, k) => {
+        const nx = slotX(k);
+        if (sub.type === 'rest') {
+          container.appendChild(svgText(rhythmCellGlyph(sub), nx + slotW / 2, y - h * 0.05, { cls: 'el-glyph-text', anchor: 'middle', size: h }));
+        } else {
+          drawSingleNote(container, nx, y, sub, h, headW, stemLen);
+        }
+      });
+      drawTupletBracket(container, x + w * 0.04, x + w * 0.96, beamY, -1, h * 0.12, h * 0.55);
+    }
+  }
+
   // Draws a whole rhythm bar's worth of cells into `container` (either the
   // on-page element's <g>, or the sidebar builder's own small <svg>), used
   // by both so they render identically. Rests get their font glyph; every
@@ -1909,6 +2210,13 @@
     cells.forEach((cell, i) => {
       const cellX = x + positionsPx[i];
       const cellW = cellWidths[i];
+
+      if (cell.type === 'tuplet') {
+        renderTupletGroupRhythm(container, cell, cellX, cellW, y, h,
+          (subIdx, clientX, clientY) => onCellClick(i, clientX, clientY, subIdx), onCellDrag, moveEl);
+        return;
+      }
+
       const hit = svgRect(cellX, beamY - beamThick - 4, cellW, (y - beamY) + beamThick + h * 0.9, { cls: 'el-rhythm-cell-hit' });
       container.appendChild(hit);
       if (onCellDrag) wireDragAndClick(hit, onCellDrag, (clientX, clientY) => onCellClick(i, clientX, clientY), moveEl);
@@ -2010,9 +2318,17 @@
     const g = svgGroup({ cls: 'el-group' });
     const startX = el.x, startY = el.y;
     renderRhythmCells(g, el.cells, el.x, el.y, el.w, el.h,
-      (idx, clientX, clientY) => openRhythmMenu(clientX, clientY, el.cells, idx, newCells => {
-        el.cells = newCells; markDirty(); renderSvg();
-      }, { onChange: () => { markDirty(); renderSvg(); } }),
+      (idx, clientX, clientY, subIdx) => {
+        if (subIdx != null) {
+          openTupletSlotMenu(clientX, clientY, el.cells[idx], subIdx,
+            () => { markDirty(); renderSvg(); },
+            () => { el.cells = rebuildRhythmCells(el.cells, idx, { type: 'rest', duration: el.cells[idx].duration }); markDirty(); renderSvg(); });
+          return;
+        }
+        openRhythmMenu(clientX, clientY, el.cells, idx, newCells => {
+          el.cells = newCells; markDirty(); renderSvg();
+        }, { onChange: () => { markDirty(); renderSvg(); } });
+      },
       (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); },
       barBeatUnits(el.denominator || 4), el);
 
@@ -2079,6 +2395,124 @@
     });
   }
 
+  // Sibling of renderTupletGroupRhythm: draws one tuplet group on the note
+  // staff -- `cell.cells.length` (3, in v1) equal-width slots spanning
+  // `[x, x+w)`, with real pitched noteheads (ledger lines, accidentals, a
+  // stem direction from each note's own pitch) instead of the rhythm
+  // tool's slashes. Handles its own hit-testing too (a rest slot behaves
+  // like a plain rest cell -- click for the menu, drag to move the staff; a
+  // note slot behaves like a plain note -- click/right-click for the menu,
+  // drag to re-pitch), routing back through `callbacks.onCellMenu`/
+  // `onNoteDrag` with the sub-slot index tacked on as a 4th argument. `i`
+  // is the tuplet's own index in the outer `cells`.
+  function renderTupletGroupStaff(container, cell, x, w, el, callbacks, i) {
+    const subCells = cell.cells;
+    const n = subCells.length;
+    const slotW = w / n;
+    const noteSize = el.h * 0.65;
+    const stemLen = el.h * 0.68;
+    const beamThick = el.h * 0.12;
+    const stemHalf = NOTESTAFF_STEM_W / 2;
+    const midlineY = pitchToY(4, el);
+
+    const slotX = k => x + k * slotW;
+    const cx = k => slotX(k) + slotW / 2;
+    const pitchOf = k => (subCells[k].pitch != null ? subCells[k].pitch : STAFF_DEFAULT_PITCH);
+    const halfWOf = k => noteheadHalfW(subCells[k].duration, noteSize);
+    const stemXOf = (k, up) => cx(k) + (up ? 1 : -1) * (halfWOf(k) - stemHalf);
+
+    subCells.forEach((sub, k) => {
+      if (sub.type === 'rest') {
+        const hit = svgRect(slotX(k), el.y - el.h * 0.25, slotW, el.h * 1.5, { cls: 'el-rhythm-cell-hit' });
+        container.appendChild(hit);
+        const pick = (clientX, clientY) => callbacks.onCellMenu(i, clientX, clientY, k);
+        if (callbacks.onMove) wireDragAndClick(hit, callbacks.onMove, pick, el);
+        else hit.addEventListener('click', e => pick(e.clientX, e.clientY));
+        return;
+      }
+      const hitW = Math.max(halfWOf(k) * 2 * 1.6, 12), hitH = el.h * 0.35;
+      const hit = svgRect(cx(k) - hitW / 2, pitchToY(pitchOf(k), el) - hitH / 2, hitW, hitH, { cls: 'el-note-hit' });
+      container.appendChild(hit);
+      hit.addEventListener('contextmenu', e => { e.preventDefault(); callbacks.onCellMenu(i, e.clientX, e.clientY, k); });
+      const dragStartPitch = pitchOf(k);
+      wireDragAndClick(hit,
+        (ddx, ddy) => callbacks.onNoteDrag(i, ddy, dragStartPitch, k),
+        (clientX, clientY) => callbacks.onCellMenu(i, clientX, clientY, k),
+        null, callbacks.onMove ? el : null);
+    });
+
+    subCells.forEach((sub, k) => {
+      if (sub.type === 'rest') {
+        container.appendChild(svgText(rhythmCellGlyph(sub), cx(k), midlineY, { cls: 'el-glyph-text', anchor: 'middle', size: el.h * 0.75 }));
+        return;
+      }
+      const pitch = pitchOf(k), noteY = pitchToY(pitch, el), halfW = halfWOf(k);
+      drawLedgerLines(container, el, cx(k), pitch, halfW + noteSize * 0.1);
+      if (sub.accidental) {
+        container.appendChild(svgText(ACCIDENTAL_CODES[sub.accidental], cx(k) - halfW - noteSize * 0.14, noteY, {
+          cls: 'el-notestaff-accidental', anchor: 'end', size: noteSize,
+        }));
+      }
+      container.appendChild(svgText(noteheadCode(sub.duration), cx(k), noteY, {
+        cls: `el-notehead-oval ${sub.duration >= 16 ? 'el-notehead-oval-open' : 'el-notehead-oval-filled'}`,
+        anchor: 'middle', size: noteSize,
+      }));
+    });
+
+    // Eighth-shaped slots that are all notes beam together (with a plain "3"
+    // over the beam); a quarter-shaped triplet is never beam-eligible, and
+    // any group containing a rest falls back to individual stems/flags plus
+    // a bracket (with a "3" in its gap) -- same choice as the rhythm tool.
+    const beamed = subCells.every(sub => sub.type === 'note') && BEAM_ELIGIBLE_DURATIONS.has(cell.unit);
+    if (beamed) {
+      const avgPitch = subCells.reduce((s, sub, k) => s + pitchOf(k), 0) / n;
+      const stemUp = avgPitch < 4;
+      const extremePitch = stemUp
+        ? Math.max(...subCells.map((s, k) => pitchOf(k)))
+        : Math.min(...subCells.map((s, k) => pitchOf(k)));
+      const beamY = pitchToY(extremePitch, el) + (stemUp ? -stemLen : stemLen);
+      const stemXs = [];
+      subCells.forEach((sub, k) => {
+        const stemX = stemXOf(k, stemUp);
+        stemXs.push(stemX);
+        const stemStartY = pitchToY(pitchOf(k), el) + (stemUp ? -1 : 1) * noteSize * 0.04;
+        container.appendChild(svgLine(stemX, stemStartY, stemX, beamY, { cls: 'el-notegroup-stem' }));
+        drawArticulations(container, stemUp
+          ? { aboveX: stemX, aboveY: beamY - beamThick / 2, belowX: cx(k), belowY: pitchToY(pitchOf(k), el) + el.h / 8 }
+          : { aboveX: cx(k), aboveY: pitchToY(pitchOf(k), el) - el.h / 8, belowX: stemX, belowY: beamY + beamThick / 2 },
+          sub.articulations, el.h * 0.85);
+      });
+      const primary = svgLine(stemXs[0] - stemHalf, beamY, stemXs[stemXs.length - 1] + stemHalf, beamY, { cls: 'el-notegroup-beam' });
+      primary.setAttribute('stroke-width', beamThick);
+      container.appendChild(primary);
+      drawTupletNumber(container, stemXs[0], stemXs[stemXs.length - 1], beamY, stemUp ? -1 : 1, el.h * 0.5);
+    } else {
+      let topY = pitchToY(STAFF_PITCH_MAX, el);
+      subCells.forEach((sub, k) => {
+        if (sub.type === 'rest') return;
+        const pitch = pitchOf(k);
+        const stemUp = pitch < 4;
+        const stemX = stemXOf(k, stemUp);
+        const noteY = pitchToY(pitch, el);
+        const stemStartY = noteY + (stemUp ? -1 : 1) * noteSize * 0.04;
+        const stemTipY = stemUp ? noteY - stemLen : noteY + stemLen;
+        container.appendChild(svgLine(stemX, stemStartY, stemX, stemTipY, { cls: 'el-notegroup-stem' }));
+        topY = Math.min(topY, stemTipY);
+        if (sub.duration === 2 || sub.duration === 4 || sub.duration === 6) {
+          const flagCode = sub.duration === 2
+            ? (stemUp ? FLAG_CODES['16th-up'] : FLAG_CODES['16th-down'])
+            : (stemUp ? FLAG_CODES['8th-up'] : FLAG_CODES['8th-down']);
+          container.appendChild(svgText(flagCode, stemX - stemHalf, stemTipY, { cls: 'el-notestaff-flag', anchor: 'start', size: noteSize }));
+        }
+        drawArticulations(container, stemUp
+          ? { aboveX: stemX, aboveY: stemTipY, belowX: cx(k), belowY: noteY + el.h / 8 }
+          : { aboveX: cx(k), aboveY: noteY - el.h / 8, belowX: stemX, belowY: stemTipY },
+          sub.articulations, el.h * 0.85);
+      });
+      drawTupletBracket(container, x + w * 0.04, x + w * 0.96, topY - el.h * 0.12, -1, el.h * 0.1, el.h * 0.5);
+    }
+  }
+
   // Sibling of renderRhythmCells: real pitched noteheads (the font's actual
   // notehead/clef/accidental glyphs, not the rhythm tool's hand-drawn slash)
   // positioned per-cell by pitch (staff step) rather than one fixed
@@ -2134,6 +2568,10 @@
     }
 
     cells.forEach((cell, i) => {
+      if (cell.type === 'tuplet') {
+        renderTupletGroupStaff(container, cell, x + positionsPx[i], cellWidths[i], el, callbacks, i);
+        return;
+      }
       if (cell.type === 'rest') {
         const hit = svgRect(x + positionsPx[i], el.y - el.h * 0.25, cellWidths[i], el.h * 1.5, { cls: 'el-rhythm-cell-hit' });
         container.appendChild(hit);
@@ -2168,6 +2606,9 @@
     const headTopY = k => pitchToY(pitchOf(k), el) - el.h / 8;
     const headBottomY = k => pitchToY(pitchOf(k), el) + el.h / 8;
     cells.forEach((cell, i) => {
+      // Already fully drawn (hits, noteheads/rests, beam or bracket) in the
+      // hit-testing pass above -- see renderTupletGroupStaff.
+      if (cell.type === 'tuplet') return;
       if (cell.type === 'rest') {
         container.appendChild(svgText(rhythmCellGlyph(cell), restCx(i), midlineY, { cls: 'el-glyph-text', anchor: 'middle', size: el.h * 0.75 }));
         return;
@@ -2305,20 +2746,45 @@
     // were written. A drag or a menu pick on a copy goes back through
     // storedStaffNote.
     const shown = el.cells.map(c => {
+      if (c.type === 'tuplet') {
+        return {
+          ...c,
+          cells: c.cells.map(sc => {
+            if (sc.type !== 'note') return sc;
+            const n = displayedStaffNote(el, sc);
+            return { ...sc, pitch: n.pitch, accidental: n.accidental };
+          }),
+        };
+      }
       if (c.type !== 'note') return c;
       const n = displayedStaffNote(el, c);
       return { ...c, pitch: n.pitch, accidental: n.accidental };
     });
 
     renderStaffCells(g, shown, el.x + leadW, el.y, el.w, el, {
-      onCellMenu: (idx, clientX, clientY) => {
+      onCellMenu: (idx, clientX, clientY, subIdx) => {
+        if (subIdx != null) {
+          openTupletStaffSlotMenu(clientX, clientY, el.cells[idx], subIdx,
+            () => { markDirty(); renderSvg(); },
+            () => { el.cells = rebuildRhythmCells(el.cells, idx, { type: 'rest', duration: el.cells[idx].duration }); markDirty(); renderSvg(); },
+            el);
+          return;
+        }
         openStaffMenu(clientX, clientY, el.cells, idx,
           newCells => { el.cells = newCells; markDirty(); renderSvg(); },
           () => { markDirty(); renderSvg(); }, el);
       },
-      onNoteDrag: (idx, ddy, startPitch) => {
+      onNoteDrag: (idx, ddy, startPitch, subIdx) => {
         const deltaSteps = Math.round(-ddy / (el.h / 8));
         const pitch = clamp(startPitch + deltaSteps, STAFF_PITCH_MIN, STAFF_PITCH_MAX);
+        if (subIdx != null) {
+          const stored = storedStaffNote(el, pitch, shown[idx].cells[subIdx].accidental);
+          const realSub = el.cells[idx].cells[subIdx];
+          realSub.pitch = stored.pitch;
+          if (transposeState.semitones) realSub.accidental = stored.accidental;
+          markDirty(); renderSvg();
+          return;
+        }
         const stored = storedStaffNote(el, pitch, shown[idx].accidental);
         el.cells[idx].pitch = stored.pitch;
         // Untransposed, the accidental is left exactly as it was.
@@ -2395,17 +2861,23 @@
   // Every entry the note/rest picker menu (openRhythmMenu) can show. Which
   // ones are on is chosen in the edit box, so rarely used items can live here
   // without cluttering the menu: give a new item `defaultOn: false` and it
-  // stays hidden until someone ticks it. Ids: `note-<dur>` / `rest-<dur>`
-  // (durations, matching RHYTHM_MENU_OPTIONS), `artic-<kind>`, `tie`, `acc-<value>`.
+  // stays hidden until someone ticks it. Ids: `note-<dur>` / `rest-<dur>` /
+  // `triplet-<dur>` (durations, matching RHYTHM_MENU_OPTIONS), `artic-<kind>`,
+  // `tie`, `acc-<value>`.
   const NOTE_MENU_GROUPS = [
     { id: 'duration', label: 'Notes' },
     { id: 'rest', label: 'Rests' },
+    { id: 'tuplet', label: 'Tuplets' },
     { id: 'articulation', label: 'Articulations' },
     { id: 'tie', label: 'Tie' },
     { id: 'accidental', label: 'Accidentals (note staff only)' },
   ];
   const NOTE_MENU_ITEMS = [
-    ...RHYTHM_MENU_OPTIONS.map(o => ({ id: `${o.type}-${o.duration}`, group: o.type === 'note' ? 'duration' : 'rest', label: o.label, defaultOn: true })),
+    ...RHYTHM_MENU_OPTIONS.map(o => ({
+      id: `${o.type}-${o.duration}`,
+      group: o.type === 'note' ? 'duration' : o.type === 'triplet' ? 'tuplet' : 'rest',
+      label: o.label, defaultOn: true,
+    })),
     ...ARTICULATION_KINDS.map(k => ({ id: `artic-${k.value}`, group: 'articulation', label: k.label, defaultOn: true })),
     { id: 'tie', group: 'tie', label: 'Tie to next note', defaultOn: true },
     ...ACCIDENTAL_MENU_OPTIONS.map(a => ({ id: `acc-${a.value || 'default'}`, group: 'accidental', label: a.label, defaultOn: true })),
@@ -2990,6 +3462,7 @@
         input.autocomplete = 'off';
         input.spellcheck = false;
         input.setAttribute('aria-label', `Bar ${bar + 1}, chord ${k + 1}`);
+        input.title = '- rest, r repeat bar, Am- tie to the next chord';
         input.addEventListener('focus', () => { if (activeSlot !== slotIdx) { activeSlot = slotIdx; renderSvg(); } });
         input.addEventListener('blur', () => {
           if (editBoxBuilding) return; // the box is being rebuilt around it
@@ -3378,9 +3851,16 @@
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     const builderW = barTotalUnits(builderNumerator, builderDenominator) * BUILDER_UNIT_PX;
     renderRhythmCells(svg, builderCells, 6, 40, builderW, BUILDER_H,
-      (idx, clientX, clientY) => openRhythmMenu(clientX, clientY, builderCells, idx, newCells => {
-        builderCells = newCells; renderBuilderSvg();
-      }, { onChange: renderBuilderSvg }),
+      (idx, clientX, clientY, subIdx) => {
+        if (subIdx != null) {
+          openTupletSlotMenu(clientX, clientY, builderCells[idx], subIdx, renderBuilderSvg,
+            () => { builderCells = rebuildRhythmCells(builderCells, idx, { type: 'rest', duration: builderCells[idx].duration }); renderBuilderSvg(); });
+          return;
+        }
+        openRhythmMenu(clientX, clientY, builderCells, idx, newCells => {
+          builderCells = newCells; renderBuilderSvg();
+        }, { onChange: renderBuilderSvg });
+      },
       null, barBeatUnits(builderDenominator));
     const vbW = builderW + 12;
     svg.setAttribute('viewBox', `0 0 ${vbW} 68`);
@@ -3453,14 +3933,22 @@
     drawKeySignature(svg, builderEl);
     drawStaffBarlines(svg, builderEl, builderEl.x + leadW, builderW, staffBuilderCells);
     renderStaffCells(svg, staffBuilderCells, builderEl.x + leadW, builderEl.y, builderW, builderEl, {
-      onCellMenu: (idx, clientX, clientY) => {
+      onCellMenu: (idx, clientX, clientY, subIdx) => {
+        if (subIdx != null) {
+          openTupletStaffSlotMenu(clientX, clientY, staffBuilderCells[idx], subIdx, renderStaffBuilderSvg,
+            () => { staffBuilderCells = rebuildRhythmCells(staffBuilderCells, idx, { type: 'rest', duration: staffBuilderCells[idx].duration }); renderStaffBuilderSvg(); },
+            builderEl);
+          return;
+        }
         openStaffMenu(clientX, clientY, staffBuilderCells, idx,
           newCells => { staffBuilderCells = newCells; renderStaffBuilderSvg(); },
           renderStaffBuilderSvg, builderEl); // `staged`: stays in the sheet's own key, but its bars are kept
       },
-      onNoteDrag: (idx, ddy, startPitch) => {
+      onNoteDrag: (idx, ddy, startPitch, subIdx) => {
         const deltaSteps = Math.round(-ddy / (STAFF_BUILDER_H / 8));
-        staffBuilderCells[idx].pitch = clamp(startPitch + deltaSteps, STAFF_PITCH_MIN, STAFF_PITCH_MAX);
+        const pitch = clamp(startPitch + deltaSteps, STAFF_PITCH_MIN, STAFF_PITCH_MAX);
+        if (subIdx != null) { staffBuilderCells[idx].cells[subIdx].pitch = pitch; renderStaffBuilderSvg(); return; }
+        staffBuilderCells[idx].pitch = pitch;
         renderStaffBuilderSvg();
       },
     });
