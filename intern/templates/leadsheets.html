@@ -18,8 +18,8 @@
     <a href="/leadsheets/{{ sheet.id }}" class="leadsheet-card__link">
       <div class="setlist-card__header">
         <span>{{ sheet.title }}</span>
-        {% if sheet.key %}<span class="setlist-card__date">{{ sheet.key }}</span>{% endif %}
       </div>
+      {% if sheet.artist %}<div class="leadsheet-card__artist">{{ sheet.artist }}</div>{% endif %}
     </a>
   </li>
   {% endfor %}

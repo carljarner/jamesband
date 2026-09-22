@@ -1409,6 +1409,12 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   text-decoration: none;
 }
 
+.leadsheet-card__artist {
+  margin-top: 0.15rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
 /* ---------- Lead sheet editor ---------- */
 @font-face {
   font-family: 'MuseJazzText';
@@ -1726,6 +1732,11 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .palette-tile--glyph {
   font-family: 'MuseJazz', serif;
   font-size: 1.2rem;
+}
+
+.palette-tile--glyph span {
+  display: inline-block;
+  transform: scale(1.15, 0.8); /* matches GLYPH_SCALE_X/Y in leadsheet-editor.js */
 }
 
 .page-wrap {
@@ -2057,6 +2068,9 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .el-notegroup-stem { stroke: #1a1815; stroke-width: 1.5; pointer-events: none; }
 .el-notegroup-beam { stroke: #1a1815; pointer-events: none; }
 .el-notehead-slash { stroke: #1a1815; stroke-linecap: round; }
+
+.el-tuplet-bracket { stroke: #1a1815; stroke-width: 1; fill: none; pointer-events: none; }
+.el-tuplet-number { fill: #1a1815; font-family: 'Inter', system-ui, sans-serif; font-size: 0.7em; pointer-events: none; user-select: none; }
 
 .el-staff-line { stroke: #1a1815; stroke-width: 1; pointer-events: none; }
 .el-ledger-line { stroke: #1a1815; stroke-width: 1; pointer-events: none; }
