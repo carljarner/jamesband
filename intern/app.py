@@ -323,16 +323,6 @@ async def leadsheets_create(request: Request):
     return sheet
 
 
-@app.post("/leadsheets/import")
-async def leadsheets_import(request: Request):
-    body = await request.json()
-    try:
-        sheet = leadsheets.import_leadsheet(body)
-    except ValueError as exc:
-        return Response(content=str(exc), status_code=400)
-    return sheet
-
-
 @app.get("/leadsheets/{leadsheet_id}", response_class=HTMLResponse)
 async def leadsheet_editor_page(request: Request, leadsheet_id: str):
     try:

@@ -137,13 +137,10 @@
     { type: 'triplet', unit: 4, duration: 8, label: 'Eighth-note triplet' },
     { type: 'triplet', unit: 8, duration: 16, label: 'Quarter-note triplet' },
   ];
-  // `barUnits` (note staff only): the room counts to the end of the bar the
-  // cell is in, so a note never runs across a barline.
-  function rhythmMenuOptionsFor(cells, idx, barUnits) {
+  function rhythmMenuOptionsFor(cells, idx) {
     const totalUnits = cells.reduce((s, c) => s + c.duration, 0);
     const pos = cells.slice(0, idx).reduce((s, c) => s + c.duration, 0);
-    const roomToEnd = barUnits ? barUnits - (pos % barUnits) : totalUnits - pos;
-    return RHYTHM_MENU_OPTIONS.filter(o => o.duration <= roomToEnd);
+    return RHYTHM_MENU_OPTIONS.filter(o => o.duration <= totalUnits - pos);
   }
   // How narrow a bar can be squeezed is just every cell at its floor width
   // (see allocateCellWidths below) -- below that, cells would have to
@@ -200,12 +197,26 @@
     for (const i of active) result[i] = (weights[i] / remainingWeight) * remaining;
     return result;
   }
+  // The fewest rests that fill `len` 32nds starting `start` 32nds into a bar:
+  // each rest as long as fits and starts on a multiple of its own length, so
+  // a half rest only sits on beat 1 or 3 of 4/4, the way it's engraved.
+  const REST_FILL_DURATIONS = [32, 16, 8, 4, 2];
+  function restsForGap(start, len) {
+    const out = [];
+    for (let pos = start, end = start + len; pos < end;) {
+      const d = REST_FILL_DURATIONS.find(r => pos % r === 0 && pos + r <= end) || 2;
+      out.push({ type: 'rest', duration: d });
+      pos += d;
+    }
+    return out;
+  }
   // Replaces cells[idx] with newCell, then reconciles everything after it:
   // cells fully or partially overtaken by the new (larger) duration are
   // dropped, any leftover gap (when shrinking, or when growth doesn't land
-  // exactly on an old boundary) is filled with fresh 16th rests, and
-  // whatever remains untouched after that is kept as-is.
-  function rebuildRhythmCells(cells, idx, newCell) {
+  // exactly on an old boundary) is filled with rests (see restsForGap), and
+  // whatever remains untouched after that is kept as-is. `barUnits` (a
+  // multi-bar note staff) lines the filler up on the bar it's in.
+  function rebuildRhythmCells(cells, idx, newCell, barUnits) {
     const pos = cells.slice(0, idx).reduce((s, c) => s + c.duration, 0);
     const newEnd = pos + newCell.duration;
     let cursor = pos + cells[idx].duration;
@@ -214,12 +225,33 @@
       cursor += cells[i].duration;
       i++;
     }
-    const filler = [];
-    for (let rem = cursor - newEnd; rem > 0; rem -= 2) filler.push({ type: 'rest', duration: 2 });
+    const filler = restsForGap(barUnits ? newEnd % barUnits : newEnd, cursor - newEnd);
     const out = [...cells.slice(0, idx), { ...newCell }, ...filler, ...cells.slice(i)];
     // A tie needs a note on both ends: one whose next cell became a rest goes.
     out.forEach((c, k) => { if (c.tie && !canTieCell(out, k)) delete c.tie; });
     return out;
+  }
+  // rebuildRhythmCells for a picked duration: a note changed to another note
+  // keeps its articulations and tie (a rest has none). On a note staff
+  // (`staffEl`) it keeps its pitch and accidental too, and a rest turned into
+  // a note lands on the middle line as drawn (see storedStaffNote).
+  function replaceCellKeeping(cells, idx, newCell, staffEl) {
+    const prior = cells[idx];
+    const next = rebuildRhythmCells(cells, idx, newCell, staffEl ? staffBarUnits(staffEl) : null);
+    const nc = next[idx];
+    if (nc.type !== 'note') return next;
+    if (prior.type === 'note') {
+      if (prior.articulations) nc.articulations = [...prior.articulations];
+      if (prior.tie && canTieCell(next, idx)) nc.tie = true;
+    }
+    if (staffEl && nc.pitch == null) {
+      const from = prior.type === 'note' && prior.pitch != null
+        ? { pitch: prior.pitch, accidental: prior.accidental || null }
+        : storedStaffNote(staffEl, STAFF_DEFAULT_PITCH, null);
+      nc.pitch = from.pitch;
+      nc.accidental = from.accidental;
+    }
+    return next;
   }
   function rhythmCellGlyph(cell) {
     if (cell.type === 'rest') {
@@ -478,6 +510,11 @@
   // being typed into on a selected row, and the marquee box itself while it's
   // being drawn (SVG units).
   const selectedIds = new Set();
+
+  // On a phone-sized screen the page is a viewer: see the sheet, transpose
+  // it and print it, but nothing edits it (the CSS hides the editing tools).
+  const viewerMQ = matchMedia('(max-width: 700px)');
+  function isViewer() { return viewerMQ.matches; }
   let activeSlot = null;
   let marquee = null;
 
@@ -1037,7 +1074,7 @@
   // gesture; a press-and-release without dragging just deselects.
   function wireMarquee() {
     document.getElementById('sheet-svg').addEventListener('mousedown', e => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || isViewer()) return;
       e.preventDefault();
       const start = clientToSvg(e.clientX, e.clientY);
       const startClientX = e.clientX, startClientY = e.clientY;
@@ -1082,6 +1119,7 @@
   // that lands inside a multi-selection narrows it to that element.
   function wireDragAndClick(hitEl, onDrag, onClick, moveEl, selectEl) {
     hitEl.addEventListener('mousedown', e => {
+      if (isViewer()) return;
       e.preventDefault();
       e.stopPropagation();
       const target = selectEl || moveEl;
@@ -1190,7 +1228,7 @@
     if (activeRhythmMenu && !activeRhythmMenu.contains(e.target)) closeRhythmMenu();
   }, true);
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && activeRhythmMenu) closeRhythmMenu();
+    if (e.key === 'Escape' && activeRhythmMenu && !staffEditor.el) closeRhythmMenu();
   });
 
   // A row of toggle buttons under a small heading, appended after the
@@ -1240,28 +1278,17 @@
     return svg;
   }
 
-  const ACCIDENTAL_MENU_OPTIONS = [
-    { value: null, code: '', label: 'Key default' },
-    { value: 'sharp', code: ACCIDENTAL_CODES.sharp, label: 'Sharp' },
-    { value: 'flat', code: ACCIDENTAL_CODES.flat, label: 'Flat' },
-    { value: 'natural', code: ACCIDENTAL_CODES.natural, label: 'Natural' },
-  ];
-
-  // `opts.onChange()` is called after an in-place change to the cell
-  // (articulation / accidental) so the caller can mark dirty and re-render;
-  // `opts.accidentals` adds the accidental section (note staff only), reading
-  // and writing through `opts.accidentalGet()` / `opts.accidentalSet(value)`
-  // when given (a transposed staff shows a different accidental than it
-  // stores); `opts.barUnits` keeps notes inside their bar (see
-  // rhythmMenuOptionsFor). The sections apply to notes only -- a rest just
-  // gets the duration grid.
+  // Rhythm bars only (a note staff is written in the staff editor, see
+  // openStaffEditor). `opts.onChange()` is called after an in-place change to
+  // the cell (articulation / tie) so the caller can mark dirty and re-render.
+  // The sections apply to notes only -- a rest just gets the duration grid.
   function openRhythmMenu(clientX, clientY, cells, idx, onApply, opts = {}) {
     closeRhythmMenu();
     const menu = document.createElement('div');
     menu.className = 'rhythm-menu';
     const prior = cells[idx];
     // Which items appear is set in the edit box (see NOTE_MENU_ITEMS).
-    rhythmMenuOptionsFor(cells, idx, opts.barUnits).filter(opt => isMenuItemOn(`${opt.type}-${opt.duration}`)).forEach(opt => {
+    rhythmMenuOptionsFor(cells, idx).filter(opt => isMenuItemOn(`${opt.type}-${opt.duration}`)).forEach(opt => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'rhythm-menu-item';
@@ -1276,13 +1303,7 @@
       btn.appendChild(glyph);
       btn.appendChild(label);
       btn.addEventListener('click', () => {
-        const next = rebuildRhythmCells(cells, idx, opt.type === 'triplet' ? makeTupletCell(opt.unit) : opt);
-        // Changing one note to another keeps its articulations; a rest has none.
-        if (opt.type === 'note' && prior.type === 'note') {
-          if (prior.articulations) next[idx].articulations = [...prior.articulations];
-          if (prior.tie) next[idx].tie = true;
-        }
-        onApply(next);
+        onApply(replaceCellKeeping(cells, idx, opt.type === 'triplet' ? makeTupletCell(opt.unit) : { type: opt.type, duration: opt.duration }));
         closeRhythmMenu();
       });
       menu.appendChild(btn);
@@ -1307,18 +1328,6 @@
           onClick: () => { toggleCellTie(prior); changed(); },
         }]);
       }
-      const accidentals = ACCIDENTAL_MENU_OPTIONS.filter(a => isMenuItemOn(`acc-${a.value || 'default'}`));
-      if (opts.accidentals && accidentals.length) {
-        addMenuToggleSection(menu, 'Accidental', Math.min(accidentals.length, 4), accidentals.map(a => ({
-          glyph: a.code,
-          label: a.label,
-          isOn: () => (opts.accidentalGet ? opts.accidentalGet() : prior.accidental || null) === a.value,
-          onClick: () => {
-            if (opts.accidentalSet) opts.accidentalSet(a.value); else prior.accidental = a.value;
-            changed();
-          },
-        })));
-      }
     }
     if (!menu.children.length) {
       const none = document.createElement('div');
@@ -1340,58 +1349,17 @@
     activeRhythmMenu = menu;
   }
 
-  // Wraps the rhythm menu so a note-staff cell picks up pitch/accidental the
-  // same way the machinery already handles duration: a fresh placement (cell
-  // had no pitch yet, i.e. it was a rest) defaults to the middle line with no
-  // accidental; changing an existing note's duration keeps its pitch and
-  // accidental (and, via openRhythmMenu, its articulations) as-is. Clicking or
-  // right-clicking a placed note opens this (see renderStaffCells).
-  // `staffEl` (a placed staff, not the builder's) keeps a transposed staff
-  // working in the key it shows: a fresh note lands on the middle line as
-  // drawn, and the accidental picked is the one seen, stored back in the
-  // original key (see storedStaffNote).
-  function openStaffMenu(clientX, clientY, cells, idx, onApply, onChange, staffEl) {
-    const prior = cells[idx];
-    const opts = { onChange, accidentals: true };
-    if (staffEl) {
-      opts.barUnits = staffBarUnits(staffEl);
-      opts.accidentalGet = () => displayedStaffNote(staffEl, prior).accidental;
-      opts.accidentalSet = value => {
-        const stored = storedStaffNote(staffEl, displayedStaffNote(staffEl, prior).pitch, value);
-        prior.pitch = stored.pitch;
-        prior.accidental = stored.accidental;
-      };
-    }
-    openRhythmMenu(clientX, clientY, cells, idx, newCells => {
-      // Read at pick time, not menu-open time: the accidental toggle in the
-      // same menu edits `prior` in place before a duration is chosen.
-      const priorPitch = prior.pitch, priorAccidental = prior.accidental;
-      const nc = newCells[idx];
-      if (nc.type === 'note') {
-        if (priorPitch != null) {
-          nc.pitch = priorPitch;
-          nc.accidental = priorAccidental != null ? priorAccidental : null;
-        } else {
-          const fresh = staffEl ? storedStaffNote(staffEl, STAFF_DEFAULT_PITCH, null) : { pitch: STAFF_DEFAULT_PITCH, accidental: null };
-          nc.pitch = fresh.pitch;
-          nc.accidental = fresh.accidental;
-        }
-      }
-      onApply(newCells);
-    }, opts);
-  }
-
   // The restricted menu for one slot of a placed tuplet (see renderTupletGroupRhythm
   // / renderTupletGroupStaff). Unlike the normal cell menu, a slot's duration
   // can never change -- that's what keeps the group's equal parts adding up
   // to its own slot -- so this offers only a note/rest toggle at the
-  // tuplet's own `unit`, the same articulation/accidental sections as the
+  // tuplet's own `unit`, the same articulation section as the
   // normal menu (no tie: ties into/out of a tuplet aren't supported), and a
   // "Remove triplet" action that hands off to `onRemove` -- the caller
   // replaces the *whole* tuplet cell with a plain rest of its total
   // duration (see rebuildRhythmCells). `onChange` is called after every
   // edit (mutations are all in place, on `tupletCell.cells[subIdx]`).
-  function openTupletSlotMenu(clientX, clientY, tupletCell, subIdx, onChange, onRemove, opts = {}) {
+  function openTupletSlotMenu(clientX, clientY, tupletCell, subIdx, onChange, onRemove) {
     closeRhythmMenu();
     const menu = document.createElement('div');
     menu.className = 'rhythm-menu';
@@ -1411,11 +1379,8 @@
         btn.appendChild(glyph);
         btn.appendChild(label);
         btn.addEventListener('click', () => {
-          const next = { ...opt };
-          if (opt.type === 'note') {
-            if (prior.type === 'note' && prior.articulations) next.articulations = [...prior.articulations];
-            if (opts.onNotePick) opts.onNotePick(next);
-          }
+          const next = { type: opt.type, duration: opt.duration };
+          if (opt.type === 'note' && prior.type === 'note' && prior.articulations) next.articulations = [...prior.articulations];
           subCells[subIdx] = next;
           onChange();
           closeRhythmMenu();
@@ -1430,18 +1395,6 @@
           label: k.label,
           isOn: () => cellHasArticulation(prior, k.value),
           onClick: () => { toggleCellArticulation(prior, k.value); onChange(); },
-        })));
-      }
-      const accidentals = ACCIDENTAL_MENU_OPTIONS.filter(a => isMenuItemOn(`acc-${a.value || 'default'}`));
-      if (opts.accidentals && accidentals.length) {
-        addMenuToggleSection(menu, 'Accidental', Math.min(accidentals.length, 4), accidentals.map(a => ({
-          glyph: a.code,
-          label: a.label,
-          isOn: () => (opts.accidentalGet ? opts.accidentalGet() : prior.accidental || null) === a.value,
-          onClick: () => {
-            if (opts.accidentalSet) opts.accidentalSet(a.value); else prior.accidental = a.value;
-            onChange();
-          },
         })));
       }
     }
@@ -1461,35 +1414,6 @@
     menu.style.left = `${left}px`;
     menu.style.top = `${top}px`;
     activeRhythmMenu = menu;
-  }
-
-  // Wraps openTupletSlotMenu the same way openStaffMenu wraps openRhythmMenu:
-  // a fresh note (the slot was a rest) defaults to the middle line, an
-  // existing note keeps its pitch/accidental across a rest<->note toggle,
-  // and the accidental section reads/writes through the staff's own
-  // transposition (see displayedStaffNote/storedStaffNote).
-  function openTupletStaffSlotMenu(clientX, clientY, tupletCell, subIdx, onChange, onRemove, staffEl) {
-    const prior = tupletCell.cells[subIdx];
-    const opts = { accidentals: true };
-    if (staffEl) {
-      opts.accidentalGet = () => displayedStaffNote(staffEl, prior).accidental;
-      opts.accidentalSet = value => {
-        const stored = storedStaffNote(staffEl, displayedStaffNote(staffEl, prior).pitch, value);
-        prior.pitch = stored.pitch;
-        prior.accidental = stored.accidental;
-      };
-    }
-    opts.onNotePick = nc => {
-      if (prior.pitch != null) {
-        nc.pitch = prior.pitch;
-        nc.accidental = prior.accidental != null ? prior.accidental : null;
-      } else {
-        const fresh = staffEl ? storedStaffNote(staffEl, STAFF_DEFAULT_PITCH, null) : { pitch: STAFF_DEFAULT_PITCH, accidental: null };
-        nc.pitch = fresh.pitch;
-        nc.accidental = fresh.accidental;
-      }
-    };
-    openTupletSlotMenu(clientX, clientY, tupletCell, subIdx, onChange, onRemove, opts);
   }
 
   // `chord`: size for a chord symbol's raised numbers (see parseChordSegments).
@@ -1723,6 +1647,7 @@
     renderSvg();
     if (type === 'title' || type === 'chordText' || type === 'text') focusEditField('text');
     else if (el.type === 'row' && rowSlotCount(el) > 0) focusSlot(el.id, 0);
+    else if (el.type === 'notestaff') openStaffEditor(el, { idx: 0 }, { input: true }); // straight to writing its notes
   }
 
   // Copies everything currently marked, a little down and to the right of the
@@ -2395,16 +2320,39 @@
     });
   }
 
+  // The hit area of one staff cell (or tuplet slot `k`), drawn under its ink.
+  // On the page (`callbacks.onMove`) it spans the cell's whole column: a
+  // click fires onCellClick and a drag moves the staff. In the staff editor a
+  // rest keeps the column (a click selects it), but a note is only grabbable
+  // by its head, where a drag re-pitches it (onNoteDrag) and a click selects it.
+  function wireStaffCellHit(container, el, callbacks, cell, i, k, colX, colW, cx, pitch, halfW) {
+    if (!callbacks.onCellClick && !callbacks.onMove) return;
+    const click = () => { if (callbacks.onCellClick) callbacks.onCellClick(i, k); };
+    if (cell.type === 'rest' || !callbacks.onNoteDrag) {
+      const hit = svgRect(colX, el.y - el.h * 0.25, colW, el.h * 1.5, { cls: 'el-rhythm-cell-hit' });
+      container.appendChild(hit);
+      if (callbacks.onMove) wireDragAndClick(hit, callbacks.onMove, click, el);
+      else hit.addEventListener('click', click);
+      return;
+    }
+    const hitW = Math.max(halfW * 2 * 1.6, 12), hitH = el.h * 0.35;
+    const hit = svgRect(cx - hitW / 2, pitchToY(pitch, el) - hitH / 2, hitW, hitH, { cls: 'el-note-hit' });
+    container.appendChild(hit);
+    // `pitch` is fixed for the whole gesture: a drag's own mousemove/mouseup
+    // listeners outlive the re-renders it triggers, so this closure is what
+    // keeps firing, and onNoteDrag applies ddy against it rather than the
+    // already-moved pitch (which would compound every tick).
+    wireDragAndClick(hit, (ddx, ddy) => callbacks.onNoteDrag(i, ddy, pitch, k), click);
+  }
+
   // Sibling of renderTupletGroupRhythm: draws one tuplet group on the note
   // staff -- `cell.cells.length` (3, in v1) equal-width slots spanning
   // `[x, x+w)`, with real pitched noteheads (ledger lines, accidentals, a
   // stem direction from each note's own pitch) instead of the rhythm
-  // tool's slashes. Handles its own hit-testing too (a rest slot behaves
-  // like a plain rest cell -- click for the menu, drag to move the staff; a
-  // note slot behaves like a plain note -- click/right-click for the menu,
-  // drag to re-pitch), routing back through `callbacks.onCellMenu`/
-  // `onNoteDrag` with the sub-slot index tacked on as a 4th argument. `i`
-  // is the tuplet's own index in the outer `cells`.
+  // tool's slashes. Handles its own hit-testing too, each slot exactly like
+  // a plain cell (see wireStaffCellHit), routing back through
+  // `callbacks.onCellClick` / `onNoteDrag` with the slot index. `i` is the
+  // tuplet's own index in the outer `cells`.
   function renderTupletGroupStaff(container, cell, x, w, el, callbacks, i) {
     const subCells = cell.cells;
     const n = subCells.length;
@@ -2420,41 +2368,26 @@
     const pitchOf = k => (subCells[k].pitch != null ? subCells[k].pitch : STAFF_DEFAULT_PITCH);
     const halfWOf = k => noteheadHalfW(subCells[k].duration, noteSize);
     const stemXOf = (k, up) => cx(k) + (up ? 1 : -1) * (halfWOf(k) - stemHalf);
+    const sel = k => (callbacks.selected && callbacks.selected(i, k) ? ' is-cell-selected' : '');
 
     subCells.forEach((sub, k) => {
-      if (sub.type === 'rest') {
-        const hit = svgRect(slotX(k), el.y - el.h * 0.25, slotW, el.h * 1.5, { cls: 'el-rhythm-cell-hit' });
-        container.appendChild(hit);
-        const pick = (clientX, clientY) => callbacks.onCellMenu(i, clientX, clientY, k);
-        if (callbacks.onMove) wireDragAndClick(hit, callbacks.onMove, pick, el);
-        else hit.addEventListener('click', e => pick(e.clientX, e.clientY));
-        return;
-      }
-      const hitW = Math.max(halfWOf(k) * 2 * 1.6, 12), hitH = el.h * 0.35;
-      const hit = svgRect(cx(k) - hitW / 2, pitchToY(pitchOf(k), el) - hitH / 2, hitW, hitH, { cls: 'el-note-hit' });
-      container.appendChild(hit);
-      hit.addEventListener('contextmenu', e => { e.preventDefault(); callbacks.onCellMenu(i, e.clientX, e.clientY, k); });
-      const dragStartPitch = pitchOf(k);
-      wireDragAndClick(hit,
-        (ddx, ddy) => callbacks.onNoteDrag(i, ddy, dragStartPitch, k),
-        (clientX, clientY) => callbacks.onCellMenu(i, clientX, clientY, k),
-        null, callbacks.onMove ? el : null);
+      wireStaffCellHit(container, el, callbacks, sub, i, k, slotX(k), slotW, cx(k), pitchOf(k), halfWOf(k));
     });
 
     subCells.forEach((sub, k) => {
       if (sub.type === 'rest') {
-        container.appendChild(svgText(rhythmCellGlyph(sub), cx(k), midlineY, { cls: 'el-glyph-text', anchor: 'middle', size: el.h * 0.75 }));
+        container.appendChild(svgText(rhythmCellGlyph(sub), cx(k), midlineY, { cls: `el-glyph-text${sel(k)}`, anchor: 'middle', size: el.h * 0.75 }));
         return;
       }
       const pitch = pitchOf(k), noteY = pitchToY(pitch, el), halfW = halfWOf(k);
       drawLedgerLines(container, el, cx(k), pitch, halfW + noteSize * 0.1);
       if (sub.accidental) {
         container.appendChild(svgText(ACCIDENTAL_CODES[sub.accidental], cx(k) - halfW - noteSize * 0.14, noteY, {
-          cls: 'el-notestaff-accidental', anchor: 'end', size: noteSize,
+          cls: `el-notestaff-accidental${sel(k)}`, anchor: 'end', size: noteSize,
         }));
       }
       container.appendChild(svgText(noteheadCode(sub.duration), cx(k), noteY, {
-        cls: `el-notehead-oval ${sub.duration >= 16 ? 'el-notehead-oval-open' : 'el-notehead-oval-filled'}`,
+        cls: `el-notehead-oval ${sub.duration >= 16 ? 'el-notehead-oval-open' : 'el-notehead-oval-filled'}${sel(k)}`,
         anchor: 'middle', size: noteSize,
       }));
     });
@@ -2476,7 +2409,7 @@
         const stemX = stemXOf(k, stemUp);
         stemXs.push(stemX);
         const stemStartY = pitchToY(pitchOf(k), el) + (stemUp ? -1 : 1) * noteSize * 0.04;
-        container.appendChild(svgLine(stemX, stemStartY, stemX, beamY, { cls: 'el-notegroup-stem' }));
+        container.appendChild(svgLine(stemX, stemStartY, stemX, beamY, { cls: `el-notegroup-stem${sel(k)}` }));
         drawArticulations(container, stemUp
           ? { aboveX: stemX, aboveY: beamY - beamThick / 2, belowX: cx(k), belowY: pitchToY(pitchOf(k), el) + el.h / 8 }
           : { aboveX: cx(k), aboveY: pitchToY(pitchOf(k), el) - el.h / 8, belowX: stemX, belowY: beamY + beamThick / 2 },
@@ -2496,13 +2429,13 @@
         const noteY = pitchToY(pitch, el);
         const stemStartY = noteY + (stemUp ? -1 : 1) * noteSize * 0.04;
         const stemTipY = stemUp ? noteY - stemLen : noteY + stemLen;
-        container.appendChild(svgLine(stemX, stemStartY, stemX, stemTipY, { cls: 'el-notegroup-stem' }));
+        container.appendChild(svgLine(stemX, stemStartY, stemX, stemTipY, { cls: `el-notegroup-stem${sel(k)}` }));
         topY = Math.min(topY, stemTipY);
         if (sub.duration === 2 || sub.duration === 4 || sub.duration === 6) {
           const flagCode = sub.duration === 2
             ? (stemUp ? FLAG_CODES['16th-up'] : FLAG_CODES['16th-down'])
             : (stemUp ? FLAG_CODES['8th-up'] : FLAG_CODES['8th-down']);
-          container.appendChild(svgText(flagCode, stemX - stemHalf, stemTipY, { cls: 'el-notestaff-flag', anchor: 'start', size: noteSize }));
+          container.appendChild(svgText(flagCode, stemX - stemHalf, stemTipY, { cls: `el-notestaff-flag${sel(k)}`, anchor: 'start', size: noteSize }));
         }
         drawArticulations(container, stemUp
           ? { aboveX: stemX, aboveY: stemTipY, belowX: cx(k), belowY: noteY + el.h / 8 }
@@ -2526,16 +2459,16 @@
   // where a 16th rest in that cell is drawn. (Rests are picked fresh from the
   // menu, never resized in place, so they stay centered in their span.)
   //
-  // Only a note's head is grabbable (not its whole column), and the staff
-  // itself is grabbable anywhere else -- lines, clef, rests -- to move it.
-  // `callbacks` is `{ onCellMenu(idx,clientX,clientY),
-  // onNoteDrag(idx, ddy, startPitch), onMove(ddx, ddy) }` -- onMove is
-  // optional (the sidebar builder preview has nothing to move). A rest fires
-  // onCellMenu on a plain click and moves the staff on a drag; a note fires
-  // onCellMenu on a plain click or right-click (duration, accidental and
-  // articulation, preserving pitch -- see openStaffMenu) and onNoteDrag while
-  // dragging (re-pitch, snapped to the staff-step grid).
-  function renderStaffCells(container, cells, x, y, w, el, callbacks) {
+  // `callbacks` (all optional; none at all draws a plain preview, like the
+  // sidebar builder's) is `{ onCellClick(idx, subIdx), onMove(ddx, ddy),
+  // onNoteDrag(idx, ddy, startPitch, subIdx), selected(idx, subIdx), onOpen() }`
+  // -- see wireStaffCellHit for what a press on a cell does. A drag anywhere
+  // else on a placed staff moves it, and a double-click there fires onOpen.
+  // `selected` cells are drawn in the selection colour.
+  // Returns the drawing's vertical reach and `cellBoxes`, where each cell
+  // (and each tuplet slot, in `subs`) sits: `{ x, w, cx }`, cx being where
+  // its head or rest is centred.
+  function renderStaffCells(container, cells, x, y, w, el, callbacks = {}) {
     const totalUnits = cells.reduce((s, c) => s + c.duration, 0);
     const { widths: cellWidths, offsets: positionsPx } = staffLayout(el, cells, w);
     let cursor = 0;
@@ -2560,11 +2493,20 @@
     // engraved stem does.
     const stemXOf = (k, up) => noteCx(k) + (up ? 1 : -1) * (halfWOf(k) - stemHalf);
     const stemStartYOf = (k, up) => pitchToY(pitchOf(k), el) + (up ? -1 : 1) * noteSize * 0.04;
+    const sel = k => (callbacks.selected && callbacks.selected(k, null) ? ' is-cell-selected' : '');
+
+    const cellBoxes = cells.map((cell, i) => {
+      const bx = x + positionsPx[i], bw = cellWidths[i];
+      if (cell.type !== 'tuplet') return { x: bx, w: bw, cx: cell.type === 'rest' ? restCx(i) : noteCx(i) };
+      const sw = bw / cell.cells.length;
+      return { x: bx, w: bw, cx: bx + bw / 2, subs: cell.cells.map((_, k) => ({ x: bx + k * sw, w: sw, cx: bx + (k + 0.5) * sw })) };
+    });
 
     if (callbacks.onMove) {
       const body = svgRect(el.x, el.y - el.h * 0.35, x + w - el.x, el.h * 1.7, { cls: 'el-row-hit' });
       container.appendChild(body);
       wireDragAndClick(body, callbacks.onMove, null, el);
+      if (callbacks.onOpen) body.addEventListener('dblclick', () => callbacks.onOpen());
     }
 
     cells.forEach((cell, i) => {
@@ -2572,29 +2514,7 @@
         renderTupletGroupStaff(container, cell, x + positionsPx[i], cellWidths[i], el, callbacks, i);
         return;
       }
-      if (cell.type === 'rest') {
-        const hit = svgRect(x + positionsPx[i], el.y - el.h * 0.25, cellWidths[i], el.h * 1.5, { cls: 'el-rhythm-cell-hit' });
-        container.appendChild(hit);
-        const pick = (clientX, clientY) => callbacks.onCellMenu(i, clientX, clientY);
-        if (callbacks.onMove) wireDragAndClick(hit, callbacks.onMove, pick, el);
-        else hit.addEventListener('click', e => pick(e.clientX, e.clientY));
-        return;
-      }
-      const hitW = Math.max(halfWOf(i) * 2 * 1.6, 12), hitH = el.h * 0.35;
-      const hit = svgRect(noteCx(i) - hitW / 2, pitchToY(pitchOf(i), el) - hitH / 2, hitW, hitH, { cls: 'el-note-hit' });
-      container.appendChild(hit);
-      hit.addEventListener('contextmenu', e => { e.preventDefault(); callbacks.onCellMenu(i, e.clientX, e.clientY); });
-      // Captured once per render (i.e. once per gesture -- a drag's own
-      // mousemove/mouseup listeners outlive the re-renders it triggers, so
-      // this closure, not any later one, is what actually keeps firing).
-      // onNoteDrag must apply ddy against this fixed value, never against
-      // the cell's current (already-mutated-mid-drag) pitch, or each tick
-      // would compound on top of the last instead of tracking the cursor.
-      const dragStartPitch = pitchOf(i);
-      wireDragAndClick(hit,
-        (ddx, ddy) => callbacks.onNoteDrag(i, ddy, dragStartPitch),
-        (clientX, clientY) => callbacks.onCellMenu(i, clientX, clientY),
-        null, callbacks.onMove ? el : null); // a note drag re-pitches rather than moves, but a press still picks the staff
+      wireStaffCellHit(container, el, callbacks, cell, i, null, x + positionsPx[i], cellWidths[i], noteCx(i), pitchOf(i), halfWOf(i));
     });
 
     const handledRunStarts = new Set();
@@ -2610,7 +2530,7 @@
       // hit-testing pass above -- see renderTupletGroupStaff.
       if (cell.type === 'tuplet') return;
       if (cell.type === 'rest') {
-        container.appendChild(svgText(rhythmCellGlyph(cell), restCx(i), midlineY, { cls: 'el-glyph-text', anchor: 'middle', size: el.h * 0.75 }));
+        container.appendChild(svgText(rhythmCellGlyph(cell), restCx(i), midlineY, { cls: `el-glyph-text${sel(i)}`, anchor: 'middle', size: el.h * 0.75 }));
         return;
       }
       const cx = noteCx(i), halfW = halfWOf(i);
@@ -2620,18 +2540,18 @@
 
       if (cell.accidental) {
         container.appendChild(svgText(ACCIDENTAL_CODES[cell.accidental], cx - halfW - noteSize * 0.14, noteY, {
-          cls: 'el-notestaff-accidental', anchor: 'end', size: noteSize,
+          cls: `el-notestaff-accidental${sel(i)}`, anchor: 'end', size: noteSize,
         }));
       }
       container.appendChild(svgText(noteheadCode(cell.duration), cx, noteY, {
-        cls: `el-notehead-oval ${cell.duration >= 16 ? 'el-notehead-oval-open' : 'el-notehead-oval-filled'}`,
+        cls: `el-notehead-oval ${cell.duration >= 16 ? 'el-notehead-oval-open' : 'el-notehead-oval-filled'}${sel(i)}`,
         anchor: 'middle', size: noteSize,
       }));
       if (cell.duration === 6 || cell.duration === 12 || cell.duration === 24 || cell.duration === 48) {
         // A note on a line gets its dot in the space above, like engraved
         // music, not struck through by the line.
         const dotY = pitch % 2 === 0 ? noteY - el.h / 8 : noteY;
-        container.appendChild(svgText(AUG_DOT, cx + halfW + noteSize * 0.1, dotY, { cls: 'el-glyph-text', size: noteSize }));
+        container.appendChild(svgText(AUG_DOT, cx + halfW + noteSize * 0.1, dotY, { cls: `el-glyph-text${sel(i)}`, size: noteSize }));
       }
       if (cell.duration === 32 || cell.duration === 48) { // whole notes: no stem
         stemUpAt.set(i, pitch < 4);
@@ -2655,7 +2575,7 @@
         for (let k = run.start; k <= run.end; k++) {
           const stemX = stemXOf(k, stemUp);
           stemXs.push(stemX);
-          container.appendChild(svgLine(stemX, stemStartYOf(k, stemUp), stemX, beamY, { cls: 'el-notegroup-stem' }));
+          container.appendChild(svgLine(stemX, stemStartYOf(k, stemUp), stemX, beamY, { cls: `el-notegroup-stem${sel(k)}` }));
           articulationAnchor.set(k, stemUp
             ? { aboveX: stemX, aboveY: beamY - beamThick / 2, belowX: noteCx(k), belowY: headBottomY(k) }
             : { aboveX: noteCx(k), aboveY: headTopY(k), belowX: stemX, belowY: beamY + beamThick / 2 });
@@ -2691,7 +2611,7 @@
         stemUpAt.set(i, stemUp);
         const stemX = stemXOf(i, stemUp);
         const stemTipY = stemUp ? noteY - stemLen : noteY + stemLen;
-        container.appendChild(svgLine(stemX, stemStartYOf(i, stemUp), stemX, stemTipY, { cls: 'el-notegroup-stem' }));
+        container.appendChild(svgLine(stemX, stemStartYOf(i, stemUp), stemX, stemTipY, { cls: `el-notegroup-stem${sel(i)}` }));
         articulationAnchor.set(i, stemUp
           ? { aboveX: stemX, aboveY: stemTipY, belowX: cx, belowY: headBottomY(i) }
           : { aboveX: cx, aboveY: headTopY(i), belowX: stemX, belowY: stemTipY });
@@ -2699,7 +2619,7 @@
           const flagCode = cell.duration === 2
             ? (stemUp ? FLAG_CODES['16th-up'] : FLAG_CODES['16th-down'])
             : (stemUp ? FLAG_CODES['8th-up'] : FLAG_CODES['8th-down']);
-          container.appendChild(svgText(flagCode, stemX - stemHalf, stemTipY, { cls: 'el-notestaff-flag', anchor: 'start', size: noteSize }));
+          container.appendChild(svgText(flagCode, stemX - stemHalf, stemTipY, { cls: `el-notestaff-flag${sel(i)}`, anchor: 'start', size: noteSize }));
         }
       }
     });
@@ -2727,9 +2647,25 @@
     return {
       topY: pitchToY(STAFF_PITCH_MAX, el) - el.h * 0.3,
       bottomY: pitchToY(STAFF_PITCH_MIN, el) + el.h * 0.3,
+      cellBoxes,
     };
   }
 
+  // Transposed with the sheet, a staff's notes are drawn from copies with the
+  // pitch and accidental as they read now; the stored cells stay as they were
+  // written. Anything picked or typed on a copy goes back through
+  // storedStaffNote.
+  function displayedCells(el) {
+    const show = c => {
+      if (c.type !== 'note') return c;
+      const n = displayedStaffNote(el, c);
+      return { ...c, pitch: n.pitch, accidental: n.accidental };
+    };
+    return el.cells.map(c => (c.type === 'tuplet' ? { ...c, cells: c.cells.map(show) } : show(c)));
+  }
+
+  // On the page a staff is only laid out: moved, squeezed and resized. A
+  // click on a note or rest opens the staff editor on it (see openStaffEditor).
   function renderNoteStaffEl(svg, el) {
     const g = svgGroup({ cls: 'el-group' });
     const startX = el.x, startY = el.y;
@@ -2741,56 +2677,9 @@
     drawKeySignature(g, el);
     drawStaffBarlines(g, el, el.x + leadW, el.w, el.cells);
 
-    // Transposed with the sheet, the notes are drawn from copies with the
-    // pitch and accidental as they read now; the stored cells stay as they
-    // were written. A drag or a menu pick on a copy goes back through
-    // storedStaffNote.
-    const shown = el.cells.map(c => {
-      if (c.type === 'tuplet') {
-        return {
-          ...c,
-          cells: c.cells.map(sc => {
-            if (sc.type !== 'note') return sc;
-            const n = displayedStaffNote(el, sc);
-            return { ...sc, pitch: n.pitch, accidental: n.accidental };
-          }),
-        };
-      }
-      if (c.type !== 'note') return c;
-      const n = displayedStaffNote(el, c);
-      return { ...c, pitch: n.pitch, accidental: n.accidental };
-    });
-
-    renderStaffCells(g, shown, el.x + leadW, el.y, el.w, el, {
-      onCellMenu: (idx, clientX, clientY, subIdx) => {
-        if (subIdx != null) {
-          openTupletStaffSlotMenu(clientX, clientY, el.cells[idx], subIdx,
-            () => { markDirty(); renderSvg(); },
-            () => { el.cells = rebuildRhythmCells(el.cells, idx, { type: 'rest', duration: el.cells[idx].duration }); markDirty(); renderSvg(); },
-            el);
-          return;
-        }
-        openStaffMenu(clientX, clientY, el.cells, idx,
-          newCells => { el.cells = newCells; markDirty(); renderSvg(); },
-          () => { markDirty(); renderSvg(); }, el);
-      },
-      onNoteDrag: (idx, ddy, startPitch, subIdx) => {
-        const deltaSteps = Math.round(-ddy / (el.h / 8));
-        const pitch = clamp(startPitch + deltaSteps, STAFF_PITCH_MIN, STAFF_PITCH_MAX);
-        if (subIdx != null) {
-          const stored = storedStaffNote(el, pitch, shown[idx].cells[subIdx].accidental);
-          const realSub = el.cells[idx].cells[subIdx];
-          realSub.pitch = stored.pitch;
-          if (transposeState.semitones) realSub.accidental = stored.accidental;
-          markDirty(); renderSvg();
-          return;
-        }
-        const stored = storedStaffNote(el, pitch, shown[idx].accidental);
-        el.cells[idx].pitch = stored.pitch;
-        // Untransposed, the accidental is left exactly as it was.
-        if (transposeState.semitones) el.cells[idx].accidental = stored.accidental;
-        markDirty(); renderSvg();
-      },
+    renderStaffCells(g, displayedCells(el), el.x + leadW, el.y, el.w, el, {
+      onCellClick: (idx, subIdx) => openStaffEditor(el, { idx, subIdx }),
+      onOpen: () => openStaffEditor(el),
       onMove: moveTo,
     });
 
@@ -2842,6 +2731,8 @@
   }
 
   function render() {
+    document.getElementById('viewer-title').textContent = model.title || 'Untitled';
+    document.getElementById('viewer-artist').textContent = model.artist || '';
     document.getElementById('sheet-title').value = model.title;
     document.getElementById('sheet-artist').value = model.artist || '';
     document.getElementById('sheet-key').value = model.key;
@@ -2863,14 +2754,13 @@
   // without cluttering the menu: give a new item `defaultOn: false` and it
   // stays hidden until someone ticks it. Ids: `note-<dur>` / `rest-<dur>` /
   // `triplet-<dur>` (durations, matching RHYTHM_MENU_OPTIONS), `artic-<kind>`,
-  // `tie`, `acc-<value>`.
+  // `tie`.
   const NOTE_MENU_GROUPS = [
     { id: 'duration', label: 'Notes' },
     { id: 'rest', label: 'Rests' },
     { id: 'tuplet', label: 'Tuplets' },
     { id: 'articulation', label: 'Articulations' },
     { id: 'tie', label: 'Tie' },
-    { id: 'accidental', label: 'Accidentals (note staff only)' },
   ];
   const NOTE_MENU_ITEMS = [
     ...RHYTHM_MENU_OPTIONS.map(o => ({
@@ -2880,7 +2770,6 @@
     })),
     ...ARTICULATION_KINDS.map(k => ({ id: `artic-${k.value}`, group: 'articulation', label: k.label, defaultOn: true })),
     { id: 'tie', group: 'tie', label: 'Tie to next note', defaultOn: true },
-    ...ACCIDENTAL_MENU_OPTIONS.map(a => ({ id: `acc-${a.value || 'default'}`, group: 'accidental', label: a.label, defaultOn: true })),
   ];
   const NOTE_MENU_BY_ID = Object.fromEntries(NOTE_MENU_ITEMS.map(i => [i.id, i]));
   // An editor preference rather than sheet content, so it lives in this
@@ -3062,6 +2951,218 @@
     const d = clamp(steps, lo, hi);
     notes.forEach(c => { c.pitch = pitchOf(c) + d; });
   }
+  /* ---------- note staff: editing operations ---------- */
+  // What the staff editor's keys and toolbar do (see openStaffEditor), kept
+  // apart from its DOM code. A place in a staff is `{ idx, subIdx }`: cell
+  // `idx` of `el.cells`, or with a `subIdx` one slot of the tuplet there
+  // (`subIdx` is null otherwise). Pitches are worked on as drawn, so a
+  // transposed staff is written in the key it shows, and stored back through
+  // storedStaffNote. Each returns false when it can't apply.
+  const NOTE_DURATIONS = [48, 32, 24, 16, 12, 8, 6, 4, 2];
+  const REST_DURATIONS = [32, 16, 12, 8, 6, 4, 2]; // the rests rhythmCellGlyph can draw
+  const DOTTED = { 4: 6, 8: 12, 16: 24, 32: 48 };
+  const UNDOTTED = { 6: 4, 12: 8, 24: 16, 48: 32 };
+  function cellStart(cells, idx) { return cells.slice(0, idx).reduce((s, c) => s + c.duration, 0); }
+  function cellAt(el, addr) {
+    const c = el.cells[addr.idx];
+    return c && addr.subIdx != null ? c.cells[addr.subIdx] : c;
+  }
+  function sameAddr(a, b) { return !!a && !!b && a.idx === b.idx && a.subIdx === b.subIdx; }
+  // Every place in reading order: each plain cell, each tuplet slot.
+  function staffAddresses(el) {
+    const out = [];
+    el.cells.forEach((c, idx) => {
+      if (c.type === 'tuplet') c.cells.forEach((_, subIdx) => out.push({ idx, subIdx }));
+      else out.push({ idx, subIdx: null });
+    });
+    return out;
+  }
+  // From the start of cell `idx` to the end of its bar.
+  function roomInBar(el, idx) {
+    const barUnits = staffBarUnits(el);
+    return barUnits - cellStart(el.cells, idx) % barUnits;
+  }
+  // A plain note and the notes tied to it on either side: a pitch change
+  // moves them all, as in MuseScore.
+  function tieChain(el, addr) {
+    if (addr.subIdx != null) return [cellAt(el, addr)];
+    let a = addr.idx, b = addr.idx;
+    while (a > 0 && isTiedToNext(el.cells, a - 1)) a--;
+    while (isTiedToNext(el.cells, b)) b++;
+    return el.cells.slice(a, b + 1);
+  }
+  function setShownNote(el, cell, pitch, accidental) {
+    const stored = storedStaffNote(el, pitch, accidental);
+    cell.pitch = stored.pitch;
+    cell.accidental = stored.accidental;
+  }
+  function setChainNote(el, addr, pitch, accidental) {
+    tieChain(el, addr).forEach(c => setShownNote(el, c, pitch, accidental));
+  }
+  // The staff position of `letter` nearest `near` (both as drawn).
+  function pitchForLetter(letter, clef, near) {
+    let best = null;
+    for (let p = STAFF_PITCH_MIN; p <= STAFF_PITCH_MAX; p++) {
+      if (staffLetterForPosition(p, clef) === letter && (best == null || Math.abs(p - near) < Math.abs(best - near))) best = p;
+    }
+    return best;
+  }
+  // The drawn pitch of the last note before `addr`: what a typed letter's
+  // octave is judged from.
+  function pitchBefore(el, addr) {
+    const list = staffAddresses(el);
+    const at = list.findIndex(a => sameAddr(a, addr));
+    for (let k = (at < 0 ? list.length : at) - 1; k >= 0; k--) {
+      const c = cellAt(el, list[k]);
+      if (c.type === 'note') return displayedStaffNote(el, c).pitch;
+    }
+    return STAFF_DEFAULT_PITCH;
+  }
+
+  // The note (or rest, which becomes a note) at `addr` goes to `letter`, in
+  // the octave nearest where it was, with the key's own accidental.
+  function setNoteLetter(el, addr, letter) {
+    const cell = cellAt(el, addr);
+    if (!cell || cell.type === 'tuplet') return false;
+    const near = cell.type === 'note' ? displayedStaffNote(el, cell).pitch : pitchBefore(el, addr);
+    cell.type = 'note';
+    setChainNote(el, addr, pitchForLetter(letter, el.clef || 'treble', near), null);
+    return true;
+  }
+  // A semitone up or down, sharpened going up and flattened going down unless
+  // the key already spells it (see transposeStaffNote).
+  function stepSemitone(el, addr, dir) {
+    const cell = cellAt(el, addr);
+    if (!cell || cell.type !== 'note') return false;
+    const shown = displayedStaffNote(el, cell);
+    const sig = displayedKeySignature(el);
+    const next = transposeStaffNote(shown, el.clef || 'treble', sig, sig, dir, dir < 0);
+    // transposeStaffNote folds a note that leaves the staff back by an
+    // octave; stepping stops at the edge instead.
+    if (Math.abs(next.pitch - shown.pitch) > 1) return false;
+    setChainNote(el, addr, next.pitch, next.accidental);
+    return true;
+  }
+  // `steps` staff steps (7 = an octave). A single step lands on the key's own
+  // note, like MuseScore's diatonic up/down; an octave keeps the accidental.
+  function stepStaff(el, addr, steps) {
+    const cell = cellAt(el, addr);
+    if (!cell || cell.type !== 'note') return false;
+    const shown = displayedStaffNote(el, cell);
+    const pitch = shown.pitch + steps;
+    if (pitch < STAFF_PITCH_MIN || pitch > STAFF_PITCH_MAX) return false;
+    setChainNote(el, addr, pitch, Math.abs(steps) === 7 ? shown.accidental : null);
+    return true;
+  }
+  // Sets the accidental as drawn, or back to the key's own when it's already set.
+  function toggleAccidental(el, addr, accidental) {
+    const cell = cellAt(el, addr);
+    if (!cell || cell.type !== 'note') return false;
+    const shown = displayedStaffNote(el, cell);
+    setChainNote(el, addr, shown.pitch, shown.accidental === accidental ? null : accidental);
+    return true;
+  }
+
+  // A plain cell's new length, if it fits before the barline. A tuplet
+  // slot's length is fixed (it's what keeps the group adding up).
+  function setCellDuration(el, addr, duration) {
+    if (addr.subIdx != null) return false;
+    const cell = el.cells[addr.idx];
+    if (!cell || cell.type === 'tuplet') return false;
+    if (!(cell.type === 'rest' ? REST_DURATIONS : NOTE_DURATIONS).includes(duration)) return false;
+    if (duration > roomInBar(el, addr.idx)) return false;
+    if (duration !== cell.duration) el.cells = replaceCellKeeping(el.cells, addr.idx, { type: cell.type, duration }, el);
+    return true;
+  }
+  function dotToggled(duration) { return DOTTED[duration] || UNDOTTED[duration] || null; }
+  function halved(duration) { return NOTE_DURATIONS.includes(duration / 2) ? duration / 2 : null; }
+  function doubled(duration) { return NOTE_DURATIONS.includes(duration * 2) ? duration * 2 : null; }
+
+  // The note or tuplet slot at `addr` becomes a rest. A tuplet slot that
+  // already is one takes the whole tuplet with it.
+  function toRest(el, addr) {
+    const cell = el.cells[addr.idx];
+    if (!cell) return false;
+    const barUnits = staffBarUnits(el);
+    const wholeCellToRests = () => {
+      el.cells = rebuildRhythmCells(el.cells, addr.idx, restsForGap(cellStart(el.cells, addr.idx) % barUnits, cell.duration)[0], barUnits);
+    };
+    if (addr.subIdx != null) {
+      if (cell.cells[addr.subIdx].type === 'rest') wholeCellToRests();
+      else cell.cells[addr.subIdx] = { type: 'rest', duration: cell.unit };
+      return true;
+    }
+    if (cell.type === 'rest') return false;
+    wholeCellToRests();
+    return true;
+  }
+  // An eighth- or quarter-note triplet (`duration` 8 or 16: the group's
+  // length) in place of whatever starts at cell `idx`.
+  function makeTriplet(el, idx, duration) {
+    if ((duration !== 8 && duration !== 16) || idx >= el.cells.length || duration > roomInBar(el, idx)) return false;
+    el.cells = rebuildRhythmCells(el.cells, idx, makeTupletCell(duration / 2), staffBarUnits(el));
+    return true;
+  }
+  // Ties the note at `addr` to the next one, which takes its pitch (a tie
+  // joins two of the same note); a second time unties them.
+  function toggleTie(el, addr) {
+    if (addr.subIdx != null || !canTieCell(el.cells, addr.idx)) return false;
+    const cell = el.cells[addr.idx];
+    toggleCellTie(cell);
+    if (cell.tie) {
+      const next = el.cells[addr.idx + 1];
+      next.pitch = cell.pitch;
+      next.accidental = cell.accidental || null;
+    }
+    return true;
+  }
+  function toggleArticulation(el, addr, kind) {
+    const cell = cellAt(el, addr);
+    if (!cell || cell.type !== 'note') return false;
+    toggleCellArticulation(cell, kind);
+    return true;
+  }
+
+  // Note input: writes a note or rest (`spec`: { type, duration, pitch,
+  // accidental }, pitch as stored) at `cursor` over whatever is there, and
+  // returns where it went (`written`) and the place after it (`next`), or
+  // null when there's no room. As in MuseScore, a note running past the
+  // barline carries on in the next bar as tied notes, and writing past the
+  // last bar adds one (up to STAFF_MAX_BARS; past that it's cut short).
+  // Inside a tuplet it fills the slot, whose length is fixed.
+  function writeAtCursor(el, cursor, spec) {
+    const fill = (cell, type) => {
+      if (type === 'note') { cell.pitch = spec.pitch; cell.accidental = spec.accidental; }
+      return cell;
+    };
+    if (cursor.subIdx != null) {
+      const tuplet = el.cells[cursor.idx];
+      tuplet.cells[cursor.subIdx] = fill({ type: spec.type, duration: tuplet.unit }, spec.type);
+      const last = cursor.subIdx === tuplet.cells.length - 1;
+      return { written: { ...cursor }, next: last ? { idx: cursor.idx + 1, subIdx: null } : { idx: cursor.idx, subIdx: cursor.subIdx + 1 } };
+    }
+    const values = spec.type === 'rest' ? REST_DURATIONS : NOTE_DURATIONS;
+    const barUnits = staffBarUnits(el);
+    let idx = cursor.idx, remaining = spec.duration, first = null;
+    while (remaining > 0) {
+      if (idx >= el.cells.length) {
+        if (staffBarCount(el) >= STAFF_MAX_BARS) break;
+        setStaffBars(el, staffBarCount(el) + 1);
+      }
+      let chunk = Math.min(remaining, roomInBar(el, idx));
+      remaining -= chunk;
+      while (chunk > 0) {
+        const d = values.find(v => v <= chunk);
+        el.cells = rebuildRhythmCells(el.cells, idx, fill({ type: spec.type, duration: d }, spec.type), barUnits);
+        if (first == null) first = idx;
+        else if (spec.type === 'note') el.cells[idx - 1].tie = true;
+        chunk -= d;
+        idx++;
+      }
+    }
+    return first == null ? null : { written: { idx: first, subIdx: null }, next: { idx, subIdx: null } };
+  }
+
   function reorderElement(el, toFront) {
     model.elements = model.elements.filter(e => e !== el);
     if (toFront) model.elements.push(el); else model.elements.unshift(el);
@@ -3279,6 +3380,9 @@
       actionsSection(),
     ],
     notestaff: el => [
+      { fields: [
+        { kind: 'buttons', items: [{ label: 'Edit notes…', title: 'Open the staff editor (Enter, or click a note on the page)', own: true, onClick: e => openStaffEditor(e) }] },
+      ] },
       { title: 'Bars', fields: [
         numField('Bars', 'bars', { stepper: true, integer: true, min: 1, max: STAFF_MAX_BARS, get: e => staffBarCount(e), set: setStaffBars, structural: true }),
       ] },
@@ -3297,7 +3401,6 @@
         { label: '− octave', onClick: e => transposeStaff(e, -7) },
         { label: '+ octave', onClick: e => transposeStaff(e, 7) },
       ] }] },
-      { fields: [{ kind: 'noteMenu', staff: true }] },
       geometrySection(el),
       actionsSection(),
     ],
@@ -3521,14 +3624,13 @@
   }
 
   // The list of items the floating note menu shows (see NOTE_MENU_ITEMS).
-  function fieldNoteMenu(el, f) {
+  function fieldNoteMenu() {
     const det = mk('details', 'eb-details');
     det.open = noteMenuSectionOpen;
     det.addEventListener('toggle', () => { noteMenuSectionOpen = det.open; });
     det.appendChild(mk('summary', null, 'Floating note menu'));
-    det.appendChild(mk('p', 'eb-hint', `Choose what the menu offers when you click a note. Applies to all rhythm bars and note staves.`));
+    det.appendChild(mk('p', 'eb-hint', `Choose what the menu offers when you click a note. Applies to all rhythm bars.`));
     NOTE_MENU_GROUPS.forEach(group => {
-      if (group.id === 'accidental' && !f.staff) return;
       const items = NOTE_MENU_ITEMS.filter(i => i.group === group.id);
       const box = mk('div', 'eb-check-group');
       box.appendChild(mk('div', 'eb-check-group-title', group.label));
@@ -3729,6 +3831,7 @@
 
   wireMarquee();
   document.addEventListener('keydown', e => {
+    if (staffEditor.el) return; // it takes the keys while it's open
     const t = e.target;
     const typing = !!(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT'));
     // Escape leaves a field first; pressed on the page it drops the selection.
@@ -3739,6 +3842,13 @@
     }
     // The rest are left alone while typing in any field.
     if (typing || !selectedIds.size) return;
+    // Enter or N on a single selected note staff opens it in the staff editor.
+    const only = selectedIds.size === 1 ? model.elements.find(el => selectedIds.has(el.id)) : null;
+    if (only && only.type === 'notestaff' && plain(e) && (e.key === 'Enter' || keyIs(e, 'n')) && t.tagName !== 'BUTTON') {
+      e.preventDefault();
+      openStaffEditor(only);
+      return;
+    }
     // Cmd/Ctrl+D duplicates the selection (and keeps the browser from
     // bookmarking the page).
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
@@ -3763,6 +3873,7 @@
   pageWrap.addEventListener('drop', e => {
     e.preventDefault();
     pageWrap.classList.remove('drag-over');
+    if (isViewer()) return;
     let payload;
     try { payload = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (err) { return; }
     if (!payload || !payload.type) return;
@@ -3896,30 +4007,26 @@
   wireTimeSigInput('rhythm-time-den', v => { builderDenominator = v; });
 
   /* ---------- note staff builder ---------- */
-  // Same idea as the rhythm bar builder above, plus clef and key-signature
-  // controls. Unlike the rhythm builder (click-only, since a rhythm cell has
-  // no drag of its own), this preview is fully interactive -- dragging a
-  // note re-pitches it and clicking one opens the accidental menu, exactly
-  // like the on-page version -- since there's no reason to restrict that
-  // here.
+  // Sets up an empty staff (time, clef, bars) to drag onto the page; the
+  // preview only shows it. The notes are written in the staff editor, which
+  // opens as soon as the staff is dropped (see addElement).
   let staffBuilderNumerator = 4, staffBuilderDenominator = 4;
   let staffBuilderClef = 'treble';
   let staffBuilderBars = 1;
   // The key isn't set here: a new staff starts on the sheet's key (see
   // keySignatureForKey) and is changed afterwards in its edit box.
-  let staffBuilderCells = defaultBeatCells(staffBuilderNumerator, staffBuilderDenominator, staffBuilderBars);
-  const STAFF_BUILDER_H = 40;
+  const STAFF_BUILDER_H = 24;
   const STAFF_BUILDER_VIEW_W = 300; // the whole drawing is this wide, whatever the bars or time signature
-  const STAFF_BUILDER_VIEW_H = 120;
-  function resetStaffBuilderCells() {
-    staffBuilderCells = defaultBeatCells(staffBuilderNumerator, staffBuilderDenominator, staffBuilderBars);
+  const STAFF_BUILDER_VIEW_H = 68; // as tall as the rhythm builder's preview
+  function staffBuilderCells() {
+    return defaultBeatCells(staffBuilderNumerator, staffBuilderDenominator, staffBuilderBars);
   }
 
   function renderStaffBuilderSvg() {
     const svg = document.getElementById('notestaff-builder-svg');
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     const builderEl = {
-      x: 10, y: 40, h: STAFF_BUILDER_H, w: 0, staged: true,
+      x: 10, y: (STAFF_BUILDER_VIEW_H - STAFF_BUILDER_H) / 2, h: STAFF_BUILDER_H, w: 0, staged: true,
       clef: staffBuilderClef, keySignature: keySignatureForKey(model.key),
       numerator: staffBuilderNumerator, denominator: staffBuilderDenominator, bars: staffBuilderBars,
     };
@@ -3931,27 +4038,9 @@
     drawStaffLines(svg, builderEl);
     drawClef(svg, builderEl);
     drawKeySignature(svg, builderEl);
-    drawStaffBarlines(svg, builderEl, builderEl.x + leadW, builderW, staffBuilderCells);
-    renderStaffCells(svg, staffBuilderCells, builderEl.x + leadW, builderEl.y, builderW, builderEl, {
-      onCellMenu: (idx, clientX, clientY, subIdx) => {
-        if (subIdx != null) {
-          openTupletStaffSlotMenu(clientX, clientY, staffBuilderCells[idx], subIdx, renderStaffBuilderSvg,
-            () => { staffBuilderCells = rebuildRhythmCells(staffBuilderCells, idx, { type: 'rest', duration: staffBuilderCells[idx].duration }); renderStaffBuilderSvg(); },
-            builderEl);
-          return;
-        }
-        openStaffMenu(clientX, clientY, staffBuilderCells, idx,
-          newCells => { staffBuilderCells = newCells; renderStaffBuilderSvg(); },
-          renderStaffBuilderSvg, builderEl); // `staged`: stays in the sheet's own key, but its bars are kept
-      },
-      onNoteDrag: (idx, ddy, startPitch, subIdx) => {
-        const deltaSteps = Math.round(-ddy / (STAFF_BUILDER_H / 8));
-        const pitch = clamp(startPitch + deltaSteps, STAFF_PITCH_MIN, STAFF_PITCH_MAX);
-        if (subIdx != null) { staffBuilderCells[idx].cells[subIdx].pitch = pitch; renderStaffBuilderSvg(); return; }
-        staffBuilderCells[idx].pitch = pitch;
-        renderStaffBuilderSvg();
-      },
-    });
+    const cells = staffBuilderCells();
+    drawStaffBarlines(svg, builderEl, builderEl.x + leadW, builderW, cells);
+    renderStaffCells(svg, cells, builderEl.x + leadW, builderEl.y, builderW, builderEl);
 
     svg.setAttribute('viewBox', `0 0 ${STAFF_BUILDER_VIEW_W} ${STAFF_BUILDER_VIEW_H}`);
     svg.setAttribute('width', STAFF_BUILDER_VIEW_W);
@@ -3962,20 +4051,15 @@
 
   document.getElementById('staff-builder-drag').addEventListener('dragstart', e => {
     startPlacementDrag(e, {
-      type: 'notestaff', cells: staffBuilderCells, numerator: staffBuilderNumerator, denominator: staffBuilderDenominator,
+      type: 'notestaff', cells: staffBuilderCells(), numerator: staffBuilderNumerator, denominator: staffBuilderDenominator,
       bars: staffBuilderBars, clef: staffBuilderClef, keySignature: keySignatureForKey(model.key),
     });
-  });
-  document.getElementById('staff-builder-reset').addEventListener('click', () => {
-    resetStaffBuilderCells();
-    renderStaffBuilderSvg();
   });
   function wireStaffTimeSigInput(id, apply) {
     document.getElementById(id).addEventListener('change', e => {
       const v = clamp(parseInt(e.target.value, 10) || 4, 1, 32);
       e.target.value = v;
       apply(v);
-      resetStaffBuilderCells();
       renderStaffBuilderSvg();
     });
   }
@@ -3984,7 +4068,6 @@
   document.getElementById('staff-bars').addEventListener('change', e => {
     staffBuilderBars = clamp(parseInt(e.target.value, 10) || 1, 1, STAFF_MAX_BARS);
     e.target.value = staffBuilderBars;
-    resetStaffBuilderCells();
     renderStaffBuilderSvg();
   });
   document.getElementById('staff-clef').addEventListener('change', e => {
@@ -3992,9 +4075,451 @@
     renderStaffBuilderSvg();
   });
 
+  /* ---------- note staff editor (modal) ---------- */
+  // Where a staff's notes are written, MuseScore style (the keys are in
+  // STAFF_EDITOR_BINDINGS). Edits land on the staff straight away, so the page
+  // behind shows them; Done keeps them, Cancel puts the staff back as it was
+  // when the editor opened, and undo/redo step through snapshots in between.
+  // Two modes, as in MuseScore: normal mode works on the selected note or
+  // rest; in note-input mode (N) there's a cursor, and a letter writes a note
+  // of the current duration there and moves on. In both, `sel` is the cell
+  // shown selected, which the pitch/accidental/articulation keys act on (in
+  // note input, the note just written or the one under the cursor).
+  const staffEditorEl = document.getElementById('staff-editor');
+  const staffEditorSvg = document.getElementById('staff-editor-svg');
+  const staffEditorHelp = document.getElementById('staff-editor-help');
+  const staffEditor = {
+    el: null, mode: 'normal', sel: null, cursor: null,
+    duration: 8, // note input's current duration; kept from one opening to the next
+    undo: [], redo: [], opening: null, message: '',
+  };
+  const STAFF_EDITOR_H = 56; // the staff's height in the editor (a placed one is about 30)
+  const STAFF_EDITOR_VIEW_W = 1000;
+  const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform);
+  const MOD_LABEL = IS_MAC ? '⌘' : 'Ctrl+';
+
+  function staffSnapshot(el) { return JSON.stringify({ cells: el.cells, bars: el.bars, w: el.w }); }
+  function restoreStaff(el, snap) {
+    const s = JSON.parse(snap);
+    el.cells = s.cells; el.bars = s.bars; el.w = s.w;
+  }
+  // The nearest real place to `a` after the cells changed under it; with
+  // `allowEnd` (the input cursor) also the place after the last cell.
+  function clampAddr(el, a, allowEnd) {
+    if (allowEnd && a.idx >= el.cells.length) return { idx: el.cells.length, subIdx: null };
+    const idx = clamp(a.idx, 0, el.cells.length - 1);
+    const c = el.cells[idx];
+    if (c.type !== 'tuplet') return { idx, subIdx: null };
+    return { idx, subIdx: clamp(a.subIdx != null ? a.subIdx : 0, 0, c.cells.length - 1) };
+  }
+
+  function openStaffEditor(el, at = {}, opts = {}) {
+    if (staffEditor.el) return;
+    closeRhythmMenu();
+    selectOnly(el.id);
+    Object.assign(staffEditor, { el, mode: opts.input ? 'input' : 'normal', undo: [], redo: [], opening: staffSnapshot(el), message: '' });
+    staffEditor.sel = clampAddr(el, { idx: at.idx || 0, subIdx: at.subIdx != null ? at.subIdx : null });
+    staffEditor.cursor = staffEditor.sel;
+    staffEditorEl.hidden = false;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); // keys go to the editor, not a field behind it
+    renderSvg();
+    renderStaffEditor();
+  }
+  // `keep` false (Cancel) puts the staff back as it was when the editor opened.
+  function closeStaffEditor(keep) {
+    const { el, opening } = staffEditor;
+    if (!el) return;
+    if (!keep && staffSnapshot(el) !== opening) { restoreStaff(el, opening); markDirty(); }
+    staffEditor.el = null;
+    staffEditorEl.hidden = true;
+    renderSvg();
+  }
+
+  // Runs one edit as an undo step. `fn(el)` may return a message to show
+  // (why nothing happened); an edit that changes nothing isn't recorded.
+  function editStaff(fn) {
+    const { el } = staffEditor;
+    const before = staffSnapshot(el);
+    const msg = fn(el);
+    staffEditor.message = typeof msg === 'string' ? msg : '';
+    if (staffSnapshot(el) !== before) {
+      staffEditor.undo.push(before);
+      staffEditor.redo = [];
+      applySize(el, el.w, null); // more or shorter notes change how narrow the staff can be
+      markDirty();
+      renderSvg();
+    }
+    staffEditor.sel = clampAddr(el, staffEditor.sel);
+    staffEditor.cursor = clampAddr(el, staffEditor.cursor, true);
+    renderStaffEditor();
+  }
+  function undoStaffEdit(dir) {
+    const { el } = staffEditor;
+    const from = dir < 0 ? staffEditor.undo : staffEditor.redo;
+    const to = dir < 0 ? staffEditor.redo : staffEditor.undo;
+    if (!from.length) return;
+    to.push(staffSnapshot(el));
+    restoreStaff(el, from.pop());
+    staffEditor.sel = clampAddr(el, staffEditor.sel);
+    staffEditor.cursor = clampAddr(el, staffEditor.cursor, true);
+    staffEditor.message = '';
+    markDirty();
+    renderSvg();
+    renderStaffEditor();
+  }
+
+  /* what the keys and toolbar buttons do */
+  const isInput = () => staffEditor.mode === 'input';
+  // An edit of the selected cell: `fn(el, sel)` returns false when it can't
+  // apply, and `why` is shown then.
+  function editSelected(fn, why) {
+    editStaff(el => (fn(el, staffEditor.sel) === false ? why : undefined));
+  }
+  // The duration the toolbar shows as current: note input's, else the selection's.
+  function shownDuration() {
+    if (isInput()) return staffEditor.duration;
+    const c = cellAt(staffEditor.el, staffEditor.sel);
+    return c && staffEditor.sel.subIdx == null ? c.duration : null;
+  }
+  function selectedNote() {
+    const c = staffEditor.el && cellAt(staffEditor.el, staffEditor.sel);
+    return c && c.type === 'note' ? c : null;
+  }
+  function toggleInputMode() {
+    staffEditor.mode = isInput() ? 'normal' : 'input';
+    if (isInput()) staffEditor.cursor = staffEditor.sel;
+    staffEditor.message = '';
+    renderStaffEditor();
+  }
+  // Note input: sets the duration for what's typed next. Normal mode: the
+  // selected cell gets it.
+  function changeDuration(next, why) {
+    if (isInput()) {
+      if (next) staffEditor.duration = next;
+      staffEditor.message = next ? '' : why;
+      renderStaffEditor();
+      return;
+    }
+    editSelected((el, sel) => !!next && setCellDuration(el, sel, next), why);
+  }
+  const NO_ROOM = "That length doesn't fit before the barline (a triplet's notes can't change length)";
+  function pickDuration(d) { changeDuration(d, NO_ROOM); }
+  function durationStep(fn, why) { const d = shownDuration(); changeDuration(d ? fn(d) : null, why); }
+
+  // Note input: writes a note (at `shownPitch`, as drawn) or a rest at the cursor.
+  function writeAt(type, pitchFor) {
+    editStaff(el => {
+      const cursor = staffEditor.cursor;
+      const spec = { type, duration: staffEditor.duration };
+      if (type === 'note') Object.assign(spec, storedStaffNote(el, pitchFor(el, cursor), null));
+      const res = writeAtCursor(el, cursor, spec);
+      if (!res) return `The staff is full (${STAFF_MAX_BARS} bars)`;
+      staffEditor.sel = res.written;
+      staffEditor.cursor = res.next;
+      return undefined;
+    });
+  }
+  function typeLetter(letter) {
+    if (isInput()) writeAt('note', (el, cursor) => pitchForLetter(letter, el.clef || 'treble', pitchBefore(el, cursor)));
+    else editSelected((el, sel) => setNoteLetter(el, sel, letter), "A triplet's slots are picked one at a time");
+  }
+  function restAction() {
+    if (isInput()) writeAt('rest');
+    else editSelected(toRest, 'That is a rest already');
+  }
+  function deleteAction() {
+    if (!isInput()) { editSelected(toRest, 'That is a rest already'); return; }
+    // Note input: steps back over the last cell and makes it a rest.
+    const list = staffAddresses(staffEditor.el);
+    const at = list.findIndex(a => sameAddr(a, staffEditor.cursor));
+    const prev = list[(at < 0 ? list.length : at) - 1];
+    if (!prev) return;
+    staffEditor.cursor = prev;
+    staffEditor.sel = prev;
+    editSelected(toRest);
+  }
+  function tripletAction() {
+    const why = 'A triplet is made from a quarter (eighth-note triplet) or a half (quarter-note triplet) that fits in the bar';
+    if (isInput()) {
+      editStaff(el => {
+        const idx = staffEditor.cursor.idx;
+        if (staffEditor.cursor.subIdx != null || !makeTriplet(el, idx, staffEditor.duration)) return why;
+        staffEditor.cursor = staffEditor.sel = { idx, subIdx: 0 };
+        return undefined;
+      });
+      return;
+    }
+    editStaff(el => {
+      const { idx, subIdx } = staffEditor.sel;
+      if (subIdx != null || !makeTriplet(el, idx, el.cells[idx].duration)) return why;
+      staffEditor.sel = { idx, subIdx: 0 };
+      return undefined;
+    });
+  }
+  function addBarAction() {
+    editStaff(el => {
+      if (staffBarCount(el) >= STAFF_MAX_BARS) return `A staff has at most ${STAFF_MAX_BARS} bars`;
+      setStaffBars(el, staffBarCount(el) + 1);
+      return undefined;
+    });
+  }
+  // ← / → (by cell, or with `byBar` to the first cell of the previous/next
+  // bar): moves the selection, or in note input the cursor, which can also
+  // sit after the last cell.
+  function moveSelection(dir, byBar) {
+    const el = staffEditor.el;
+    const list = staffAddresses(el);
+    if (isInput()) list.push({ idx: el.cells.length, subIdx: null });
+    const from = isInput() ? staffEditor.cursor : staffEditor.sel;
+    let i = Math.max(0, list.findIndex(a => sameAddr(a, from)));
+    if (byBar) {
+      const barUnits = staffBarUnits(el);
+      const barOf = a => Math.floor(cellStart(el.cells, a.idx) / barUnits);
+      const want = barOf(from) + dir;
+      const hit = list.findIndex(a => (dir > 0 ? barOf(a) >= want : barOf(a) === want));
+      i = hit >= 0 ? hit : (dir > 0 ? list.length - 1 : 0);
+    } else {
+      i = clamp(i + dir, 0, list.length - 1);
+    }
+    const to = list[i];
+    if (isInput()) {
+      staffEditor.cursor = to;
+      if (to.idx < el.cells.length) staffEditor.sel = to;
+    } else {
+      staffEditor.sel = to;
+    }
+    staffEditor.message = '';
+    renderStaffEditor();
+  }
+  function pitchAction(fn) { editSelected(fn, 'Select a note first (it stays within the staff)'); }
+
+  // Every key and toolbar button, in one list, so the shortcut sheet can't
+  // drift from what the keys do. The first binding whose `match` fits a
+  // keydown runs; one with a `glyph` is also a toolbar button (`group` sets
+  // where the separators go). Keys are matched on `e.key`, so the symbol
+  // keys work on any keyboard layout.
+  const isMod = e => (IS_MAC ? e.metaKey : e.ctrlKey);
+  const plain = e => !e.metaKey && !e.ctrlKey && !e.altKey;
+  const keyIs = (e, k) => e.key.toLowerCase() === k;
+  const arrowDir = (e, a, b) => (e.key === a ? -1 : e.key === b ? 1 : 0);
+  const STAFF_EDITOR_BINDINGS = [
+    { keys: 'N', label: 'Note input on/off', group: 'mode', glyph: 'N',
+      match: e => plain(e) && !e.shiftKey && keyIs(e, 'n'), run: toggleInputMode, isOn: isInput },
+    ...[[2, '3', '16th', '16th'], [4, '4', '8th', '8th'], [8, '5', 'Quarter', 'quarter'], [16, '6', 'Half', 'half'], [32, '7', 'Whole', 'whole']]
+      .map(([d, key, label, code]) => ({
+        keys: key, label, group: 'duration', glyph: NOTE_CODES[code], musical: true,
+        match: e => plain(e) && e.key === key, run: () => pickDuration(d),
+        isOn: () => { const cur = shownDuration(); return cur === d || UNDOTTED[cur] === d; },
+      })),
+    { keys: '.', label: 'Dot', group: 'duration', glyph: AUG_DOT, musical: true,
+      match: e => plain(e) && e.key === '.', run: () => durationStep(dotToggled, "That can't be dotted here"),
+      isOn: () => !!UNDOTTED[shownDuration()] },
+    { keys: '0', label: 'Rest', group: 'duration', glyph: REST_CODES.quarter, musical: true,
+      match: e => plain(e) && e.key === '0', run: restAction },
+    ...[['+', 'Sharp', 'sharp'], ['-', 'Flat', 'flat'], ['=', 'Natural', 'natural']].map(([key, label, acc]) => ({
+      keys: key, label, group: 'accidental', glyph: ACCIDENTAL_CODES[acc], musical: true,
+      match: e => plain(e) && e.key === key,
+      run: () => pitchAction((el, sel) => toggleAccidental(el, sel, acc)),
+      isOn: () => { const n = selectedNote(); return !!n && displayedStaffNote(staffEditor.el, n).accidental === acc; },
+    })),
+    { keys: 'T', label: 'Tie to next note', group: 'mark', glyph: tieIcon,
+      match: e => plain(e) && !e.shiftKey && keyIs(e, 't'),
+      run: () => editSelected(toggleTie, 'A tie joins a note to the note right after it'),
+      isOn: () => !!staffEditor.el && staffEditor.sel.subIdx == null && isTiedToNext(staffEditor.el.cells, staffEditor.sel.idx) },
+    { keys: `${MOD_LABEL}3`, label: 'Triplet', group: 'mark', glyph: '3',
+      match: e => isMod(e) && !e.altKey && e.key === '3', run: tripletAction },
+    ...[['S', 'staccato', 'Staccato'], ['V', 'accent', 'Accent'], ['F', 'fermata', 'Fermata']].map(([key, kind, label]) => ({
+      keys: `Shift+${key}`, label, group: 'articulation', glyph: () => articulationIcon(kind),
+      match: e => plain(e) && e.shiftKey && keyIs(e, key.toLowerCase()),
+      run: () => editSelected((el, sel) => toggleArticulation(el, sel, kind), 'Select a note first'),
+      isOn: () => { const n = selectedNote(); return !!n && cellHasArticulation(n, kind); },
+    })),
+    { keys: `${MOD_LABEL}Z`, label: 'Undo', group: 'history', glyph: '↶',
+      match: e => isMod(e) && !e.shiftKey && keyIs(e, 'z'), run: () => undoStaffEdit(-1) },
+    { keys: `Shift+${MOD_LABEL}Z`, label: 'Redo', group: 'history', glyph: '↷',
+      match: e => isMod(e) && e.shiftKey && keyIs(e, 'z'), run: () => undoStaffEdit(1) },
+    { keys: '?', label: 'Show/hide the shortcuts', group: 'help', glyph: '?',
+      match: e => !e.metaKey && !e.ctrlKey && e.key === '?', run: () => { staffEditorHelp.hidden = !staffEditorHelp.hidden; } },
+    // Keys only.
+    { keys: 'A–G', label: 'Note input: write that note (nearest the one before). Else: change the selected note to it',
+      match: e => plain(e) && !e.shiftKey && /^[a-g]$/i.test(e.key), run: e => typeLetter(e.key.toUpperCase()) },
+    { keys: '↑ ↓', label: 'Up/down a semitone',
+      match: e => plain(e) && !e.shiftKey && arrowDir(e, 'ArrowDown', 'ArrowUp'),
+      run: e => pitchAction((el, sel) => stepSemitone(el, sel, arrowDir(e, 'ArrowDown', 'ArrowUp'))) },
+    { keys: 'Alt+Shift+↑ ↓', label: 'Up/down one staff step (in the key)',
+      match: e => e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && arrowDir(e, 'ArrowDown', 'ArrowUp'),
+      run: e => pitchAction((el, sel) => stepStaff(el, sel, arrowDir(e, 'ArrowDown', 'ArrowUp'))) },
+    { keys: `${MOD_LABEL}↑ ↓`, label: 'Up/down an octave',
+      match: e => isMod(e) && arrowDir(e, 'ArrowDown', 'ArrowUp'),
+      run: e => pitchAction((el, sel) => stepStaff(el, sel, 7 * arrowDir(e, 'ArrowDown', 'ArrowUp'))) },
+    { keys: '← →', label: 'Previous/next note (in note input: move the cursor)',
+      match: e => plain(e) && !e.shiftKey && arrowDir(e, 'ArrowLeft', 'ArrowRight'),
+      run: e => moveSelection(arrowDir(e, 'ArrowLeft', 'ArrowRight'), false) },
+    { keys: `${MOD_LABEL}← →`, label: 'Previous/next bar',
+      match: e => isMod(e) && arrowDir(e, 'ArrowLeft', 'ArrowRight'),
+      run: e => moveSelection(arrowDir(e, 'ArrowLeft', 'ArrowRight'), true) },
+    { keys: 'Q W', label: 'Halve/double the length',
+      match: e => plain(e) && !e.shiftKey && (keyIs(e, 'q') || keyIs(e, 'w')),
+      run: e => (keyIs(e, 'q') ? durationStep(halved, "That can't be halved") : durationStep(doubled, NO_ROOM)) },
+    { keys: 'Delete', label: 'Make it a rest (on a triplet rest: remove the triplet). In note input: the one before the cursor',
+      match: e => !e.metaKey && !e.ctrlKey && (e.key === 'Delete' || e.key === 'Backspace'), run: deleteAction },
+    { keys: `${MOD_LABEL}B`, label: 'Add a bar', match: e => isMod(e) && keyIs(e, 'b'), run: addBarAction },
+    { keys: 'Esc', label: 'Leave note input; else close (keeps the changes)',
+      match: e => e.key === 'Escape', run: () => (isInput() ? toggleInputMode() : closeStaffEditor(true)) },
+    { keys: `${MOD_LABEL}Enter`, label: 'Done', match: e => isMod(e) && e.key === 'Enter', run: () => closeStaffEditor(true) },
+  ];
+
+  // Captures every key while the editor is open, so nothing reaches the page
+  // behind (arrows would nudge the staff, Delete would remove it).
+  document.addEventListener('keydown', e => {
+    if (!staffEditor.el) return;
+    const binding = STAFF_EDITOR_BINDINGS.find(b => b.match(e));
+    if (!binding) return;
+    e.preventDefault();
+    e.stopPropagation();
+    binding.run(e);
+  }, true);
+
+  // The toolbar and the shortcut sheet, built once from the bindings.
+  const staffEditorButtons = [];
+  (function buildStaffEditorChrome() {
+    const bar = document.getElementById('staff-editor-toolbar');
+    let group = null, box = null;
+    STAFF_EDITOR_BINDINGS.filter(b => b.glyph).forEach(b => {
+      if (b.group !== group) {
+        group = b.group;
+        box = mk('div', 'staff-editor-group');
+        bar.appendChild(box);
+      }
+      const btn = mk('button', 'staff-editor-btn');
+      btn.type = 'button';
+      btn.title = `${b.label} (${b.keys})`;
+      btn.setAttribute('aria-label', b.label);
+      const glyph = mk('span', b.musical ? 'staff-editor-glyph staff-editor-glyph--music' : 'staff-editor-glyph');
+      if (typeof b.glyph === 'function') glyph.appendChild(b.glyph());
+      else glyph.textContent = b.glyph;
+      btn.append(glyph, mk('span', 'staff-editor-key', b.keys));
+      btn.addEventListener('click', () => { b.run(); btn.blur(); });
+      box.appendChild(btn);
+      staffEditorButtons.push({ btn, b });
+    });
+    const list = mk('dl', 'staff-editor-help-list');
+    STAFF_EDITOR_BINDINGS.forEach(b => list.append(mk('dt', null, b.keys), mk('dd', null, b.label)));
+    staffEditorHelp.appendChild(list);
+    document.getElementById('staff-editor-done').addEventListener('click', () => closeStaffEditor(true));
+    document.getElementById('staff-editor-cancel').addEventListener('click', () => closeStaffEditor(false));
+  })();
+
+  const DURATION_NAMES = Object.fromEntries(RHYTHM_MENU_OPTIONS.filter(o => o.type === 'note').map(o => [o.duration, o.label.toLowerCase()]));
+  // "Bar 2, beat 3" for a place (the cursor after the last cell: "end").
+  function staffPlaceLabel(el, addr) {
+    if (addr.idx >= el.cells.length) return 'End of the staff';
+    const barUnits = staffBarUnits(el);
+    const pos = cellStart(el.cells, addr.idx);
+    const beat = (pos % barUnits) / barBeatUnits(el.denominator || 4) + 1;
+    const text = `Bar ${Math.floor(pos / barUnits) + 1}, beat ${Math.round(beat * 100) / 100}`;
+    return addr.subIdx != null ? `${text}, triplet note ${addr.subIdx + 1}` : text;
+  }
+
+  function renderStaffEditor() {
+    const { el } = staffEditor;
+    if (!el) return;
+    const svg = staffEditorSvg;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    // The same staff drawn big: it keeps the real one's key and transposition,
+    // so the notes read exactly as they do on the page.
+    const view = { ...el, x: 24, y: 84, h: STAFF_EDITOR_H };
+    const leadW = notestaffLeadWidth(view);
+    view.w = Math.max(STAFF_EDITOR_VIEW_W - view.x - leadW - 24, staffMinWidth(view));
+    const viewW = view.x + leadW + view.w + 24, viewH = view.y + view.h + 84;
+    svg.setAttribute('viewBox', `0 0 ${viewW} ${viewH}`);
+    svg.appendChild(svgRect(0, 0, viewW, viewH, { cls: 'staff-editor-bg' }));
+    drawStaffLines(svg, view);
+    drawClef(svg, view);
+    drawKeySignature(svg, view);
+    drawStaffBarlines(svg, view, view.x + leadW, view.w, el.cells);
+
+    const input = isInput();
+    // One undo step per drag: a drag keeps calling the callbacks of the
+    // render it started in, so this flag lives exactly one gesture.
+    let dragRecorded = false;
+    const { cellBoxes } = renderStaffCells(svg, displayedCells(el), view.x + leadW, view.y, view.w, view, {
+      selected: (idx, subIdx) => sameAddr(staffEditor.sel, { idx, subIdx }),
+      onCellClick: (idx, subIdx) => {
+        staffEditor.sel = { idx, subIdx };
+        staffEditor.message = '';
+        renderStaffEditor();
+      },
+      onNoteDrag: (idx, ddy, startPitch, subIdx) => {
+        const addr = { idx, subIdx };
+        if (!dragRecorded) { staffEditor.undo.push(staffSnapshot(el)); staffEditor.redo = []; dragRecorded = true; }
+        const pitch = clamp(startPitch + Math.round(-ddy / (view.h / 8)), STAFF_PITCH_MIN, STAFF_PITCH_MAX);
+        setChainNote(el, addr, pitch, displayedStaffNote(el, cellAt(el, addr)).accidental);
+        staffEditor.sel = addr;
+        markDirty(); renderSvg(); renderStaffEditor();
+      },
+    });
+
+    // Where a cell's note would go, horizontally: the head's spot in a plain
+    // cell (see renderStaffCells' noteCx), a slot's centre in a tuplet.
+    const boxOf = a => {
+      if (a.idx >= cellBoxes.length) return null;
+      const b = cellBoxes[a.idx];
+      return a.subIdx != null ? b.subs[a.subIdx] : b;
+    };
+    const headX = a => {
+      const b = boxOf(a);
+      if (!b) return view.x + leadW + view.w - view.h * 0.3;
+      return a.subIdx != null ? b.cx : b.x + Math.min(b.w, view.h * 0.45) / 2;
+    };
+    if (input) {
+      const cx = headX(staffEditor.cursor);
+      svg.appendChild(svgRect(cx - view.h * 0.2, view.y - view.h * 0.35, view.h * 0.4, view.h * 1.7, { cls: 'staff-editor-cursor', rx: 3 }));
+      // In note input a click on the staff writes a note there, at the pitch
+      // under the pointer (shown as a faint ghost head while hovering).
+      const capture = svgRect(view.x + leadW, view.y - view.h, view.w, view.h * 3, { cls: 'staff-editor-capture' });
+      const ghost = svgGroup({ cls: 'staff-editor-ghost' });
+      const at = ev => {
+        const { rect, scale } = svgMetricsFor(svg);
+        const x = (ev.clientX - rect.left) / scale, y = (ev.clientY - rect.top) / scale;
+        let addr = { idx: el.cells.length, subIdx: null };
+        staffAddresses(el).forEach(a => { if (x >= boxOf(a).x) addr = a; });
+        if (x < cellBoxes[0].x) addr = staffAddresses(el)[0];
+        return { addr, pitch: clamp(Math.round((view.y + view.h - y) / (view.h / 8)), STAFF_PITCH_MIN, STAFF_PITCH_MAX) };
+      };
+      capture.addEventListener('mousemove', ev => {
+        const { addr, pitch } = at(ev);
+        while (ghost.firstChild) ghost.removeChild(ghost.firstChild);
+        const cx = headX(addr), size = view.h * 0.65;
+        drawLedgerLines(ghost, view, cx, pitch, noteheadHalfW(8, size) + size * 0.1);
+        ghost.appendChild(svgText(noteheadCode(staffEditor.duration), cx, pitchToY(pitch, view), { cls: 'el-notehead-oval', anchor: 'middle', size }));
+      });
+      capture.addEventListener('mouseleave', () => { while (ghost.firstChild) ghost.removeChild(ghost.firstChild); });
+      capture.addEventListener('click', ev => {
+        const { addr, pitch } = at(ev);
+        staffEditor.cursor = addr;
+        writeAt('note', () => pitch);
+      });
+      svg.appendChild(capture);
+      svg.appendChild(ghost);
+    }
+
+    staffEditorButtons.forEach(({ btn, b }) => { if (b.isOn) btn.classList.toggle('staff-editor-btn--on', !!b.isOn()); });
+    document.getElementById('staff-editor-info').textContent =
+      `${el.clef === 'bass' ? 'Bass' : 'Treble'} clef · ${keySignatureLabel(displayedKeySignature(el))} · ${el.numerator || 4}/${el.denominator || 4} · ${staffBarCount(el)} of ${STAFF_MAX_BARS} bars`;
+    const where = staffPlaceLabel(el, input ? staffEditor.cursor : staffEditor.sel);
+    document.getElementById('staff-editor-status').textContent = input
+      ? `Note input · writing ${DURATION_NAMES[staffEditor.duration] || ''} notes · ${where}`
+      : `Normal · ${where} · N to write notes`;
+    const msg = document.getElementById('staff-editor-message');
+    msg.textContent = staffEditor.message;
+    msg.hidden = !staffEditor.message;
+  }
+
   /* ---------- transpose box ---------- */
   // Above the edit box; rebuilt whenever the transposition or the sheet's key
-  // changes. Transposing only changes the view, so nothing here marks the
+  // changes. The heading and the sheet's key field sit above it in the
+  // template, so typing a key doesn't rebuild (and unfocus) the field. Transposing only changes the view, so nothing here marks the
   // sheet as unsaved.
   const transposeBox = document.getElementById('transpose-box');
   function renderTransposeBox() {
@@ -4002,11 +4527,10 @@
     const key = parseKey(model.key);
     if (!key) t.semitones = 0;
     transposeBox.textContent = '';
-    const head = mk('div', 'eb-head');
-    head.appendChild(mk('span', 'eb-head-title', 'Transpose'));
-    transposeBox.appendChild(head);
     if (!key) {
-      transposeBox.appendChild(mk('div', 'eb-hint', 'Set the sheet’s key in the top bar to transpose.'));
+      transposeBox.appendChild(mk('div', 'eb-hint', isViewer()
+        ? 'This sheet has no key set, so it can’t be transposed.'
+        : 'Set the sheet’s key above to transpose.'));
       return;
     }
     const apply = () => { renderTransposeBox(); renderSvg(); };
@@ -4087,22 +4611,31 @@
     if (dirty) { e.preventDefault(); e.returnValue = ''; }
   });
 
-  document.getElementById('export-btn').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(model, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${(model.title || 'leadsheet').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  });
-
   document.getElementById('print-btn').addEventListener('click', () => window.print());
+  document.getElementById('viewer-print-btn').addEventListener('click', () => window.print());
+
+  // Entering the viewer (on load, or when a rotate/resize crosses the
+  // breakpoint) drops any selection and closes the editing popups; leaving it
+  // just brings the tools back.
+  function applyViewerMode() {
+    const on = isViewer();
+    document.body.classList.toggle('lead-viewer', on);
+    if (!on) return;
+    if (staffEditor.el) closeStaffEditor(true);
+    if (activeRhythmMenu) closeRhythmMenu();
+    selectedIds.clear();
+    activeSlot = null;
+    marquee = null;
+    transposeState.pickerOpen = true;
+  }
+  viewerMQ.addEventListener('change', () => { applyViewerMode(); renderTransposeBox(); renderSvg(); });
+  applyViewerMode();
 
   const confirmModal = document.getElementById('confirm-modal');
-  document.getElementById('delete-btn').addEventListener('click', () => { confirmModal.hidden = false; });
+  document.getElementById('delete-btn').addEventListener('click', () => {
+    document.getElementById('confirm-text').textContent = `Delete "${model.title.trim() || 'Untitled'}"?`;
+    confirmModal.hidden = false;
+  });
   confirmModal.addEventListener('click', e => { if (e.target === confirmModal) confirmModal.hidden = true; });
   document.getElementById('confirm-cancel').addEventListener('click', () => { confirmModal.hidden = true; });
   document.getElementById('confirm-ok').addEventListener('click', async () => {

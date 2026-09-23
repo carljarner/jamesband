@@ -109,14 +109,3 @@ def delete_leadsheet(leadsheet_id: str) -> None:
         raise KeyError(leadsheet_id)
     path.unlink()
     data_store.commit_and_push("Remove lead sheet")
-
-
-def import_leadsheet(doc: dict) -> dict:
-    title = str(doc.get("title") or "").strip()
-    if not title:
-        raise ValueError("Sheet title can't be empty.")
-    leadsheet_id = _unique_id(title, _existing_ids())
-    cleaned = _clean_doc(leadsheet_id, doc)
-    _save(cleaned)
-    data_store.commit_and_push(f"Import lead sheet '{cleaned['title']}'")
-    return cleaned
