@@ -2,3 +2,10 @@
 __pycache__/
 *.pyc
 .DS_Store
+intern/data/
+# Served by the intern app from the server now (hosting.md Part 5)
+public/repertoire.json
+public/images/dsbs_1.jpg
+public/images/video-bg.png
+public/images/koncept-bg.png
+public/images/kontakt-bg.png
