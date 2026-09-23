@@ -2597,6 +2597,1550 @@
     ]
   },
   {
+    "id": "fascination",
+    "title": "Fascination",
+    "artist": "Alphabeat",
+    "key": "A",
+    "updated_at": "2026-09-22T22:05:59.539911+00:00",
+    "elements": [
+      {
+        "id": "el-mud7nrg8-1",
+        "type": "title",
+        "x": 37,
+        "y": 81.8515625,
+        "text": "Intro",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7nu53-3",
+        "type": "text",
+        "x": 110,
+        "y": 86.8515625,
+        "text": "(4 takter trommer)",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mud7nzok-5",
+        "type": "title",
+        "x": 37,
+        "y": 137.8515625,
+        "text": "Vers",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7ochp-7",
+        "type": "row",
+        "x": 50,
+        "y": 182.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 2,
+        "chords": [
+          "D/a",
+          "A",
+          "A",
+          "",
+          "D/a",
+          "A",
+          "A",
+          "",
+          "F#m",
+          "E",
+          "E",
+          "",
+          "D",
+          "D",
+          "D",
+          ""
+        ],
+        "repeatEnd": true,
+        "repeatStart": true
+      },
+      {
+        "id": "el-mud7p9t7-9",
+        "type": "text",
+        "x": 683,
+        "y": 156.3515625,
+        "text": "x2",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mud7pddf-b",
+        "type": "title",
+        "x": 36,
+        "y": 223.3515625,
+        "text": "Bro",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7pi9u-d",
+        "type": "row",
+        "x": 49,
+        "y": 269.3515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 2,
+        "chords": [
+          "C#m",
+          "D",
+          "D",
+          "",
+          "E",
+          "F#m",
+          "F#m",
+          "",
+          "Bm",
+          "",
+          "r",
+          "E",
+          "",
+          "r"
+        ],
+        "repeatEnd": true,
+        "repeatStart": true,
+        "chordCounts": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          2,
+          1
+        ]
+      },
+      {
+        "id": "el-mud7rbsl-f",
+        "type": "row",
+        "x": 622,
+        "y": 321.3515625,
+        "w": 82,
+        "h": 27,
+        "barCount": 1,
+        "chordsPerBar": 4,
+        "chords": [
+          "E",
+          "D",
+          "",
+          ""
+        ]
+      },
+      {
+        "id": "el-mud7rvuu-h",
+        "type": "rhythmbar",
+        "x": 626,
+        "y": 366.3515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud7s7te-j",
+        "type": "title",
+        "x": 28,
+        "y": 355.3515625,
+        "text": "Omkv\u00e6d",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7sd5j-m",
+        "type": "volta",
+        "x": 623,
+        "y": 251.3515625,
+        "w": 50,
+        "h": 14,
+        "text": "1.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mud7sf5r-o",
+        "type": "text",
+        "x": 681,
+        "y": 246.3515625,
+        "text": "x2",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mud7si3b-q",
+        "type": "volta",
+        "x": 619,
+        "y": 302.3515625,
+        "w": 50,
+        "h": 14,
+        "text": "2.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mud7sulr-s",
+        "type": "row",
+        "x": 47,
+        "y": 400.3515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "E",
+          "r",
+          "D/f#",
+          "D",
+          "E",
+          "R",
+          "D/f#",
+          "D"
+        ],
+        "repeatEnd": true,
+        "repeatStart": true
+      },
+      {
+        "id": "el-mud7thva-u",
+        "type": "volta",
+        "x": 375,
+        "y": 377.3515625,
+        "w": 50,
+        "h": 14,
+        "text": "1.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mud7tv5i-w",
+        "type": "row",
+        "x": 374,
+        "y": 446.3515625,
+        "w": 164,
+        "h": 27,
+        "barCount": 2,
+        "chordsPerBar": 1,
+        "chords": [
+          "E",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        "chordCounts": [
+          4,
+          1
+        ]
+      },
+      {
+        "id": "el-mud7uj18-y",
+        "type": "title",
+        "x": 31,
+        "y": 468.3515625,
+        "text": "Link",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7un8l-10",
+        "type": "text",
+        "x": 97,
+        "y": 472.3515625,
+        "text": "(2 takter guitar)",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mud7usuh-12",
+        "type": "title",
+        "x": 32,
+        "y": 517.3515625,
+        "text": "Vers",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7uzkj-13",
+        "type": "title",
+        "x": 33,
+        "y": 564.3515625,
+        "text": "Bro",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7uzkk-14",
+        "type": "row",
+        "x": 42,
+        "y": 609.3515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 2,
+        "chords": [
+          "C#m",
+          "D",
+          "D",
+          "",
+          "E",
+          "F#m",
+          "F#m",
+          "",
+          "Bm",
+          "",
+          "r",
+          "E",
+          ""
+        ],
+        "repeatEnd": false,
+        "repeatStart": false,
+        "chordCounts": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          2,
+          0
+        ]
+      },
+      {
+        "id": "el-mud7w8d5-1e",
+        "type": "title",
+        "x": 31,
+        "y": 652.3515625,
+        "text": "Omkv\u00e6d",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7wx2r-1g",
+        "type": "rhythmbar",
+        "x": 621,
+        "y": 627.3515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud7x78u-1i",
+        "type": "title",
+        "x": 30,
+        "y": 701.3515625,
+        "text": "C",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7xdgh-1k",
+        "type": "row",
+        "x": 40,
+        "y": 749.3515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 2,
+        "chords": [
+          "F#m",
+          "",
+          "D/f#",
+          "",
+          "E/g#",
+          "",
+          "A",
+          "",
+          "D",
+          "",
+          "D",
+          "E",
+          "D",
+          "",
+          "E",
+          ""
+        ],
+        "repeatEnd": true,
+        "repeatStart": true
+      },
+      {
+        "id": "el-mud7yf34-1m",
+        "type": "volta",
+        "x": 613,
+        "y": 729.3515625,
+        "w": 50,
+        "h": 14,
+        "text": "1, 2.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mud7ykfp-1o",
+        "type": "row",
+        "x": 613,
+        "y": 801.3515625,
+        "w": 82,
+        "h": 27,
+        "barCount": 1,
+        "chordsPerBar": 1,
+        "chords": [
+          ""
+        ]
+      },
+      {
+        "id": "el-mud7yp2n-1p",
+        "type": "rhythmbar",
+        "x": 618,
+        "y": 819.3515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud7yy57-1r",
+        "type": "volta",
+        "x": 613,
+        "y": 783.3515625,
+        "w": 50,
+        "h": 14,
+        "text": "3.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mud7z6h8-1t",
+        "type": "text",
+        "x": 675,
+        "y": 726.3515625,
+        "text": "x3",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mud7zhcd-1v",
+        "type": "title",
+        "x": 31,
+        "y": 823.3515625,
+        "text": "Omkv\u00e6d",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7znxg-1w",
+        "type": "row",
+        "x": 40,
+        "y": 867.3515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "-",
+          "-",
+          "D/f#",
+          "D",
+          "E",
+          "R",
+          "D/f#",
+          "D"
+        ],
+        "repeatEnd": false,
+        "repeatStart": false
+      },
+      {
+        "id": "el-mud8071e-1x",
+        "type": "row",
+        "x": 40,
+        "y": 911.3515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "E",
+          "r",
+          "D/f#",
+          "D",
+          "E",
+          "R",
+          "D/f#",
+          ""
+        ],
+        "repeatEnd": false,
+        "repeatStart": false
+      },
+      {
+        "id": "el-mud80jvv-1y",
+        "type": "rhythmbar",
+        "x": 619,
+        "y": 927.3515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud80ojj-20",
+        "type": "title",
+        "x": 32,
+        "y": 953.3515625,
+        "text": "Outro",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud80z5s-21",
+        "type": "row",
+        "x": 38,
+        "y": 998.3515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "E",
+          "r",
+          "D/f#",
+          "D",
+          "E",
+          "R",
+          "D/f#",
+          ""
+        ],
+        "repeatEnd": true,
+        "repeatStart": true
+      },
+      {
+        "id": "el-mud815ok-22",
+        "type": "rhythmbar",
+        "x": 615,
+        "y": 1015.3515625,
+        "w": 64,
+        "h": 19,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud81f40-24",
+        "type": "volta",
+        "x": 365,
+        "y": 975.3515625,
+        "w": 50,
+        "h": 14,
+        "text": "1.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mud81jhw-26",
+        "type": "row",
+        "x": 365,
+        "y": 1052.3515625,
+        "w": 164,
+        "h": 27,
+        "barCount": 2,
+        "chordsPerBar": 1,
+        "chords": [
+          "E",
+          "E",
+          ""
+        ],
+        "chordCounts": [
+          1,
+          2
+        ]
+      },
+      {
+        "id": "el-mud81mdl-28",
+        "type": "volta",
+        "x": 365,
+        "y": 1034.3515625,
+        "w": 50,
+        "h": 14,
+        "text": "2.",
+        "fontSize": 8
+      },
+      {
+        "id": "el-mud81qmt-2a",
+        "type": "text",
+        "x": 674,
+        "y": 972.3515625,
+        "text": "x2",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mud83gk0-2c",
+        "type": "rhythmbar",
+        "x": 486,
+        "y": 1070.3515625,
+        "w": 35,
+        "h": 20,
+        "numerator": 2,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud83j0w-2e",
+        "type": "chordText",
+        "x": 510,
+        "y": 1031.3515625,
+        "text": "F#m",
+        "fontSize": 10
+      }
+    ]
+  },
+  {
+    "id": "for-evigt",
+    "title": "For Evigt",
+    "artist": "Volbeat",
+    "key": "D",
+    "updated_at": "2026-09-22T21:42:08.795119+00:00",
+    "elements": [
+      {
+        "id": "el-mud6ulck-1",
+        "type": "title",
+        "x": 35,
+        "y": 65.8515625,
+        "text": "Vers",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6ursi-3",
+        "type": "row",
+        "x": 57,
+        "y": 109.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "D",
+          "A",
+          "Bm",
+          "r",
+          "G",
+          "r",
+          "A",
+          "r"
+        ],
+        "repeatEnd": true,
+        "repeatStart": true
+      },
+      {
+        "id": "el-mud6v1qw-5",
+        "type": "text",
+        "x": 108,
+        "y": 75.3515625,
+        "text": "(+trommer anden gang)",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mud6vczw-7",
+        "type": "text",
+        "x": 686,
+        "y": 84.3515625,
+        "text": "x2",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mud6vicz-9",
+        "type": "title",
+        "x": 35,
+        "y": 152.3515625,
+        "text": "Link",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6vp33-b",
+        "type": "row",
+        "x": 56,
+        "y": 195.3515625,
+        "w": 328,
+        "h": 27,
+        "barCount": 4,
+        "chordsPerBar": 1,
+        "chords": [
+          "D",
+          "D",
+          "A"
+        ],
+        "chordCounts": [
+          1,
+          0,
+          1,
+          1
+        ]
+      },
+      {
+        "id": "el-mud6whgf-d",
+        "type": "rhythmbar",
+        "x": 142,
+        "y": 213.3515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud6wksq-f",
+        "type": "title",
+        "x": 37,
+        "y": 237.3515625,
+        "text": "Vers",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6wo56-h",
+        "type": "title",
+        "x": 37,
+        "y": 281.3515625,
+        "text": "Bro",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6wspz-j",
+        "type": "row",
+        "x": 48,
+        "y": 325.3515625,
+        "w": 328,
+        "h": 27,
+        "barCount": 4,
+        "chordsPerBar": 1,
+        "chords": [
+          "Em",
+          "r",
+          "A"
+        ],
+        "chordCounts": [
+          1,
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "id": "el-mud6x675-l",
+        "type": "rhythmbar",
+        "x": 301,
+        "y": 341.3515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 8
+          },
+          {
+            "type": "rest",
+            "duration": 8
+          },
+          {
+            "type": "rest",
+            "duration": 8
+          }
+        ]
+      },
+      {
+        "id": "el-mud6xbja-n",
+        "type": "title",
+        "x": 34,
+        "y": 363.3515625,
+        "text": "Omkv\u00e6d",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6xp7e-p",
+        "type": "row",
+        "x": 45,
+        "y": 406.3515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "G",
+          "r",
+          "D",
+          "Bm",
+          "G",
+          "r"
+        ],
+        "chordCounts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "el-mud6yms7-r",
+        "type": "rhythmbar",
+        "x": 539,
+        "y": 424.8515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud6ysxy-t",
+        "type": "rhythmbar",
+        "x": 625,
+        "y": 425.8515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud6yv1u-v",
+        "type": "chordText",
+        "x": 540,
+        "y": 380.8515625,
+        "text": "D",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mud6z30x-x",
+        "type": "row",
+        "x": 44,
+        "y": 445.8515625,
+        "w": 492,
+        "h": 27,
+        "barCount": 6,
+        "chordsPerBar": 1,
+        "chords": [
+          "G",
+          "A",
+          "D",
+          "G",
+          "G",
+          "A"
+        ]
+      },
+      {
+        "id": "el-mud6z9zd-z",
+        "type": "title",
+        "x": 36,
+        "y": 483.8515625,
+        "text": "Link",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6zd7l-11",
+        "type": "title",
+        "x": 33,
+        "y": 532.8515625,
+        "text": "Vers",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6zfxq-13",
+        "type": "title",
+        "x": 34,
+        "y": 578.8515625,
+        "text": "Bro",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6zigw-15",
+        "type": "title",
+        "x": 33,
+        "y": 627.8515625,
+        "text": "Omkv\u00e6d",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6zmus-17",
+        "type": "title",
+        "x": 33,
+        "y": 678.8515625,
+        "text": "Link",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6zpwj-19",
+        "type": "title",
+        "x": 34,
+        "y": 727.8515625,
+        "text": "Banjo",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud6zu6o-1b",
+        "type": "text",
+        "x": 98,
+        "y": 730.8515625,
+        "text": "ny taktart: 6/8",
+        "fontSize": 12
+      },
+      {
+        "id": "el-mud71fd1-1f",
+        "type": "row",
+        "x": 50,
+        "y": 774.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "D",
+          "r",
+          "r",
+          "r",
+          "G",
+          "r",
+          "r",
+          "r"
+        ],
+        "repeatEnd": true,
+        "repeatStart": true
+      },
+      {
+        "id": "el-mud72bby-1h",
+        "type": "row",
+        "x": 50,
+        "y": 814.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "E",
+          "r",
+          "A",
+          "r",
+          "D",
+          "r",
+          "G",
+          "r"
+        ]
+      },
+      {
+        "id": "el-mud72k0g-1j",
+        "type": "row",
+        "x": 50,
+        "y": 856.8515625,
+        "w": 328,
+        "h": 27,
+        "barCount": 4,
+        "chordsPerBar": 1,
+        "chords": [
+          "A",
+          "r"
+        ],
+        "chordCounts": [
+          1,
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "el-mud73fbq-1o",
+        "type": "rhythmbar",
+        "x": 224,
+        "y": 872.8515625,
+        "w": 160,
+        "h": 19,
+        "numerator": 8,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 32,
+            "label": "Whole",
+            "tie": true
+          },
+          {
+            "type": "note",
+            "duration": 32,
+            "label": "Whole"
+          }
+        ]
+      },
+      {
+        "id": "el-mud73ukt-1q",
+        "type": "title",
+        "x": 36,
+        "y": 894.8515625,
+        "text": "Omkv\u00e6d",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud73ynu-1r",
+        "type": "row",
+        "x": 43,
+        "y": 938.3515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "G",
+          "r",
+          "D",
+          "Bm",
+          "G",
+          "r"
+        ],
+        "chordCounts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "el-mud73ynv-1s",
+        "type": "rhythmbar",
+        "x": 541,
+        "y": 956.8515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud73ynv-1t",
+        "type": "rhythmbar",
+        "x": 623,
+        "y": 955.8515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "rest",
+            "duration": 4,
+            "label": "8th rest"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          },
+          {
+            "type": "note",
+            "duration": 4,
+            "label": "8th"
+          }
+        ]
+      },
+      {
+        "id": "el-mud73ynv-1u",
+        "type": "chordText",
+        "x": 538,
+        "y": 912.8515625,
+        "text": "D",
+        "fontSize": 14
+      },
+      {
+        "id": "el-mud73ynv-1v",
+        "type": "row",
+        "x": 41,
+        "y": 980.8515625,
+        "w": 656,
+        "h": 27,
+        "barCount": 8,
+        "chordsPerBar": 1,
+        "chords": [
+          "G",
+          "A",
+          "D",
+          "G",
+          "G",
+          "r",
+          "A"
+        ],
+        "chordCounts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0
+        ]
+      },
+      {
+        "id": "el-mud74b8a-1w",
+        "type": "rhythmbar",
+        "x": 622,
+        "y": 996.3515625,
+        "w": 70,
+        "h": 20,
+        "numerator": 4,
+        "denominator": 4,
+        "cells": [
+          {
+            "type": "note",
+            "duration": 8,
+            "label": "Quarter",
+            "articulations": [
+              "staccato"
+            ]
+          },
+          {
+            "type": "rest",
+            "duration": 8
+          },
+          {
+            "type": "rest",
+            "duration": 8
+          },
+          {
+            "type": "rest",
+            "duration": 8
+          }
+        ]
+      },
+      {
+        "id": "el-mud74gq2-1y",
+        "type": "title",
+        "x": 34,
+        "y": 1019.8515625,
+        "text": "Omkv\u00e6d",
+        "fontSize": 17
+      },
+      {
+        "id": "el-mud7828k-26",
+        "type": "text",
+        "x": 53,
+        "y": 1062.8515625,
+        "text": "(slut: gentag \"skal vi for evigt m\u00e5ske samme vej\" nogle gange)",
+        "fontSize": 12
+      }
+    ]
+  },
+  {
     "id": "gimme-gimme-gimme",
     "title": "Gimme! Gimme! Gimme!",
     "artist": "ABBA",
@@ -3771,7 +5315,7 @@
     "title": "Hjertet Ser",
     "artist": "Karen Busck & Erann DD",
     "key": "Db",
-    "updated_at": "2026-09-22T11:03:22.407819+00:00",
+    "updated_at": "2026-09-23T08:45:55.716557+00:00",
     "elements": [
       {
         "id": "el-muchfttb-1",
@@ -3792,12 +5336,14 @@
         "chords": [
           "Db",
           "Db",
+          "",
+          "-",
           "-"
         ],
         "chordsPerBar": 1,
         "chordCounts": [
           1,
-          2
+          4
         ]
       },
       {
@@ -3875,7 +5421,7 @@
       {
         "id": "el-muchkyvo-e",
         "type": "row",
-        "x": 46,
+        "x": 54,
         "y": 363.8515625,
         "w": 656,
         "h": 27,
@@ -12357,1550 +13903,6 @@
         "x": 678,
         "y": 859.8515625,
         "text": "x2",
-        "fontSize": 12
-      }
-    ]
-  },
-  {
-    "id": "fascination",
-    "title": "Fascination",
-    "artist": "Alphabeat",
-    "key": "A",
-    "updated_at": "2026-09-22T22:05:59.539911+00:00",
-    "elements": [
-      {
-        "id": "el-mud7nrg8-1",
-        "type": "title",
-        "x": 37,
-        "y": 81.8515625,
-        "text": "Intro",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7nu53-3",
-        "type": "text",
-        "x": 110,
-        "y": 86.8515625,
-        "text": "(4 takter trommer)",
-        "fontSize": 12
-      },
-      {
-        "id": "el-mud7nzok-5",
-        "type": "title",
-        "x": 37,
-        "y": 137.8515625,
-        "text": "Vers",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7ochp-7",
-        "type": "row",
-        "x": 50,
-        "y": 182.8515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 2,
-        "chords": [
-          "D/a",
-          "A",
-          "A",
-          "",
-          "D/a",
-          "A",
-          "A",
-          "",
-          "F#m",
-          "E",
-          "E",
-          "",
-          "D",
-          "D",
-          "D",
-          ""
-        ],
-        "repeatEnd": true,
-        "repeatStart": true
-      },
-      {
-        "id": "el-mud7p9t7-9",
-        "type": "text",
-        "x": 683,
-        "y": 156.3515625,
-        "text": "x2",
-        "fontSize": 12
-      },
-      {
-        "id": "el-mud7pddf-b",
-        "type": "title",
-        "x": 36,
-        "y": 223.3515625,
-        "text": "Bro",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7pi9u-d",
-        "type": "row",
-        "x": 49,
-        "y": 269.3515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 2,
-        "chords": [
-          "C#m",
-          "D",
-          "D",
-          "",
-          "E",
-          "F#m",
-          "F#m",
-          "",
-          "Bm",
-          "",
-          "r",
-          "E",
-          "",
-          "r"
-        ],
-        "repeatEnd": true,
-        "repeatStart": true,
-        "chordCounts": [
-          2,
-          2,
-          2,
-          2,
-          2,
-          1,
-          2,
-          1
-        ]
-      },
-      {
-        "id": "el-mud7rbsl-f",
-        "type": "row",
-        "x": 622,
-        "y": 321.3515625,
-        "w": 82,
-        "h": 27,
-        "barCount": 1,
-        "chordsPerBar": 4,
-        "chords": [
-          "E",
-          "D",
-          "",
-          ""
-        ]
-      },
-      {
-        "id": "el-mud7rvuu-h",
-        "type": "rhythmbar",
-        "x": 626,
-        "y": 366.3515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud7s7te-j",
-        "type": "title",
-        "x": 28,
-        "y": 355.3515625,
-        "text": "Omkv\u00e6d",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7sd5j-m",
-        "type": "volta",
-        "x": 623,
-        "y": 251.3515625,
-        "w": 50,
-        "h": 14,
-        "text": "1.",
-        "fontSize": 8
-      },
-      {
-        "id": "el-mud7sf5r-o",
-        "type": "text",
-        "x": 681,
-        "y": 246.3515625,
-        "text": "x2",
-        "fontSize": 12
-      },
-      {
-        "id": "el-mud7si3b-q",
-        "type": "volta",
-        "x": 619,
-        "y": 302.3515625,
-        "w": 50,
-        "h": 14,
-        "text": "2.",
-        "fontSize": 8
-      },
-      {
-        "id": "el-mud7sulr-s",
-        "type": "row",
-        "x": 47,
-        "y": 400.3515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 1,
-        "chords": [
-          "E",
-          "r",
-          "D/f#",
-          "D",
-          "E",
-          "R",
-          "D/f#",
-          "D"
-        ],
-        "repeatEnd": true,
-        "repeatStart": true
-      },
-      {
-        "id": "el-mud7thva-u",
-        "type": "volta",
-        "x": 375,
-        "y": 377.3515625,
-        "w": 50,
-        "h": 14,
-        "text": "1.",
-        "fontSize": 8
-      },
-      {
-        "id": "el-mud7tv5i-w",
-        "type": "row",
-        "x": 374,
-        "y": 446.3515625,
-        "w": 164,
-        "h": 27,
-        "barCount": 2,
-        "chordsPerBar": 1,
-        "chords": [
-          "E",
-          "-",
-          "-",
-          "-",
-          "-"
-        ],
-        "chordCounts": [
-          4,
-          1
-        ]
-      },
-      {
-        "id": "el-mud7uj18-y",
-        "type": "title",
-        "x": 31,
-        "y": 468.3515625,
-        "text": "Link",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7un8l-10",
-        "type": "text",
-        "x": 97,
-        "y": 472.3515625,
-        "text": "(2 takter guitar)",
-        "fontSize": 12
-      },
-      {
-        "id": "el-mud7usuh-12",
-        "type": "title",
-        "x": 32,
-        "y": 517.3515625,
-        "text": "Vers",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7uzkj-13",
-        "type": "title",
-        "x": 33,
-        "y": 564.3515625,
-        "text": "Bro",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7uzkk-14",
-        "type": "row",
-        "x": 42,
-        "y": 609.3515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 2,
-        "chords": [
-          "C#m",
-          "D",
-          "D",
-          "",
-          "E",
-          "F#m",
-          "F#m",
-          "",
-          "Bm",
-          "",
-          "r",
-          "E",
-          ""
-        ],
-        "repeatEnd": false,
-        "repeatStart": false,
-        "chordCounts": [
-          2,
-          2,
-          2,
-          2,
-          2,
-          1,
-          2,
-          0
-        ]
-      },
-      {
-        "id": "el-mud7w8d5-1e",
-        "type": "title",
-        "x": 31,
-        "y": 652.3515625,
-        "text": "Omkv\u00e6d",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7wx2r-1g",
-        "type": "rhythmbar",
-        "x": 621,
-        "y": 627.3515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud7x78u-1i",
-        "type": "title",
-        "x": 30,
-        "y": 701.3515625,
-        "text": "C",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7xdgh-1k",
-        "type": "row",
-        "x": 40,
-        "y": 749.3515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 2,
-        "chords": [
-          "F#m",
-          "",
-          "D/f#",
-          "",
-          "E/g#",
-          "",
-          "A",
-          "",
-          "D",
-          "",
-          "D",
-          "E",
-          "D",
-          "",
-          "E",
-          ""
-        ],
-        "repeatEnd": true,
-        "repeatStart": true
-      },
-      {
-        "id": "el-mud7yf34-1m",
-        "type": "volta",
-        "x": 613,
-        "y": 729.3515625,
-        "w": 50,
-        "h": 14,
-        "text": "1, 2.",
-        "fontSize": 8
-      },
-      {
-        "id": "el-mud7ykfp-1o",
-        "type": "row",
-        "x": 613,
-        "y": 801.3515625,
-        "w": 82,
-        "h": 27,
-        "barCount": 1,
-        "chordsPerBar": 1,
-        "chords": [
-          ""
-        ]
-      },
-      {
-        "id": "el-mud7yp2n-1p",
-        "type": "rhythmbar",
-        "x": 618,
-        "y": 819.3515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud7yy57-1r",
-        "type": "volta",
-        "x": 613,
-        "y": 783.3515625,
-        "w": 50,
-        "h": 14,
-        "text": "3.",
-        "fontSize": 8
-      },
-      {
-        "id": "el-mud7z6h8-1t",
-        "type": "text",
-        "x": 675,
-        "y": 726.3515625,
-        "text": "x3",
-        "fontSize": 12
-      },
-      {
-        "id": "el-mud7zhcd-1v",
-        "type": "title",
-        "x": 31,
-        "y": 823.3515625,
-        "text": "Omkv\u00e6d",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7znxg-1w",
-        "type": "row",
-        "x": 40,
-        "y": 867.3515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 1,
-        "chords": [
-          "-",
-          "-",
-          "D/f#",
-          "D",
-          "E",
-          "R",
-          "D/f#",
-          "D"
-        ],
-        "repeatEnd": false,
-        "repeatStart": false
-      },
-      {
-        "id": "el-mud8071e-1x",
-        "type": "row",
-        "x": 40,
-        "y": 911.3515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 1,
-        "chords": [
-          "E",
-          "r",
-          "D/f#",
-          "D",
-          "E",
-          "R",
-          "D/f#",
-          ""
-        ],
-        "repeatEnd": false,
-        "repeatStart": false
-      },
-      {
-        "id": "el-mud80jvv-1y",
-        "type": "rhythmbar",
-        "x": 619,
-        "y": 927.3515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud80ojj-20",
-        "type": "title",
-        "x": 32,
-        "y": 953.3515625,
-        "text": "Outro",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud80z5s-21",
-        "type": "row",
-        "x": 38,
-        "y": 998.3515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 1,
-        "chords": [
-          "E",
-          "r",
-          "D/f#",
-          "D",
-          "E",
-          "R",
-          "D/f#",
-          ""
-        ],
-        "repeatEnd": true,
-        "repeatStart": true
-      },
-      {
-        "id": "el-mud815ok-22",
-        "type": "rhythmbar",
-        "x": 615,
-        "y": 1015.3515625,
-        "w": 64,
-        "h": 19,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud81f40-24",
-        "type": "volta",
-        "x": 365,
-        "y": 975.3515625,
-        "w": 50,
-        "h": 14,
-        "text": "1.",
-        "fontSize": 8
-      },
-      {
-        "id": "el-mud81jhw-26",
-        "type": "row",
-        "x": 365,
-        "y": 1052.3515625,
-        "w": 164,
-        "h": 27,
-        "barCount": 2,
-        "chordsPerBar": 1,
-        "chords": [
-          "E",
-          "E",
-          ""
-        ],
-        "chordCounts": [
-          1,
-          2
-        ]
-      },
-      {
-        "id": "el-mud81mdl-28",
-        "type": "volta",
-        "x": 365,
-        "y": 1034.3515625,
-        "w": 50,
-        "h": 14,
-        "text": "2.",
-        "fontSize": 8
-      },
-      {
-        "id": "el-mud81qmt-2a",
-        "type": "text",
-        "x": 674,
-        "y": 972.3515625,
-        "text": "x2",
-        "fontSize": 12
-      },
-      {
-        "id": "el-mud83gk0-2c",
-        "type": "rhythmbar",
-        "x": 486,
-        "y": 1070.3515625,
-        "w": 35,
-        "h": 20,
-        "numerator": 2,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud83j0w-2e",
-        "type": "chordText",
-        "x": 510,
-        "y": 1031.3515625,
-        "text": "F#m",
-        "fontSize": 10
-      }
-    ]
-  },
-  {
-    "id": "for-evigt",
-    "title": "For Evigt",
-    "artist": "Volbeat",
-    "key": "D",
-    "updated_at": "2026-09-22T21:42:08.795119+00:00",
-    "elements": [
-      {
-        "id": "el-mud6ulck-1",
-        "type": "title",
-        "x": 35,
-        "y": 65.8515625,
-        "text": "Vers",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6ursi-3",
-        "type": "row",
-        "x": 57,
-        "y": 109.8515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 1,
-        "chords": [
-          "D",
-          "A",
-          "Bm",
-          "r",
-          "G",
-          "r",
-          "A",
-          "r"
-        ],
-        "repeatEnd": true,
-        "repeatStart": true
-      },
-      {
-        "id": "el-mud6v1qw-5",
-        "type": "text",
-        "x": 108,
-        "y": 75.3515625,
-        "text": "(+trommer anden gang)",
-        "fontSize": 12
-      },
-      {
-        "id": "el-mud6vczw-7",
-        "type": "text",
-        "x": 686,
-        "y": 84.3515625,
-        "text": "x2",
-        "fontSize": 12
-      },
-      {
-        "id": "el-mud6vicz-9",
-        "type": "title",
-        "x": 35,
-        "y": 152.3515625,
-        "text": "Link",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6vp33-b",
-        "type": "row",
-        "x": 56,
-        "y": 195.3515625,
-        "w": 328,
-        "h": 27,
-        "barCount": 4,
-        "chordsPerBar": 1,
-        "chords": [
-          "D",
-          "D",
-          "A"
-        ],
-        "chordCounts": [
-          1,
-          0,
-          1,
-          1
-        ]
-      },
-      {
-        "id": "el-mud6whgf-d",
-        "type": "rhythmbar",
-        "x": 142,
-        "y": 213.3515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud6wksq-f",
-        "type": "title",
-        "x": 37,
-        "y": 237.3515625,
-        "text": "Vers",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6wo56-h",
-        "type": "title",
-        "x": 37,
-        "y": 281.3515625,
-        "text": "Bro",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6wspz-j",
-        "type": "row",
-        "x": 48,
-        "y": 325.3515625,
-        "w": 328,
-        "h": 27,
-        "barCount": 4,
-        "chordsPerBar": 1,
-        "chords": [
-          "Em",
-          "r",
-          "A"
-        ],
-        "chordCounts": [
-          1,
-          1,
-          1,
-          0
-        ]
-      },
-      {
-        "id": "el-mud6x675-l",
-        "type": "rhythmbar",
-        "x": 301,
-        "y": 341.3515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "note",
-            "duration": 8,
-            "label": "Quarter",
-            "articulations": [
-              "staccato"
-            ]
-          },
-          {
-            "type": "rest",
-            "duration": 8
-          },
-          {
-            "type": "rest",
-            "duration": 8
-          },
-          {
-            "type": "rest",
-            "duration": 8
-          }
-        ]
-      },
-      {
-        "id": "el-mud6xbja-n",
-        "type": "title",
-        "x": 34,
-        "y": 363.3515625,
-        "text": "Omkv\u00e6d",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6xp7e-p",
-        "type": "row",
-        "x": 45,
-        "y": 406.3515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 1,
-        "chords": [
-          "G",
-          "r",
-          "D",
-          "Bm",
-          "G",
-          "r"
-        ],
-        "chordCounts": [
-          1,
-          1,
-          1,
-          1,
-          1,
-          1,
-          0,
-          0
-        ]
-      },
-      {
-        "id": "el-mud6yms7-r",
-        "type": "rhythmbar",
-        "x": 539,
-        "y": 424.8515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud6ysxy-t",
-        "type": "rhythmbar",
-        "x": 625,
-        "y": 425.8515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud6yv1u-v",
-        "type": "chordText",
-        "x": 540,
-        "y": 380.8515625,
-        "text": "D",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mud6z30x-x",
-        "type": "row",
-        "x": 44,
-        "y": 445.8515625,
-        "w": 492,
-        "h": 27,
-        "barCount": 6,
-        "chordsPerBar": 1,
-        "chords": [
-          "G",
-          "A",
-          "D",
-          "G",
-          "G",
-          "A"
-        ]
-      },
-      {
-        "id": "el-mud6z9zd-z",
-        "type": "title",
-        "x": 36,
-        "y": 483.8515625,
-        "text": "Link",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6zd7l-11",
-        "type": "title",
-        "x": 33,
-        "y": 532.8515625,
-        "text": "Vers",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6zfxq-13",
-        "type": "title",
-        "x": 34,
-        "y": 578.8515625,
-        "text": "Bro",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6zigw-15",
-        "type": "title",
-        "x": 33,
-        "y": 627.8515625,
-        "text": "Omkv\u00e6d",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6zmus-17",
-        "type": "title",
-        "x": 33,
-        "y": 678.8515625,
-        "text": "Link",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6zpwj-19",
-        "type": "title",
-        "x": 34,
-        "y": 727.8515625,
-        "text": "Banjo",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud6zu6o-1b",
-        "type": "text",
-        "x": 98,
-        "y": 730.8515625,
-        "text": "ny taktart: 6/8",
-        "fontSize": 12
-      },
-      {
-        "id": "el-mud71fd1-1f",
-        "type": "row",
-        "x": 50,
-        "y": 774.8515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 1,
-        "chords": [
-          "D",
-          "r",
-          "r",
-          "r",
-          "G",
-          "r",
-          "r",
-          "r"
-        ],
-        "repeatEnd": true,
-        "repeatStart": true
-      },
-      {
-        "id": "el-mud72bby-1h",
-        "type": "row",
-        "x": 50,
-        "y": 814.8515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 1,
-        "chords": [
-          "E",
-          "r",
-          "A",
-          "r",
-          "D",
-          "r",
-          "G",
-          "r"
-        ]
-      },
-      {
-        "id": "el-mud72k0g-1j",
-        "type": "row",
-        "x": 50,
-        "y": 856.8515625,
-        "w": 328,
-        "h": 27,
-        "barCount": 4,
-        "chordsPerBar": 1,
-        "chords": [
-          "A",
-          "r"
-        ],
-        "chordCounts": [
-          1,
-          1,
-          0,
-          0
-        ]
-      },
-      {
-        "id": "el-mud73fbq-1o",
-        "type": "rhythmbar",
-        "x": 224,
-        "y": 872.8515625,
-        "w": 160,
-        "h": 19,
-        "numerator": 8,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "note",
-            "duration": 32,
-            "label": "Whole",
-            "tie": true
-          },
-          {
-            "type": "note",
-            "duration": 32,
-            "label": "Whole"
-          }
-        ]
-      },
-      {
-        "id": "el-mud73ukt-1q",
-        "type": "title",
-        "x": 36,
-        "y": 894.8515625,
-        "text": "Omkv\u00e6d",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud73ynu-1r",
-        "type": "row",
-        "x": 43,
-        "y": 938.3515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 1,
-        "chords": [
-          "G",
-          "r",
-          "D",
-          "Bm",
-          "G",
-          "r"
-        ],
-        "chordCounts": [
-          1,
-          1,
-          1,
-          1,
-          1,
-          1,
-          0,
-          0
-        ]
-      },
-      {
-        "id": "el-mud73ynv-1s",
-        "type": "rhythmbar",
-        "x": 541,
-        "y": 956.8515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud73ynv-1t",
-        "type": "rhythmbar",
-        "x": 623,
-        "y": 955.8515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "rest",
-            "duration": 4,
-            "label": "8th rest"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          },
-          {
-            "type": "note",
-            "duration": 4,
-            "label": "8th"
-          }
-        ]
-      },
-      {
-        "id": "el-mud73ynv-1u",
-        "type": "chordText",
-        "x": 538,
-        "y": 912.8515625,
-        "text": "D",
-        "fontSize": 14
-      },
-      {
-        "id": "el-mud73ynv-1v",
-        "type": "row",
-        "x": 41,
-        "y": 980.8515625,
-        "w": 656,
-        "h": 27,
-        "barCount": 8,
-        "chordsPerBar": 1,
-        "chords": [
-          "G",
-          "A",
-          "D",
-          "G",
-          "G",
-          "r",
-          "A"
-        ],
-        "chordCounts": [
-          1,
-          1,
-          1,
-          1,
-          1,
-          1,
-          1,
-          0
-        ]
-      },
-      {
-        "id": "el-mud74b8a-1w",
-        "type": "rhythmbar",
-        "x": 622,
-        "y": 996.3515625,
-        "w": 70,
-        "h": 20,
-        "numerator": 4,
-        "denominator": 4,
-        "cells": [
-          {
-            "type": "note",
-            "duration": 8,
-            "label": "Quarter",
-            "articulations": [
-              "staccato"
-            ]
-          },
-          {
-            "type": "rest",
-            "duration": 8
-          },
-          {
-            "type": "rest",
-            "duration": 8
-          },
-          {
-            "type": "rest",
-            "duration": 8
-          }
-        ]
-      },
-      {
-        "id": "el-mud74gq2-1y",
-        "type": "title",
-        "x": 34,
-        "y": 1019.8515625,
-        "text": "Omkv\u00e6d",
-        "fontSize": 17
-      },
-      {
-        "id": "el-mud7828k-26",
-        "type": "text",
-        "x": 53,
-        "y": 1062.8515625,
-        "text": "(slut: gentag \"skal vi for evigt m\u00e5ske samme vej\" nogle gange)",
         "fontSize": 12
       }
     ]
