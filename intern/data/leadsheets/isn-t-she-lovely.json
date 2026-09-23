@@ -1,0 +1,228 @@
+{
+  "id": "isn-t-she-lovely",
+  "title": "Isn't She Lovely",
+  "artist": "Stevie Wonder",
+  "key": "C#m",
+  "updated_at": "2026-09-22T11:15:26.505002+00:00",
+  "elements": [
+    {
+      "id": "el-mucf96cx-1",
+      "type": "title",
+      "x": 44,
+      "y": 106.8515625,
+      "text": "A-stykke",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucf9efn-3",
+      "type": "row",
+      "x": 59,
+      "y": 162.8515625,
+      "w": 660,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "C#m9",
+        "F#9",
+        "B11",
+        "E"
+      ]
+    },
+    {
+      "id": "el-mucfa735-5",
+      "type": "title",
+      "x": 48,
+      "y": 273.3515625,
+      "text": "B-stykke",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucfae0n-7",
+      "type": "row",
+      "x": 63,
+      "y": 325.3515625,
+      "w": 660,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "Amaj7",
+        "G#7b9",
+        "C#m9",
+        "F#9"
+      ]
+    },
+    {
+      "id": "el-muckjqdj-1",
+      "type": "notestaff",
+      "x": 340,
+      "y": 442.3515625,
+      "w": 296,
+      "h": 24,
+      "numerator": 4,
+      "denominator": 4,
+      "bars": 2,
+      "clef": "treble",
+      "keySignature": 4,
+      "cells": [
+        {
+          "type": "rest",
+          "duration": 8
+        },
+        {
+          "type": "tuplet",
+          "unit": 4,
+          "count": 3,
+          "duration": 8,
+          "cells": [
+            {
+              "type": "rest",
+              "duration": 4
+            },
+            {
+              "type": "note",
+              "duration": 4,
+              "label": "8th",
+              "pitch": -3,
+              "accidental": null
+            },
+            {
+              "type": "note",
+              "duration": 4,
+              "label": "8th",
+              "pitch": -2,
+              "accidental": null
+            }
+          ]
+        },
+        {
+          "type": "tuplet",
+          "unit": 4,
+          "count": 3,
+          "duration": 8,
+          "cells": [
+            {
+              "type": "note",
+              "duration": 4,
+              "label": "8th",
+              "pitch": 0,
+              "accidental": null
+            },
+            {
+              "type": "note",
+              "duration": 4,
+              "label": "8th",
+              "pitch": 1,
+              "accidental": null
+            },
+            {
+              "type": "note",
+              "duration": 4,
+              "label": "8th",
+              "pitch": 2,
+              "accidental": null
+            }
+          ]
+        },
+        {
+          "type": "tuplet",
+          "unit": 4,
+          "count": 3,
+          "duration": 8,
+          "cells": [
+            {
+              "type": "note",
+              "duration": 4,
+              "label": "8th",
+              "pitch": 4,
+              "accidental": null
+            },
+            {
+              "type": "note",
+              "duration": 4,
+              "label": "8th",
+              "pitch": 5,
+              "accidental": null
+            },
+            {
+              "type": "note",
+              "duration": 4,
+              "label": "8th",
+              "pitch": 7,
+              "accidental": null
+            }
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "pitch": 7,
+          "accidental": null,
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "pitch": 7,
+          "accidental": null,
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "el-muckt6ng-1",
+      "type": "row",
+      "x": 65,
+      "y": 381.8515625,
+      "w": 660,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "B11",
+        "r",
+        "E",
+        "",
+        "",
+        "G#7b9"
+      ],
+      "chordCounts": [
+        1,
+        1,
+        2,
+        2
+      ]
+    },
+    {
+      "id": "el-muckujd5-3",
+      "type": "row",
+      "x": 59,
+      "y": 217.8515625,
+      "w": 660,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "C#m9",
+        "F#9",
+        "B11",
+        "E"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,682 @@
+{
+  "id": "treasure",
+  "title": "Treasure",
+  "artist": "Bruno Mars",
+  "key": "Cm",
+  "updated_at": "2026-09-22T07:54:22.273900+00:00",
+  "elements": [
+    {
+      "id": "el-mucd2ex2-1",
+      "type": "title",
+      "x": 37,
+      "y": 81.8515625,
+      "text": "Intro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucd2q7k-3",
+      "type": "row",
+      "x": 56,
+      "y": 129.8515625,
+      "w": 218,
+      "h": 29,
+      "barCount": 2,
+      "chordsPerBar": 1,
+      "chords": [
+        "",
+        ""
+      ]
+    },
+    {
+      "id": "el-mucd2ysg-5",
+      "type": "text",
+      "x": 67,
+      "y": 130.8515625,
+      "text": "Lady squirrel",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucd3oi9-7",
+      "type": "rhythmbar",
+      "x": 174,
+      "y": 147.8515625,
+      "w": 92,
+      "h": 20,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "el-mucd3z9a-9",
+      "type": "chordText",
+      "x": 168,
+      "y": 98.8515625,
+      "text": "Bb11",
+      "fontSize": 14
+    },
+    {
+      "id": "el-mucd4o47-b",
+      "type": "title",
+      "x": 37,
+      "y": 176.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucd62nl-h",
+      "type": "row",
+      "x": 52,
+      "y": 221.8515625,
+      "w": 686,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 3,
+      "chords": [
+        "Abmaj7",
+        "",
+        "Gm7",
+        "Fm7",
+        "",
+        "",
+        "Gm7",
+        "",
+        "",
+        "Cm7",
+        "",
+        "Bb"
+      ],
+      "repeatStart": true,
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mucd7o5z-i",
+      "type": "row",
+      "x": 49,
+      "y": 312.8515625,
+      "w": 686,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 3,
+      "chords": [
+        "Abmaj7",
+        "",
+        "Gm7",
+        "Fm7",
+        "",
+        "",
+        "Gm7",
+        "",
+        "",
+        "Cm7",
+        "",
+        "Bb"
+      ],
+      "repeatStart": true,
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mucd7sqt-k",
+      "type": "title",
+      "x": 37,
+      "y": 265.8515625,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucd818t-m",
+      "type": "row",
+      "x": 392,
+      "y": 375.8515625,
+      "w": 334,
+      "h": 27,
+      "barCount": 2,
+      "chordsPerBar": 1,
+      "chords": [
+        "Bb11",
+        "",
+        ""
+      ],
+      "chordCounts": [
+        2,
+        1
+      ]
+    },
+    {
+      "id": "el-mucd952n-o",
+      "type": "volta",
+      "x": 392,
+      "y": 286.8515625,
+      "w": 50,
+      "h": 14,
+      "text": "1.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucd97ev-q",
+      "type": "volta",
+      "x": 390,
+      "y": 350.8515625,
+      "w": 50,
+      "h": 14,
+      "text": "2.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucdasj0-r",
+      "type": "row",
+      "x": 48,
+      "y": 468.8515625,
+      "w": 686,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 3,
+      "chords": [
+        "Abmaj7",
+        "",
+        "Gm7",
+        "Fm7",
+        "",
+        "",
+        "Gm7",
+        "",
+        "",
+        "Cm7",
+        "",
+        "Bb"
+      ],
+      "repeatStart": true,
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mucdawvd-t",
+      "type": "title",
+      "x": 38,
+      "y": 416.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucdbahn-v",
+      "type": "text",
+      "x": 708,
+      "y": 195.8515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucdbiwf-x",
+      "type": "text",
+      "x": 708,
+      "y": 287.8515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucdbmwe-z",
+      "type": "text",
+      "x": 706,
+      "y": 439.8515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucdc3hv-0",
+      "type": "row",
+      "x": 47,
+      "y": 520.8515625,
+      "w": 686,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 3,
+      "chords": [
+        "Abmaj7",
+        "",
+        "Gm7",
+        "Fm7",
+        "",
+        "",
+        "Bb11",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "repeatStart": false,
+      "repeatEnd": false
+    },
+    {
+      "id": "el-mucdcv18-2",
+      "type": "title",
+      "x": 35,
+      "y": 565.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucdd9jq-5",
+      "type": "row",
+      "x": 145,
+      "y": 611.8515625,
+      "w": 343,
+      "h": 27,
+      "barCount": 2,
+      "repeatStart": false,
+      "repeatEnd": false,
+      "chords": []
+    },
+    {
+      "id": "el-mucddvyg-7",
+      "type": "rhythmbar",
+      "x": 169,
+      "y": 627.8515625,
+      "w": 136,
+      "h": 20,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "el-mucddyg8-8",
+      "type": "rhythmbar",
+      "x": 331,
+      "y": 626.8515625,
+      "w": 136,
+      "h": 20,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "rest",
+          "duration": 8,
+          "label": "Quarter rest"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "el-mucdewru-a",
+      "type": "text",
+      "x": 54,
+      "y": 612.8515625,
+      "text": "Live-break:",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucdfpa9-c",
+      "type": "title",
+      "x": 38,
+      "y": 655.8515625,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucdfsa6-e",
+      "type": "title",
+      "x": 38,
+      "y": 711.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucdfv6b-g",
+      "type": "title",
+      "x": 38,
+      "y": 768.8515625,
+      "text": "Breakdown",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucdg2q1-h",
+      "type": "row",
+      "x": 51,
+      "y": 818.8515625,
+      "w": 686,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 3,
+      "chords": [
+        "Abmaj7",
+        "",
+        "Gm7",
+        "Fm7",
+        "",
+        "",
+        "Gm7",
+        "",
+        "",
+        "Cm7",
+        "",
+        "Bb"
+      ],
+      "repeatStart": true,
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mucdg2q1-i",
+      "type": "row",
+      "x": 394,
+      "y": 881.8515625,
+      "w": 334,
+      "h": 27,
+      "barCount": 2,
+      "chordsPerBar": 1,
+      "chords": [
+        "Bb11",
+        "",
+        ""
+      ],
+      "chordCounts": [
+        2,
+        1
+      ]
+    },
+    {
+      "id": "el-mucdg2q1-j",
+      "type": "volta",
+      "x": 394,
+      "y": 792.8515625,
+      "w": 50,
+      "h": 14,
+      "text": "1.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucdg2q1-k",
+      "type": "volta",
+      "x": 392,
+      "y": 856.8515625,
+      "w": 50,
+      "h": 14,
+      "text": "2.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucdg2q1-l",
+      "type": "text",
+      "x": 710,
+      "y": 793.8515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucdgfsw-n",
+      "type": "title",
+      "x": 40,
+      "y": 935.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucdi800-p",
+      "type": "rhythmbar",
+      "x": 572,
+      "y": 392.8515625,
+      "w": 146,
+      "h": 21,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th"
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "el-mucdkt5p-r",
+      "type": "rhythmbar",
+      "x": 568,
+      "y": 538.8515625,
+      "w": 159,
+      "h": 19,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "rest",
+          "duration": 2
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "rest",
+          "duration": 2
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "el-mucdnqqj-w",
+      "type": "rhythmbar",
+      "x": 569,
+      "y": 897.8515625,
+      "w": 146,
+      "h": 21,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th"
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        }
+      ]
+    }
+  ]
+}

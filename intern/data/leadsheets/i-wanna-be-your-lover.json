@@ -1,0 +1,323 @@
+{
+  "id": "i-wanna-be-your-lover",
+  "title": "I Wanna Be Your Lover",
+  "artist": "Prince",
+  "key": "G#m",
+  "updated_at": "2026-09-22T21:19:18.746018+00:00",
+  "elements": [
+    {
+      "id": "el-mud66n0r-1",
+      "type": "title",
+      "x": 33,
+      "y": 77.8515625,
+      "text": "Intro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud66ryz-3",
+      "type": "row",
+      "x": 50,
+      "y": 119.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 4,
+      "chords": [
+        "E",
+        "",
+        "B/d#",
+        "E",
+        "E",
+        "E",
+        "B/d#",
+        "",
+        "E",
+        "B/d#",
+        "E",
+        "",
+        "G#m7",
+        "",
+        "",
+        ""
+      ],
+      "repeatEnd": true,
+      "repeatStart": true
+    },
+    {
+      "id": "el-mud67xvc-9",
+      "type": "text",
+      "x": 580,
+      "y": 150.8515625,
+      "text": "(break p\u00e5 3. anden gang)",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mud688cm-b",
+      "type": "text",
+      "x": 679,
+      "y": 95.8515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mud68cqx-d",
+      "type": "title",
+      "x": 33,
+      "y": 169.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud68gpz-e",
+      "type": "row",
+      "x": 50,
+      "y": 214.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 4,
+      "chords": [
+        "E",
+        "",
+        "B/d#",
+        "E",
+        "E",
+        "E",
+        "B/d#",
+        "",
+        "E",
+        "B/d#",
+        "E",
+        "",
+        "G#m7",
+        "",
+        "",
+        ""
+      ],
+      "repeatEnd": true,
+      "repeatStart": true
+    },
+    {
+      "id": "el-mud69akl-g",
+      "type": "text",
+      "x": 679,
+      "y": 193.8515625,
+      "text": "x4",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mud69fsh-i",
+      "type": "title",
+      "x": 35,
+      "y": 258.8515625,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud69n4d-k",
+      "type": "row",
+      "x": 51,
+      "y": 305.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 2,
+      "chords": [
+        "Emaj7",
+        "",
+        "D#m7",
+        "",
+        "G#11",
+        "",
+        "G#m7",
+        "-"
+      ]
+    },
+    {
+      "id": "el-mud6andh-m",
+      "type": "title",
+      "x": 35,
+      "y": 349.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud6aqbx-n",
+      "type": "row",
+      "x": 48,
+      "y": 390.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 4,
+      "chords": [
+        "E",
+        "",
+        "B/d#",
+        "E",
+        "E",
+        "E",
+        "B/d#",
+        "",
+        "E",
+        "B/d#",
+        "E",
+        "",
+        "G#m7",
+        "",
+        "",
+        ""
+      ],
+      "repeatEnd": true,
+      "repeatStart": true
+    },
+    {
+      "id": "el-mud6aqbx-o",
+      "type": "text",
+      "x": 677,
+      "y": 369.8515625,
+      "text": "x3",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mud6ayvs-q",
+      "type": "title",
+      "x": 37,
+      "y": 431.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud6b7rp-s",
+      "type": "title",
+      "x": 35,
+      "y": 479.8515625,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud6baos-u",
+      "type": "title",
+      "x": 35,
+      "y": 528.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud6bkn4-w",
+      "type": "title",
+      "x": 36,
+      "y": 579.8515625,
+      "text": "Solo (bas)",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud6bq67-y",
+      "type": "row",
+      "x": 50,
+      "y": 621.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "G#m7",
+        "r",
+        "r",
+        "r",
+        "r",
+        "r",
+        "r",
+        "r"
+      ]
+    },
+    {
+      "id": "el-mud6cc6s-z",
+      "type": "title",
+      "x": 35,
+      "y": 658.8515625,
+      "text": "Solo (synth)",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud6cc6s-10",
+      "type": "row",
+      "x": 49,
+      "y": 700.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "G#m7",
+        "r",
+        "r",
+        "r",
+        "r",
+        "r",
+        "r",
+        "r"
+      ]
+    },
+    {
+      "id": "el-mud6cmxt-12",
+      "type": "title",
+      "x": 31,
+      "y": 740.8515625,
+      "text": "Breakdown",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud6cvnp-14",
+      "type": "row",
+      "x": 48,
+      "y": 787.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 2,
+      "chords": [
+        "B",
+        "",
+        "r",
+        "",
+        "G#m",
+        "-",
+        "-",
+        "B",
+        "",
+        "r",
+        "",
+        "G#m",
+        "-",
+        "-"
+      ],
+      "chordCounts": [
+        2,
+        2,
+        2,
+        1,
+        2,
+        2,
+        2,
+        1
+      ]
+    },
+    {
+      "id": "el-mud6eo41-16",
+      "type": "title",
+      "x": 36,
+      "y": 825.8515625,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud6eulc-18",
+      "type": "title",
+      "x": 35,
+      "y": 878.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    }
+  ]
+}

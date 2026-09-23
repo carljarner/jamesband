@@ -1,0 +1,323 @@
+{
+  "id": "de-f-rste-k-rester-p-m-nen",
+  "title": "De F\u00f8rste K\u00e6rester P\u00e5 M\u00e5nen",
+  "artist": "TV-2",
+  "key": "G",
+  "updated_at": "2026-09-22T08:36:32.956205+00:00",
+  "elements": [
+    {
+      "id": "el-mucejn7p-1",
+      "type": "title",
+      "x": 39.999985240760104,
+      "y": 95.85168795353914,
+      "text": "Intro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucejw7c-3",
+      "type": "row",
+      "x": 56,
+      "y": 146.8517248516389,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "G",
+        "r",
+        "B",
+        "r",
+        "Em",
+        "Em/d",
+        "C",
+        "r"
+      ]
+    },
+    {
+      "id": "el-mucekxb0-5",
+      "type": "title",
+      "x": 43,
+      "y": 199.8517248516389,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucekyu1-6",
+      "type": "row",
+      "x": 58,
+      "y": 248.8517248516389,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "G",
+        "r",
+        "B",
+        "r",
+        "Em",
+        "Em/d",
+        "C",
+        "r"
+      ],
+      "repeatStart": true,
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mucelb3l-8",
+      "type": "title",
+      "x": 42,
+      "y": 297.8517248516389,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucelcvh-9",
+      "type": "row",
+      "x": 58,
+      "y": 347.8517248516389,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "G",
+        "r",
+        "B",
+        "r",
+        "Em",
+        "Em/d",
+        "C",
+        "r"
+      ],
+      "repeatStart": true,
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mucelkzj-b",
+      "type": "title",
+      "x": 40,
+      "y": 397.8517248516389,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucelnll-d",
+      "type": "title",
+      "x": 40,
+      "y": 455.8517248516389,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucelzi1-f",
+      "type": "title",
+      "x": 42,
+      "y": 514.8517248516389,
+      "text": "C",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucemgp2-h",
+      "type": "row",
+      "x": 51,
+      "y": 558.8517248516389,
+      "w": 574,
+      "h": 27,
+      "barCount": 7,
+      "chordsPerBar": 1,
+      "chords": [
+        "G",
+        "r",
+        "C9",
+        "r",
+        "A7",
+        "r",
+        "D7b9"
+      ]
+    },
+    {
+      "id": "el-muceoopp-l",
+      "type": "title",
+      "x": 38,
+      "y": 609.8517248516389,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucep17n-m",
+      "type": "row",
+      "x": 50,
+      "y": 658.8517248516389,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "G",
+        "r",
+        "B",
+        "r",
+        "Em",
+        "Em/d",
+        "C",
+        "r"
+      ],
+      "repeatEnd": false,
+      "repeatStart": false
+    },
+    {
+      "id": "el-mucepa2o-o",
+      "type": "title",
+      "x": 37,
+      "y": 704.8517248516389,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucepfeb-q",
+      "type": "title",
+      "x": 39,
+      "y": 760.8517248516389,
+      "text": "Outro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muceqvlz-s",
+      "type": "row",
+      "x": 54,
+      "y": 806.8517248516389,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Am",
+        "r",
+        "C",
+        "Dadd11",
+        "Em",
+        "r",
+        "Cm",
+        "Cm",
+        "Cm6"
+      ],
+      "chordCounts": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "el-muces6ie-u",
+      "type": "chordText",
+      "x": 718,
+      "y": 806.8517248516389,
+      "text": "G",
+      "fontSize": 14
+    },
+    {
+      "id": "el-mucesll0-1",
+      "type": "glyph",
+      "x": 726,
+      "y": 805.8517248516389,
+      "code": "\ue4c0",
+      "fontSize": 20
+    },
+    {
+      "id": "el-mucex9o0-3",
+      "type": "notestaff",
+      "x": 256.00093721173357,
+      "y": 81.85159939809975,
+      "w": 211,
+      "h": 24,
+      "numerator": 4,
+      "denominator": 4,
+      "bars": 2,
+      "clef": "treble",
+      "keySignature": 1,
+      "cells": [
+        {
+          "type": "rest",
+          "duration": 8
+        },
+        {
+          "type": "rest",
+          "duration": 4,
+          "label": "8th rest"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 6,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 7,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 8,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 7,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 6,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 16,
+          "label": "Half",
+          "pitch": 4,
+          "accidental": null
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "el-mucf4esz-1",
+      "type": "glyph",
+      "x": 572,
+      "y": 551.8515625,
+      "code": "\ue4c0",
+      "fontSize": 20
+    },
+    {
+      "id": "el-mucf61of-3",
+      "type": "text",
+      "x": 106,
+      "y": 614.8515625,
+      "text": "(breakdown)",
+      "fontSize": 12
+    }
+  ]
+}

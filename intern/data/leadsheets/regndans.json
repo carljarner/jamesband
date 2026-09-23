@@ -1,0 +1,573 @@
+{
+  "id": "regndans",
+  "title": "Regndans",
+  "artist": "Danseorkestret",
+  "key": "Gm",
+  "updated_at": "2026-09-21T13:31:53.671686+00:00",
+  "elements": [
+    {
+      "id": "el-mub9t9pp-1",
+      "type": "title",
+      "x": 35,
+      "y": 79.8515625,
+      "text": "Intro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub9uaf1-5",
+      "type": "row",
+      "x": 47,
+      "y": 141.8515625,
+      "w": 701,
+      "h": 29,
+      "barCount": 10,
+      "chordsPerBar": 1,
+      "chords": [
+        "-",
+        "-",
+        "Gm",
+        "r",
+        "Gm",
+        "r",
+        "Gm",
+        "r",
+        "Gm",
+        "r"
+      ]
+    },
+    {
+      "id": "el-mub9uxbk-7",
+      "type": "text",
+      "x": 181,
+      "y": 111.8515625,
+      "text": "+bas",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mub9v1a6-9",
+      "type": "text",
+      "x": 325,
+      "y": 109.8515625,
+      "text": "+bl\u00e6s",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mub9v9pu-b",
+      "type": "text",
+      "x": 41,
+      "y": 114.8515625,
+      "text": "trommer",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mub9xz1z-5",
+      "type": "title",
+      "x": 35,
+      "y": 195.3515625,
+      "text": "Vers + Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub9ycur-7",
+      "type": "row",
+      "x": 44,
+      "y": 239.3515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "repeatStart": true,
+      "repeatEnd": true,
+      "chordsPerBar": 1,
+      "chords": [
+        "Gm",
+        "F",
+        "F",
+        "Gm",
+        "Gm",
+        "F",
+        "F",
+        "Gm"
+      ]
+    },
+    {
+      "id": "el-mub9yncy-9",
+      "type": "text",
+      "x": 675,
+      "y": 215.3515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mub9z2db-b",
+      "type": "rhythmbar",
+      "x": 707,
+      "y": 257.3515625,
+      "w": 87,
+      "h": 20,
+      "numerator": 3,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 6,
+          "label": "Dotted 8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 6,
+          "label": "Dotted 8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "el-muba287v-1",
+      "type": "chordText",
+      "x": 712,
+      "y": 210.3515625,
+      "text": "C9",
+      "fontSize": 14
+    },
+    {
+      "id": "el-muba2iup-2",
+      "type": "title",
+      "x": 32,
+      "y": 282.3515625,
+      "text": "Vers + Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muba2iup-3",
+      "type": "row",
+      "x": 41,
+      "y": 326.3515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "repeatStart": true,
+      "repeatEnd": true,
+      "chordsPerBar": 1,
+      "chords": [
+        "Gm",
+        "F",
+        "D",
+        "Gm",
+        "Gm",
+        "F",
+        "D",
+        "Gm"
+      ]
+    },
+    {
+      "id": "el-muba2iup-4",
+      "type": "text",
+      "x": 672,
+      "y": 302.3515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-muba2iup-5",
+      "type": "rhythmbar",
+      "x": 704,
+      "y": 344.3515625,
+      "w": 87,
+      "h": 20,
+      "numerator": 3,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 6,
+          "label": "Dotted 8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 6,
+          "label": "Dotted 8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "el-muba2iup-6",
+      "type": "chordText",
+      "x": 709,
+      "y": 297.3515625,
+      "text": "C9",
+      "fontSize": 14
+    },
+    {
+      "id": "el-muba2v1n-8",
+      "type": "title",
+      "x": 35,
+      "y": 374.3515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muba339x-a",
+      "type": "row",
+      "x": 41,
+      "y": 418.3515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 2,
+      "chords": [
+        "Gm",
+        "F",
+        "F",
+        "Gm",
+        "Gm",
+        "F",
+        "F",
+        "Gm",
+        "Gm",
+        "F",
+        "F",
+        "Gm",
+        "Gm",
+        "F",
+        "F",
+        "Gm"
+      ]
+    },
+    {
+      "id": "el-muba3l6e-c",
+      "type": "title",
+      "x": 35,
+      "y": 464.3515625,
+      "text": "Breaks",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muba5558-d",
+      "type": "row",
+      "x": 46,
+      "y": 522.3515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 2,
+      "chords": [
+        "F",
+        "Gm",
+        "F",
+        "Gm",
+        "F",
+        "Gm",
+        "F",
+        "Gm"
+      ],
+      "chordCounts": [
+        0,
+        2,
+        0,
+        2,
+        0,
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "id": "el-muba65a3-f",
+      "type": "rhythmbar",
+      "x": 51,
+      "y": 538.3515625,
+      "w": 70,
+      "h": 20,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "rest",
+          "duration": 8,
+          "label": "Quarter rest"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "rest",
+          "duration": 16,
+          "label": "Half rest"
+        }
+      ]
+    },
+    {
+      "id": "el-muba6uqp-g",
+      "type": "rhythmbar",
+      "x": 216,
+      "y": 538.3515625,
+      "w": 70,
+      "h": 20,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "rest",
+          "duration": 8,
+          "label": "Quarter rest"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "rest",
+          "duration": 16,
+          "label": "Half rest"
+        }
+      ]
+    },
+    {
+      "id": "el-muba6wwy-h",
+      "type": "rhythmbar",
+      "x": 378,
+      "y": 537.3515625,
+      "w": 70,
+      "h": 20,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "rest",
+          "duration": 8,
+          "label": "Quarter rest"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "rest",
+          "duration": 16,
+          "label": "Half rest"
+        }
+      ]
+    },
+    {
+      "id": "el-muba71zu-i",
+      "type": "rhythmbar",
+      "x": 545,
+      "y": 537.3515625,
+      "w": 70,
+      "h": 20,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "rest",
+          "duration": 8,
+          "label": "Quarter rest"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "rest",
+          "duration": 16,
+          "label": "Half rest"
+        }
+      ]
+    },
+    {
+      "id": "el-muba7jw9-k",
+      "type": "chordText",
+      "x": 60,
+      "y": 500.3515625,
+      "text": "Gm",
+      "fontSize": 10
+    },
+    {
+      "id": "el-muba812e-m",
+      "type": "title",
+      "x": 30,
+      "y": 577.3515625,
+      "text": "Isabella",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muba86ng-n",
+      "type": "row",
+      "x": 38,
+      "y": 625.3515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 2,
+      "chords": [
+        "Gm",
+        "F",
+        "F",
+        "Gm",
+        "Gm",
+        "F",
+        "F",
+        "Gm",
+        "Gm",
+        "F",
+        "F",
+        "Gm",
+        "Gm",
+        "F",
+        "F",
+        "Gm"
+      ]
+    },
+    {
+      "id": "el-muba8h2v-p",
+      "type": "title",
+      "x": 29,
+      "y": 672.3515625,
+      "text": "Outro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muba8ir0-q",
+      "type": "rhythmbar",
+      "x": 703,
+      "y": 640.3515625,
+      "w": 87,
+      "h": 20,
+      "numerator": 3,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 6,
+          "label": "Dotted 8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 6,
+          "label": "Dotted 8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 2,
+          "label": "16th"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "el-muba8ir0-r",
+      "type": "chordText",
+      "x": 706,
+      "y": 598.3515625,
+      "text": "C9",
+      "fontSize": 14
+    },
+    {
+      "id": "el-muba986a-t",
+      "type": "row",
+      "x": 42,
+      "y": 723.3515625,
+      "w": 164,
+      "h": 27,
+      "barCount": 2,
+      "repeatStart": true,
+      "repeatEnd": true,
+      "chordsPerBar": 2,
+      "chords": [
+        "Gm",
+        "F",
+        "Eb",
+        "D"
+      ]
+    },
+    {
+      "id": "el-muba9w2w-x",
+      "type": "text",
+      "x": 214,
+      "y": 722.3515625,
+      "text": "Gentag indtil slut",
+      "fontSize": 12
+    }
+  ]
+}

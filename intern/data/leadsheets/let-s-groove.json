@@ -1,0 +1,522 @@
+{
+  "id": "let-s-groove",
+  "title": "Let's Groove",
+  "artist": "Earth, Wind & Fire",
+  "key": "Em",
+  "updated_at": "2026-09-21T18:55:02.049197+00:00",
+  "elements": [
+    {
+      "id": "el-mubadyio-1",
+      "type": "title",
+      "x": 35,
+      "y": 101.85171009239899,
+      "text": "Intro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubaesuc-3",
+      "type": "row",
+      "x": 53,
+      "y": 148.851710092399,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "repeatStart": true,
+      "repeatEnd": true,
+      "chordsPerBar": 2,
+      "chords": [
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7"
+      ]
+    },
+    {
+      "id": "el-mubafmjn-5",
+      "type": "text",
+      "x": 689,
+      "y": 124.85171009239899,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mubaftwm-6",
+      "type": "row",
+      "x": 50,
+      "y": 239.851710092399,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "repeatStart": false,
+      "repeatEnd": false,
+      "chordsPerBar": 2,
+      "chords": [
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7"
+      ]
+    },
+    {
+      "id": "el-mubag0rb-8",
+      "type": "title",
+      "x": 36,
+      "y": 192.851710092399,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubagbxw-9",
+      "type": "row",
+      "x": 48,
+      "y": 330.851710092399,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "repeatStart": true,
+      "repeatEnd": true,
+      "chordsPerBar": 2,
+      "chords": [
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7"
+      ]
+    },
+    {
+      "id": "el-mubaggws-b",
+      "type": "title",
+      "x": 34,
+      "y": 285.851710092399,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubagmqz-d",
+      "type": "text",
+      "x": 684,
+      "y": 303.851710092399,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mubagulg-f",
+      "type": "title",
+      "x": 35,
+      "y": 373.851710092399,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubagxcw-h",
+      "type": "title",
+      "x": 36,
+      "y": 425.851710092399,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubah1jv-j",
+      "type": "title",
+      "x": 35,
+      "y": 474.851710092399,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubah5fn-l",
+      "type": "title",
+      "x": 33,
+      "y": 527.851710092399,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubahaef-n",
+      "type": "title",
+      "x": 34,
+      "y": 579.851710092399,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubahpag-p",
+      "type": "row",
+      "x": 47,
+      "y": 627.851710092399,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "repeatStart": true,
+      "repeatEnd": true,
+      "chordsPerBar": 2,
+      "chords": [
+        "Am7",
+        "",
+        "Bm7",
+        "Em7",
+        "Am7",
+        "",
+        "Bm7",
+        "Em7",
+        "Cm7",
+        "",
+        "Dm7",
+        "Gm7",
+        "Fm7b5",
+        "",
+        "B7",
+        ""
+      ]
+    },
+    {
+      "id": "el-mubaj5b6-r",
+      "type": "rhythmbar",
+      "x": 539,
+      "y": 682.851710092399,
+      "w": 120,
+      "h": 18,
+      "numerator": 6,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "accent"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "accent"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "el-mubak57a-t",
+      "type": "title",
+      "x": 35,
+      "y": 680.851710092399,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubakblc-u",
+      "type": "row",
+      "x": 46,
+      "y": 729.851710092399,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "repeatStart": true,
+      "repeatEnd": true,
+      "chordsPerBar": 2,
+      "chords": [
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7"
+      ]
+    },
+    {
+      "id": "el-mubakk67-w",
+      "type": "title",
+      "x": 33,
+      "y": 772.851710092399,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubaknmq-y",
+      "type": "title",
+      "x": 31,
+      "y": 825.851710092399,
+      "text": "Solo",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubakqhw-z",
+      "type": "row",
+      "x": 43,
+      "y": 874.851710092399,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "repeatStart": true,
+      "repeatEnd": true,
+      "chordsPerBar": 2,
+      "chords": [
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7",
+        "Em7",
+        "",
+        "F#m7",
+        "Bm7"
+      ]
+    },
+    {
+      "id": "el-mubakvet-11",
+      "type": "text",
+      "x": 675,
+      "y": 846.851710092399,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mubakzfa-13",
+      "type": "title",
+      "x": 30,
+      "y": 921.851710092399,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubal2uf-15",
+      "type": "title",
+      "x": 32,
+      "y": 974.851710092399,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubal6e7-17",
+      "type": "title",
+      "x": 33,
+      "y": 1027.851710092399,
+      "text": "Outro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mubalffp-19",
+      "type": "text",
+      "x": 43,
+      "y": 1065.851710092399,
+      "text": "(Groove indtil slut)",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mubalu9i-1b",
+      "type": "text",
+      "x": 101,
+      "y": 696.851710092399,
+      "text": "(tilbage p\u00e5 groove)",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mubami6k-1d",
+      "type": "notestaff",
+      "x": 269.0012176372917,
+      "y": 80.8518724440379,
+      "w": 173,
+      "h": 29,
+      "numerator": 4,
+      "denominator": 4,
+      "bars": 2,
+      "clef": "bass",
+      "keySignature": 1,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "pitch": -2,
+          "accidental": null
+        },
+        {
+          "type": "rest",
+          "duration": 4,
+          "label": "8th rest"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 0,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "pitch": 1,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "pitch": 0,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "pitch": -1,
+          "accidental": null
+        },
+        {
+          "type": "rest",
+          "duration": 4,
+          "label": "8th rest"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 2,
+          "accidental": null,
+          "tie": true
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 2,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 1,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "pitch": 2,
+          "accidental": null
+        }
+      ]
+    }
+  ]
+}

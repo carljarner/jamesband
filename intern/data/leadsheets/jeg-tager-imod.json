@@ -1,0 +1,394 @@
+{
+  "id": "jeg-tager-imod",
+  "title": "Jeg Tager Imod",
+  "artist": "Thomas Helmig",
+  "key": "Dm",
+  "updated_at": "2026-09-22T09:09:11.758169+00:00",
+  "elements": [
+    {
+      "id": "el-mucfv03e-1",
+      "type": "title",
+      "x": 51,
+      "y": 90.8515625,
+      "text": "Intro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucfv4w2-3",
+      "type": "title",
+      "x": 48,
+      "y": 165.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucfv9gv-5",
+      "type": "row",
+      "x": 66,
+      "y": 206.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Gm",
+        "C",
+        "Am",
+        "Dm",
+        "Gm",
+        "C",
+        "Am",
+        "Dm"
+      ]
+    },
+    {
+      "id": "el-mucfvusf-7",
+      "type": "row",
+      "x": 65,
+      "y": 258.8515625,
+      "w": 492,
+      "h": 27,
+      "barCount": 6,
+      "chordsPerBar": 1,
+      "chords": [
+        "Gm7",
+        "C7",
+        "Am7",
+        "Dm7",
+        "Gm7",
+        "C7"
+      ]
+    },
+    {
+      "id": "el-mucfwfj5-a",
+      "type": "notestaff",
+      "x": 142,
+      "y": 113.8515625,
+      "w": 208,
+      "h": 24,
+      "numerator": 4,
+      "denominator": 4,
+      "bars": 2,
+      "clef": "treble",
+      "keySignature": -1,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 7,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 6,
+          "accidental": null
+        },
+        {
+          "type": "rest",
+          "duration": 4,
+          "label": "8th rest"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 4,
+          "accidental": null
+        },
+        {
+          "type": "rest",
+          "duration": 4,
+          "label": "8th rest"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 6,
+          "accidental": null
+        },
+        {
+          "type": "rest",
+          "duration": 4,
+          "label": "8th rest"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 3,
+          "accidental": null,
+          "tie": true
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 3,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 2,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 3,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 4,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 3,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 2,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": 0,
+          "accidental": null
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "pitch": -1,
+          "accidental": null
+        }
+      ]
+    },
+    {
+      "id": "el-mucg1a2i-e",
+      "type": "row",
+      "x": 56,
+      "y": 359.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Gm7",
+        "C7",
+        "Am7",
+        "Dm7",
+        "Gm7",
+        "C7",
+        "Am7",
+        "Dm9",
+        "Dm7"
+      ],
+      "chordCounts": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "el-mucg1a2i-f",
+      "type": "row",
+      "x": 55,
+      "y": 411.8515625,
+      "w": 492,
+      "h": 27,
+      "barCount": 6,
+      "chordsPerBar": 1,
+      "chords": [
+        "Gm7",
+        "C7",
+        "Am7",
+        "Dm7",
+        "Gm7",
+        "C7"
+      ]
+    },
+    {
+      "id": "el-mucg1a2j-g",
+      "type": "text",
+      "x": 597,
+      "y": 410.8515625,
+      "text": "(tema)",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucg1dyu-i",
+      "type": "title",
+      "x": 49,
+      "y": 307.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucg2g9k-k",
+      "type": "title",
+      "x": 50,
+      "y": 456.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucg2j2g-m",
+      "type": "title",
+      "x": 48,
+      "y": 508.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucg3krf-2",
+      "type": "text",
+      "x": 599,
+      "y": 253.8515625,
+      "text": "(tema)",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucg3zkb-4",
+      "type": "title",
+      "x": 45,
+      "y": 566.8515625,
+      "text": "Solo",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucg4qyt-5",
+      "type": "row",
+      "x": 56,
+      "y": 614.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Bbmaj7",
+        "Gm9",
+        "Bbmaj7",
+        "Gm9",
+        "Bbmaj7",
+        "Gm9",
+        "Fadd9"
+      ],
+      "chordCounts": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "el-mucg4qyt-6",
+      "type": "row",
+      "x": 55,
+      "y": 666.8515625,
+      "w": 492,
+      "h": 27,
+      "barCount": 6,
+      "chordsPerBar": 1,
+      "chords": [
+        "Bbmaj7",
+        "Gm9",
+        "Bbmaj7",
+        "Gm9",
+        "Bbmaj7",
+        "Gm9"
+      ]
+    },
+    {
+      "id": "el-mucg4qyt-7",
+      "type": "text",
+      "x": 597,
+      "y": 665.8515625,
+      "text": "(tema)",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucg76x3-b",
+      "type": "title",
+      "x": 49,
+      "y": 713.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucg7j0b-g",
+      "type": "text",
+      "x": 65,
+      "y": 757.8515625,
+      "text": "Breakdown: keys (4 takter) --> bas (4 takter) --> alle",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucg8dy7-i",
+      "type": "title",
+      "x": 48,
+      "y": 798.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucgcrm5-k",
+      "type": "rhythmbar",
+      "x": 639,
+      "y": 630.8515625,
+      "w": 70,
+      "h": 20,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 12,
+          "label": "Dotted quarter"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "tie": true
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter"
+        }
+      ]
+    }
+  ]
+}

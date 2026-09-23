@@ -1,0 +1,281 @@
+{
+  "id": "juice",
+  "title": "Juice",
+  "artist": "Bl\u00e6st",
+  "key": "Dm",
+  "updated_at": "2026-09-22T09:19:02.129092+00:00",
+  "elements": [
+    {
+      "id": "el-mucgeo5a-1",
+      "type": "title",
+      "x": 52,
+      "y": 96.8515625,
+      "text": "Intro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucges59-3",
+      "type": "row",
+      "x": 72,
+      "y": 143.8515625,
+      "w": 328,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "Dm7",
+        "G7",
+        "C11",
+        "Dm7"
+      ]
+    },
+    {
+      "id": "el-mucgeupu-5",
+      "type": "title",
+      "x": 49,
+      "y": 188.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucgf87z-7",
+      "type": "row",
+      "x": 62,
+      "y": 233.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Dm7",
+        "G7",
+        "C11",
+        "Dm7",
+        "Dm7",
+        "G7",
+        "C11",
+        "Dm7"
+      ]
+    },
+    {
+      "id": "el-mucgg5j2-9",
+      "type": "title",
+      "x": 50,
+      "y": 281.8515625,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucgg91w-b",
+      "type": "row",
+      "x": 62,
+      "y": 332.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "C11",
+        "r",
+        "D11",
+        "r",
+        "C11",
+        "r",
+        "D11",
+        "A7#5"
+      ]
+    },
+    {
+      "id": "el-mucggxzl-d",
+      "type": "title",
+      "x": 49,
+      "y": 380.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucgh0m4-e",
+      "type": "row",
+      "x": 60,
+      "y": 428.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Dm7",
+        "G7",
+        "C11",
+        "Dm7",
+        "Dm7",
+        "G7",
+        "C11",
+        "Dm7"
+      ]
+    },
+    {
+      "id": "el-mucgh88l-g",
+      "type": "title",
+      "x": 50,
+      "y": 473.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucghao3-i",
+      "type": "title",
+      "x": 49,
+      "y": 530.8515625,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucghcyx-k",
+      "type": "title",
+      "x": 49,
+      "y": 590.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucghl6b-m",
+      "type": "title",
+      "x": 48,
+      "y": 651.8515625,
+      "text": "Breakdown",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucgho8h-n",
+      "type": "row",
+      "x": 57,
+      "y": 702.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Dm7",
+        "G7",
+        "C11",
+        "Dm7",
+        "Dm7",
+        "G7",
+        "C11",
+        "A7#5"
+      ]
+    },
+    {
+      "id": "el-mucghy0f-p",
+      "type": "title",
+      "x": 43,
+      "y": 753.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucgi2l5-r",
+      "type": "title",
+      "x": 45,
+      "y": 808.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucgmie0-1",
+      "type": "text",
+      "x": 385,
+      "y": 206.8515625,
+      "text": "+bas",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucgo5bs-3",
+      "type": "rhythmbar",
+      "x": 643,
+      "y": 372.8515625,
+      "w": 70,
+      "h": 20,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "el-mucgpiew-5",
+      "type": "rhythmbar",
+      "x": 640,
+      "y": 743.8515625,
+      "w": 70,
+      "h": 20,
+      "numerator": 4,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        }
+      ]
+    }
+  ]
+}

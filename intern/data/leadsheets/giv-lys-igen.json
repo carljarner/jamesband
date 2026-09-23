@@ -1,0 +1,389 @@
+{
+  "id": "giv-lys-igen",
+  "title": "Giv Lys Igen",
+  "artist": "Jacob Aksgl\u00e6de",
+  "key": "Fm",
+  "updated_at": "2026-09-22T12:30:13.689170+00:00",
+  "elements": [
+    {
+      "id": "el-mucn1mz9-1",
+      "type": "title",
+      "x": 35,
+      "y": 88.8515625,
+      "text": "Intro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucn1til-3",
+      "type": "row",
+      "x": 48,
+      "y": 130.8515625,
+      "w": 482,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 2,
+      "chords": [
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db",
+        "Db",
+        "Eb/g",
+        "Fm",
+        ""
+      ]
+    },
+    {
+      "id": "el-mucn2g1x-5",
+      "type": "row",
+      "x": 46,
+      "y": 224.8515625,
+      "w": 482,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 2,
+      "chords": [
+        "Bbm7",
+        "Eb/g",
+        "Ab",
+        "Db",
+        "Bbm7",
+        "Eb/g",
+        "Fm",
+        ""
+      ],
+      "repeatEnd": true,
+      "repeatStart": true
+    },
+    {
+      "id": "el-mucn2ig1-7",
+      "type": "title",
+      "x": 38,
+      "y": 177.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucn3wj3-b",
+      "type": "row",
+      "x": 46,
+      "y": 316.8515625,
+      "w": 723,
+      "h": 27,
+      "barCount": 6,
+      "chordsPerBar": 2,
+      "chords": [
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db",
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db",
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db"
+      ]
+    },
+    {
+      "id": "el-mucn44tp-d",
+      "type": "title",
+      "x": 32,
+      "y": 268.8515625,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucn5bwo-f",
+      "type": "row",
+      "x": 43,
+      "y": 403.3515625,
+      "w": 482,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 2,
+      "chords": [
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db",
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db"
+      ],
+      "repeatStart": true,
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mucn5gm2-h",
+      "type": "title",
+      "x": 30,
+      "y": 360.3515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucn62t4-j",
+      "type": "row",
+      "x": 404,
+      "y": 457.3515625,
+      "w": 117,
+      "h": 27,
+      "barCount": 1,
+      "chordsPerBar": 2,
+      "chords": [
+        "Fm",
+        ""
+      ]
+    },
+    {
+      "id": "el-mucn6d09-l",
+      "type": "volta",
+      "x": 404,
+      "y": 383.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "1.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucn6g81-n",
+      "type": "volta",
+      "x": 404,
+      "y": 439.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "2.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucn75ff-p",
+      "type": "title",
+      "x": 32,
+      "y": 498.3515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucn77qa-r",
+      "type": "title",
+      "x": 33,
+      "y": 550.3515625,
+      "text": "Bro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucn7aqn-t",
+      "type": "title",
+      "x": 30,
+      "y": 606.3515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucn7dvl-v",
+      "type": "title",
+      "x": 33,
+      "y": 658.3515625,
+      "text": "Breakdown",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucn7m4l-w",
+      "type": "row",
+      "x": 40,
+      "y": 704.3515625,
+      "w": 482,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 2,
+      "chords": [
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db",
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db"
+      ],
+      "repeatStart": true,
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mucn7m4l-x",
+      "type": "row",
+      "x": 400,
+      "y": 757.3515625,
+      "w": 117,
+      "h": 27,
+      "barCount": 1,
+      "chordsPerBar": 2,
+      "chords": [
+        "Fm",
+        ""
+      ]
+    },
+    {
+      "id": "el-mucn7m4m-y",
+      "type": "volta",
+      "x": 401,
+      "y": 684.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "1.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucn7m4m-z",
+      "type": "volta",
+      "x": 400,
+      "y": 739.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "2.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucn84wr-11",
+      "type": "title",
+      "x": 33,
+      "y": 797.3515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucn87jq-13",
+      "type": "title",
+      "x": 33,
+      "y": 888.3515625,
+      "text": "Outro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucn8ffn-14",
+      "type": "row",
+      "x": 39,
+      "y": 933.3515625,
+      "w": 482,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 2,
+      "chords": [
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db",
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db"
+      ],
+      "repeatStart": true,
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mucn8ffn-15",
+      "type": "row",
+      "x": 399,
+      "y": 986.3515625,
+      "w": 351,
+      "h": 27,
+      "barCount": 3,
+      "chordsPerBar": 2,
+      "chords": [
+        "Fm",
+        "",
+        "Db",
+        "Eb/g",
+        "Fm",
+        ""
+      ]
+    },
+    {
+      "id": "el-mucn8ffn-16",
+      "type": "volta",
+      "x": 400,
+      "y": 913.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "1.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucn8ffn-17",
+      "type": "volta",
+      "x": 399,
+      "y": 968.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "2.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucn8sor-19",
+      "type": "glyph",
+      "x": 641,
+      "y": 982.3515625,
+      "code": "\ue4c0",
+      "fontSize": 20
+    },
+    {
+      "id": "el-mucndqhn-1a",
+      "type": "row",
+      "x": 39,
+      "y": 844.3515625,
+      "w": 482,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 2,
+      "chords": [
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db",
+        "Db",
+        "Eb/g",
+        "Ab",
+        "Db"
+      ],
+      "repeatStart": false,
+      "repeatEnd": false
+    },
+    {
+      "id": "el-mucnj2up-1",
+      "type": "text",
+      "x": 501,
+      "y": 199.8515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucnj74e-3",
+      "type": "text",
+      "x": 503,
+      "y": 375.8515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucnjaq1-5",
+      "type": "text",
+      "x": 494,
+      "y": 678.8515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mucnjefc-7",
+      "type": "text",
+      "x": 496,
+      "y": 906.8515625,
+      "text": "x2",
+      "fontSize": 12
+    }
+  ]
+}

@@ -1,0 +1,321 @@
+{
+  "id": "ymca",
+  "title": "YMCA",
+  "artist": "Village People",
+  "key": "F#",
+  "updated_at": "2026-09-22T21:52:21.635972+00:00",
+  "elements": [
+    {
+      "id": "el-mud7c6k1-1",
+      "type": "title",
+      "x": 35,
+      "y": 97.8515625,
+      "text": "Intro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud7cdxn-3",
+      "type": "row",
+      "x": 52,
+      "y": 145.8515625,
+      "w": 550,
+      "h": 27,
+      "barCount": 6,
+      "chordsPerBar": 1,
+      "chords": [
+        "C#",
+        "r",
+        "Bmaj/c#",
+        "r",
+        "C#9sus4",
+        "r"
+      ]
+    },
+    {
+      "id": "el-mud7d4cn-5",
+      "type": "notestaff",
+      "x": 161,
+      "y": 86.8515625,
+      "w": 99,
+      "h": 24,
+      "numerator": 4,
+      "denominator": 4,
+      "bars": 1,
+      "clef": "treble",
+      "keySignature": 6,
+      "cells": [
+        {
+          "type": "rest",
+          "duration": 8
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        },
+        {
+          "type": "rest",
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "el-mud7dxn7-7",
+      "type": "title",
+      "x": 37,
+      "y": 191.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud7e65o-9",
+      "type": "row",
+      "x": 52,
+      "y": 240.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "F#",
+        "R",
+        "D#m",
+        "r"
+      ]
+    },
+    {
+      "id": "el-mud7en3w-b",
+      "type": "row",
+      "x": 52,
+      "y": 287.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "B",
+        "r",
+        ""
+      ],
+      "chordCounts": [
+        1,
+        1,
+        0,
+        1
+      ]
+    },
+    {
+      "id": "el-mud7f0te-d",
+      "type": "rhythmbar",
+      "x": 397,
+      "y": 344.8515625,
+      "w": 300,
+      "h": 20,
+      "numerator": 8,
+      "denominator": 4,
+      "cells": [
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "tie": true
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "tie": true
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "tie": true
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th"
+        },
+        {
+          "type": "note",
+          "duration": 4,
+          "label": "8th",
+          "tie": true
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter"
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        },
+        {
+          "type": "note",
+          "duration": 8,
+          "label": "Quarter",
+          "articulations": [
+            "staccato"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "el-mud7iwmr-l",
+      "type": "chordText",
+      "x": 386,
+      "y": 288.8515625,
+      "text": "C#/e#",
+      "fontSize": 14
+    },
+    {
+      "id": "el-mud7j0jg-n",
+      "type": "chordText",
+      "x": 440,
+      "y": 289.8515625,
+      "text": "B/d#",
+      "fontSize": 14
+    },
+    {
+      "id": "el-mud7j44o-p",
+      "type": "chordText",
+      "x": 497,
+      "y": 290.8515625,
+      "text": "C#",
+      "fontSize": 14
+    },
+    {
+      "id": "el-mud7j6m0-r",
+      "type": "chordText",
+      "x": 558,
+      "y": 287.8515625,
+      "text": "B",
+      "fontSize": 14
+    },
+    {
+      "id": "el-mud7j8wf-t",
+      "type": "chordText",
+      "x": 605,
+      "y": 285.8515625,
+      "text": "A#m",
+      "fontSize": 14
+    },
+    {
+      "id": "el-mud7juk2-v",
+      "type": "chordText",
+      "x": 647,
+      "y": 284.8515625,
+      "text": "C#/g#",
+      "fontSize": 14
+    },
+    {
+      "id": "el-mud7kpny-x",
+      "type": "title",
+      "x": 39,
+      "y": 367.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud7kvhn-z",
+      "type": "row",
+      "x": 54,
+      "y": 413.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "F#",
+        "r",
+        "D#m",
+        "r"
+      ],
+      "repeatStart": true
+    },
+    {
+      "id": "el-mud7l3qt-10",
+      "type": "row",
+      "x": 55,
+      "y": 459.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "G#m",
+        "G#mmaj7",
+        "G#m7",
+        "G#m6",
+        "C#7sus4",
+        "r"
+      ],
+      "chordCounts": [
+        2,
+        2,
+        1,
+        1
+      ],
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mud7lwl9-12",
+      "type": "text",
+      "x": 683,
+      "y": 435.8515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mud7m2us-14",
+      "type": "title",
+      "x": 39,
+      "y": 502.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud7m5j2-16",
+      "type": "title",
+      "x": 35,
+      "y": 550.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud7m77o-17",
+      "type": "title",
+      "x": 40,
+      "y": 598.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mud7m77o-18",
+      "type": "title",
+      "x": 36,
+      "y": 646.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    }
+  ]
+}

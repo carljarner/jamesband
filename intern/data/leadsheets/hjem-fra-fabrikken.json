@@ -1,0 +1,412 @@
+{
+  "id": "hjem-fra-fabrikken",
+  "title": "hjem fra fabrikken",
+  "artist": "andreas odbjerg",
+  "key": "Db",
+  "updated_at": "2026-09-22T11:34:28.410964+00:00",
+  "elements": [
+    {
+      "id": "el-mucl0iwv-1",
+      "type": "title",
+      "x": 44,
+      "y": 93.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucl0v01-3",
+      "type": "row",
+      "x": 62,
+      "y": 135.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Dbmaj7",
+        "Bbm7",
+        "Fm7",
+        "Eb",
+        "Dbmaj7",
+        "Bbm7",
+        "Fm7",
+        "Eb"
+      ]
+    },
+    {
+      "id": "el-mucl1le2-5",
+      "type": "row",
+      "x": 62,
+      "y": 184.3515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Dbmaj7",
+        "Bbm7",
+        "Fm7",
+        "Eb",
+        "Bbm7",
+        "C11",
+        "Eb11",
+        "Ab11"
+      ]
+    },
+    {
+      "id": "el-mucl24we-7",
+      "type": "title",
+      "x": 41,
+      "y": 231.3515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mucl2fy3-9",
+      "type": "row",
+      "x": 64,
+      "y": 282.3515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "Dbmaj7",
+        "Ab/c",
+        "Bbm7",
+        "",
+        "Fm7",
+        "Eb",
+        "Dbmaj7",
+        "Ab/c",
+        "Bbm7",
+        "",
+        "Fm7",
+        "Eb"
+      ],
+      "chordCounts": [
+        4,
+        2,
+        4,
+        2
+      ],
+      "repeatEnd": true,
+      "repeatStart": true
+    },
+    {
+      "id": "el-mucl3r8d-b",
+      "type": "row",
+      "x": 392,
+      "y": 343.3515625,
+      "w": 324,
+      "h": 27,
+      "barCount": 2,
+      "chordsPerBar": 2,
+      "chords": [
+        "Ab11",
+        "Gb9#11",
+        "E13",
+        "C7#9"
+      ],
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mucl4oso-d",
+      "type": "volta",
+      "x": 391,
+      "y": 260.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "1, 3.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucl4rl4-f",
+      "type": "volta",
+      "x": 393,
+      "y": 323.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "2.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucl5czd-h",
+      "type": "row",
+      "x": 229,
+      "y": 395.3515625,
+      "w": 486,
+      "h": 27,
+      "barCount": 3,
+      "chordsPerBar": 3,
+      "chords": [
+        "Ab11",
+        "F11",
+        "Cm7/d",
+        "",
+        "",
+        "B/d#",
+        "Ab11-",
+        "Ab11",
+        "",
+        ""
+      ],
+      "chordCounts": [
+        3,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "el-mucl5czd-j",
+      "type": "volta",
+      "x": 230,
+      "y": 375.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "4.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-muclb019-l",
+      "type": "title",
+      "x": 47,
+      "y": 444.3515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muclb2fu-n",
+      "type": "title",
+      "x": 46,
+      "y": 497.3515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muclbays-p",
+      "type": "title",
+      "x": 49,
+      "y": 546.3515625,
+      "text": "Solo",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muclbgne-q",
+      "type": "row",
+      "x": 64,
+      "y": 591.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Dbmaj7",
+        "Bbm7",
+        "Fm7",
+        "Eb",
+        "Dbmaj7",
+        "Bbm7",
+        "Fm7",
+        "Eb"
+      ]
+    },
+    {
+      "id": "el-muclbgne-r",
+      "type": "row",
+      "x": 64,
+      "y": 640.3515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "Dbmaj7",
+        "Bbm7",
+        "Fm7",
+        "Eb",
+        "Bbm7",
+        "C11",
+        "Eb11",
+        "Ab11"
+      ]
+    },
+    {
+      "id": "el-muclcey4-t",
+      "type": "title",
+      "x": 45,
+      "y": 688.3515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muclciwd-u",
+      "type": "row",
+      "x": 63,
+      "y": 735.3515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "-",
+        "-",
+        "-",
+        "-",
+        "Ab/c",
+        "Dbmaj7",
+        "Ab/c",
+        "Bbm7",
+        "",
+        "Fm7",
+        "Eb"
+      ],
+      "chordCounts": [
+        1,
+        4,
+        4,
+        2
+      ],
+      "repeatEnd": true,
+      "repeatStart": true
+    },
+    {
+      "id": "el-muclciwd-v",
+      "type": "row",
+      "x": 391,
+      "y": 796.3515625,
+      "w": 324,
+      "h": 27,
+      "barCount": 2,
+      "chordsPerBar": 2,
+      "chords": [
+        "Ab11",
+        "Gb9#11",
+        "E13",
+        "C7#9"
+      ],
+      "repeatEnd": true
+    },
+    {
+      "id": "el-muclciwe-w",
+      "type": "volta",
+      "x": 390,
+      "y": 713.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "1, 3.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-muclciwe-x",
+      "type": "volta",
+      "x": 392,
+      "y": 776.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "2.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-muclciwe-y",
+      "type": "row",
+      "x": 389,
+      "y": 852.3515625,
+      "w": 324,
+      "h": 27,
+      "barCount": 2,
+      "chordsPerBar": 3,
+      "chords": [
+        "Ab11",
+        "F11",
+        "Cm7/d",
+        "",
+        "",
+        "B/a",
+        "Ab11-"
+      ],
+      "chordCounts": [
+        3,
+        4
+      ]
+    },
+    {
+      "id": "el-muclciwe-z",
+      "type": "volta",
+      "x": 390,
+      "y": 832.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "4.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mucleu5i-11",
+      "type": "text",
+      "x": 147,
+      "y": 501.3515625,
+      "text": "(ekstra takt til sidst)",
+      "fontSize": 12
+    },
+    {
+      "id": "el-muclglm7-13",
+      "type": "title",
+      "x": 42,
+      "y": 911.3515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-muclhz4r-18",
+      "type": "row",
+      "x": 193,
+      "y": 983.3515625,
+      "w": 324,
+      "h": 27,
+      "barCount": 2,
+      "chordsPerBar": 1,
+      "chords": [
+        "Amaj7",
+        "Dbmaj7"
+      ]
+    },
+    {
+      "id": "el-muclhz4r-19",
+      "type": "volta",
+      "x": 194,
+      "y": 963.3515625,
+      "w": 50,
+      "h": 14,
+      "text": "4.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-muclivn0-1b",
+      "type": "glyph",
+      "x": 266,
+      "y": 980.3515625,
+      "code": "\ue4c0",
+      "fontSize": 20
+    },
+    {
+      "id": "el-mucliy81-1d",
+      "type": "glyph",
+      "x": 433,
+      "y": 982.3515625,
+      "code": "\ue4c0",
+      "fontSize": 20
+    },
+    {
+      "id": "el-mucljei5-1f",
+      "type": "arrow",
+      "x1": 82,
+      "y1": 995.3515625,
+      "x2": 162,
+      "y2": 995.3515625,
+      "bow": {
+        "dx": 0,
+        "dy": 0
+      }
+    }
+  ]
+}

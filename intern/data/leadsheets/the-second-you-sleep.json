@@ -1,0 +1,343 @@
+{
+  "id": "the-second-you-sleep",
+  "title": "The Second You Sleep",
+  "artist": "Saybia",
+  "key": "E",
+  "updated_at": "2026-09-21T13:15:50.956920+00:00",
+  "elements": [
+    {
+      "id": "el-mub8v132-1",
+      "type": "title",
+      "x": 25,
+      "y": 84.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub8vad7-3",
+      "type": "row",
+      "x": 41,
+      "y": 126.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "E",
+        "Am",
+        "E",
+        "Am",
+        "C#m",
+        "Bsus4",
+        "Asus2",
+        "A#4",
+        "A"
+      ],
+      "chordCounts": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        1
+      ]
+    },
+    {
+      "id": "el-mub8w2xh-5",
+      "type": "title",
+      "x": 26,
+      "y": 171.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub8wels-7",
+      "type": "title",
+      "x": 28,
+      "y": 224.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub8wsx4-9",
+      "type": "row",
+      "x": 44,
+      "y": 270.8515625,
+      "w": 337,
+      "h": 31,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "C#m",
+        "A",
+        "E",
+        "B",
+        "Co7"
+      ],
+      "chordCounts": [
+        1,
+        1,
+        1,
+        2
+      ],
+      "repeatStart": true,
+      "repeatEnd": true
+    },
+    {
+      "id": "el-mub8z5u3-b",
+      "type": "row",
+      "x": 295,
+      "y": 332.8515625,
+      "w": 246,
+      "h": 27,
+      "barCount": 3,
+      "chordsPerBar": 2,
+      "chords": [
+        "B",
+        "Ab",
+        "Asus2",
+        "A#4",
+        "A"
+      ],
+      "chordCounts": [
+        2,
+        2,
+        1
+      ]
+    },
+    {
+      "id": "el-mub8zdwr-d",
+      "type": "volta",
+      "x": 294,
+      "y": 246.8515625,
+      "w": 22,
+      "h": 14,
+      "text": "1.",
+      "fontSize": 8
+    },
+    {
+      "id": "el-mub8zqdu-f",
+      "type": "volta",
+      "x": 295,
+      "y": 309.8515625,
+      "w": 24,
+      "h": 11,
+      "text": "2..",
+      "fontSize": 6
+    },
+    {
+      "id": "el-mub90o1h-h",
+      "type": "title",
+      "x": 28,
+      "y": 386.8515625,
+      "text": "Vers",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub90sho-j",
+      "type": "title",
+      "x": 26,
+      "y": 437.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub9104o-l",
+      "type": "row",
+      "x": 38,
+      "y": 486.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 1,
+      "chords": [
+        "C#m",
+        "A",
+        "E",
+        "B",
+        "Co7",
+        "C#m",
+        "A",
+        "E",
+        "B",
+        "Ab"
+      ],
+      "chordCounts": [
+        1,
+        1,
+        1,
+        2,
+        1,
+        1,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "el-mub939zi-1",
+      "type": "title",
+      "x": 29,
+      "y": 534.8515625,
+      "text": "Stay",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub93kz9-3",
+      "type": "row",
+      "x": 40,
+      "y": 580.8515625,
+      "w": 656,
+      "h": 27,
+      "barCount": 8,
+      "chordsPerBar": 2,
+      "chords": [
+        "Asus2",
+        "A#4",
+        "A",
+        "A#4",
+        "Asus2",
+        "A#4",
+        "A",
+        "A#4",
+        "Asus2",
+        "A#4",
+        "A",
+        "A#4",
+        "Asus2",
+        "A#4",
+        "A"
+      ],
+      "chordCounts": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1
+      ]
+    },
+    {
+      "id": "el-mub999sw-1",
+      "type": "title",
+      "x": 31,
+      "y": 631.8515625,
+      "text": "Omkv\u00e6d",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub99pb2-2",
+      "type": "row",
+      "x": 40,
+      "y": 682.8515625,
+      "w": 328,
+      "h": 27,
+      "barCount": 4,
+      "chordsPerBar": 1,
+      "chords": [
+        "C#m",
+        "A",
+        "E",
+        "B",
+        "Co7"
+      ],
+      "chordCounts": [
+        1,
+        1,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "el-mub9a7sz-4",
+      "type": "row",
+      "x": 365,
+      "y": 682.8515625,
+      "w": 328,
+      "h": 27,
+      "barCount": 4,
+      "repeatStart": true,
+      "repeatEnd": true,
+      "chordsPerBar": 1,
+      "chords": [
+        "C#m",
+        "A",
+        "E",
+        "B",
+        "Ab"
+      ],
+      "chordCounts": [
+        1,
+        1,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "el-mub9ahqu-6",
+      "type": "text",
+      "x": 669,
+      "y": 655.8515625,
+      "text": "x2",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mub9aps7-8",
+      "type": "title",
+      "x": 34,
+      "y": 723.8515625,
+      "text": "Stay",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub9auev-a",
+      "type": "title",
+      "x": 34,
+      "y": 777.8515625,
+      "text": "Outro",
+      "fontSize": 17
+    },
+    {
+      "id": "el-mub9b1gl-c",
+      "type": "row",
+      "x": 46,
+      "y": 823.8515625,
+      "w": 246,
+      "h": 27,
+      "barCount": 3,
+      "chordsPerBar": 1,
+      "chords": [
+        "E",
+        "Am",
+        "E"
+      ]
+    },
+    {
+      "id": "el-mub9pjop-5",
+      "type": "text",
+      "x": 94,
+      "y": 175.8515625,
+      "text": "(+ klaver)",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mub9pr5o-7",
+      "type": "text",
+      "x": 105,
+      "y": 227.8515625,
+      "text": "(+ trommer, bas)",
+      "fontSize": 12
+    },
+    {
+      "id": "el-mub9q1n3-9",
+      "type": "text",
+      "x": 91,
+      "y": 779.8515625,
+      "text": "(kun guitar)",
+      "fontSize": 12
+    }
+  ]
+}
