@@ -4850,5 +4850,13 @@
         "type": "song"
       }
     ]
+  },
+  {
+    "id": "84150a49",
+    "date": "2026-09-25",
+    "venue": "Test gig",
+    "lineup": "Test",
+    "notes": "",
+    "songs": []
   }
 ]
