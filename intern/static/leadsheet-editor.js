@@ -512,12 +512,12 @@
   const selectedIds = new Set();
 
   // On a phone-sized screen the page is a viewer: see the sheet, transpose
-  // it and print it, but nothing edits it (the CSS hides the editing tools).
+  // it and get it as a PDF, but nothing edits it (the CSS hides the editing tools).
   const viewerMQ = matchMedia('(max-width: 700px)');
   function isViewer() { return viewerMQ.matches; }
-  // The shareable PDF of the current render (see "share as PDF"); any
-  // re-render makes it stale.
-  let sharePdf = null;
+  // The PDF of the current render (see "sheet as PDF"); any re-render makes
+  // it stale.
+  let sheetPdf = null;
   let activeSlot = null;
   let marquee = null;
 
@@ -2710,7 +2710,8 @@
   }
 
   function renderSvg() {
-    if (sharePdf) { sharePdf = null; viewerPrintBtn.textContent = 'Share PDF'; }
+    sheetPdfGen++;
+    if (sheetPdf) dropSheetPdf();
     const svg = document.getElementById('sheet-svg');
     svg.setAttribute('viewBox', `0 0 ${PAGE_W} ${PAGE_H}`);
     while (svg.firstChild) svg.removeChild(svg.firstChild);
@@ -4617,10 +4618,12 @@
 
   document.getElementById('print-btn').addEventListener('click', () => window.print());
 
-  /* ---------- share as PDF (phones) ---------- */
-  // On a phone the viewer's button hands the sheet, as it looks now
-  // (transposition included), to the OS share sheet as an A4 PDF -- Messages,
-  // WhatsApp, Mail, AirDrop... Where the browser can't share files it prints.
+  /* ---------- sheet as PDF (phones) ---------- */
+  // The phone viewer has two ways out for the sheet as it looks now
+  // (transposition included), as an A4 PDF: the top PDF button opens it in a
+  // new tab, and the Share button at the bottom hands it to the OS share
+  // sheet -- Messages, WhatsApp, Mail, AirDrop... (shown only where the
+  // browser can share files).
   // The PDF is one full-page JPEG of the sheet drawn at ~240 dpi: the SVG is
   // inlined (computed styles + the MuseJazz fonts as data URIs, since an SVG
   // loaded as an image sees neither the page's CSS nor its fonts), drawn onto
@@ -4632,14 +4635,16 @@
     'font-size', 'font-weight', 'font-style', 'letter-spacing', 'text-anchor', 'dominant-baseline',
   ];
   const SHARE_DROP = '.el-selection, .el-slot-active, .el-marquee, .el-resize-handle, .el-move-handle, .el-arrow-handle, .el-arrow-bow-handle';
-  const viewerPrintBtn = document.getElementById('viewer-print-btn');
+  const viewerPdfBtn = document.getElementById('viewer-pdf-btn');
+  const viewerShareBtn = document.getElementById('viewer-share-btn');
   const canShareFiles = (() => {
     try {
       return !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'x.pdf', { type: 'application/pdf' })] }));
     } catch (err) { return false; }
   })();
   let shareFontCss = null;
-  let shareBusy = false;
+  let sheetPdfBuild = null; // { gen, promise } while a PDF is being made
+  let sheetPdfGen = 0;      // bumped by every re-render
 
   async function loadShareFontCss() {
     if (shareFontCss) return shareFontCss;
@@ -4736,46 +4741,74 @@
     return key ? `${base} (${key}).pdf` : `${base}.pdf`;
   }
 
-  async function sharePdfFile(file) {
+  // Old blob URLs are revoked a while later rather than at once, so a tab
+  // still loading one isn't cut off.
+  function dropSheetPdf() {
+    const { url } = sheetPdf;
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    sheetPdf = null;
+    viewerShareBtn.textContent = 'Share';
+  }
+
+  // The current render's PDF ({ file, url }), made once and reused until the
+  // next re-render.
+  function getSheetPdf() {
+    if (sheetPdf) return Promise.resolve(sheetPdf);
+    if (sheetPdfBuild && sheetPdfBuild.gen === sheetPdfGen) return sheetPdfBuild.promise;
+    const gen = sheetPdfGen;
+    const promise = sheetJpegBytes().then(jpeg => {
+      const file = new File([jpegToPdf(jpeg)], shareFileName(), { type: 'application/pdf' });
+      const pdf = { file, url: URL.createObjectURL(file) };
+      if (gen === sheetPdfGen) sheetPdf = pdf;
+      return pdf;
+    }).finally(() => { if (sheetPdfBuild && sheetPdfBuild.gen === gen) sheetPdfBuild = null; });
+    sheetPdfBuild = { gen, promise };
+    return promise;
+  }
+
+  viewerPdfBtn.addEventListener('click', async () => {
+    if (sheetPdf) { window.open(sheetPdf.url, '_blank'); return; }
+    // Browsers only allow a new tab straight from the tap, so open it now and
+    // point it at the PDF once that's ready.
+    const tab = window.open('', '_blank');
+    if (tab) tab.document.write('<p style="font:16px system-ui;padding:1rem">Preparing PDF…</p>');
+    try {
+      const { url } = await getSheetPdf();
+      if (tab) tab.location.href = url;
+      else location.href = url;
+    } catch (err) {
+      if (tab) tab.close();
+    }
+  });
+
+  async function shareSheetPdf(file) {
     try {
       await navigator.share({ files: [file], title: model.title || 'Lead sheet' });
     } catch (err) {
-      if (err.name === 'AbortError') return; // the share sheet was dismissed
-      if (err.name === 'NotAllowedError') {
-        // Building the PDF took longer than the browser lets a tap count as
-        // "the user asked to share". It's ready now, so the next tap shares
-        // straight away.
-        viewerPrintBtn.textContent = 'Tap to share';
-        return;
-      }
-      window.print();
+      // Building the PDF took longer than the browser lets a tap count as
+      // "the user asked to share". It's ready now, so the next tap shares
+      // straight away. (AbortError is just the share sheet being dismissed.)
+      if (err.name === 'NotAllowedError') viewerShareBtn.textContent = 'Tap to share';
     }
   }
 
-  viewerPrintBtn.addEventListener('click', async () => {
-    if (!canShareFiles) { window.print(); return; }
-    if (sharePdf) { viewerPrintBtn.textContent = 'Share PDF'; sharePdfFile(sharePdf); return; }
-    if (shareBusy) return;
-    shareBusy = true;
-    viewerPrintBtn.disabled = true;
-    viewerPrintBtn.textContent = 'Preparing…';
+  viewerShareBtn.addEventListener('click', async () => {
+    if (sheetPdf) { viewerShareBtn.textContent = 'Share'; shareSheetPdf(sheetPdf.file); return; }
+    if (viewerShareBtn.disabled) return;
+    viewerShareBtn.disabled = true;
+    viewerShareBtn.textContent = 'Preparing…';
     try {
-      const blob = jpegToPdf(await sheetJpegBytes());
-      sharePdf = new File([blob], shareFileName(), { type: 'application/pdf' });
-      viewerPrintBtn.textContent = 'Share PDF';
-      await sharePdfFile(sharePdf);
+      const { file } = await getSheetPdf();
+      viewerShareBtn.textContent = 'Share';
+      await shareSheetPdf(file);
     } catch (err) {
-      viewerPrintBtn.textContent = 'Share PDF';
-      window.print();
+      viewerShareBtn.textContent = 'Share';
     } finally {
-      shareBusy = false;
-      viewerPrintBtn.disabled = false;
+      viewerShareBtn.disabled = false;
     }
   });
-  if (canShareFiles) {
-    viewerPrintBtn.textContent = 'Share PDF';
-    loadShareFontCss().catch(() => {});
-  }
+  document.getElementById('viewer-share').hidden = !canShareFiles;
+  loadShareFontCss().catch(() => {});
 
   // Entering the viewer (on load, or when a rotate/resize crosses the
   // breakpoint) drops any selection and closes the editing popups; leaving it
