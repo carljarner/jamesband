@@ -1,8 +1,8 @@
 # One-time hosting setup
 
-Manual steps to wire up the split described in the plan (public page on
-GitHub Pages, intern app on Render, DNS on simply.com). Code changes are
-already done; this is account/dashboard configuration only.
+Manual steps to wire up the split: public page on GitHub Pages, intern app
+in Coolify on the Hetzner server `web-1`, DNS on simply.com. The full
+server setup (firewall, Coolify, backups) is in `hosting.md`.
 
 ## 1. GitHub repo
 
@@ -13,22 +13,28 @@ already done; this is account/dashboard configuration only.
 - Repo Settings → Pages → Custom domain: your apex domain (e.g. `example.com`).
   GitHub will show a DNS check — see step 3.
 
-## 2. Render (intern app)
+## 2. Coolify (intern app)
 
-- New → Web Service → connect the same GitHub repo.
-- Root Directory: `intern`. Render will detect the `Dockerfile` automatically.
-- Environment variables to set in the Render dashboard:
-  - `INTERN_PASSWORD` — the shared band password.
-  - `SESSION_SECRET` — any long random string (`python3 -c "import secrets; print(secrets.token_hex(32))"`).
-  - `GIT_REMOTE` — `https://x-access-token:<TOKEN>@github.com/<you>/james-band.git`,
-    where `<TOKEN>` is a fine-grained GitHub PAT scoped to just this repo with
-    Contents: Read and write. This lets the intern app commit chord
-    library/song data back to the repo (see `intern/data_store.py`).
-  - `GIT_USER_NAME`, `GIT_USER_EMAIL` — used for the automated data commits.
-- Once deployed, Render gives you a `<service>.onrender.com` URL — confirm the
-  app loads and the login gate works before moving to DNS.
-- Settings → Custom Domain → add `intern.<your-domain>`. Render will show the
-  CNAME target to add (step 3) and auto-issues a TLS cert once DNS resolves.
+- In Coolify: **jamesband → production → + New → Private Repository (with
+  GitHub App)**, repo `jamesband`, branch `main`.
+- Build Pack: Dockerfile. Base Directory: `/intern`. Dockerfile Location:
+  `/Dockerfile`. Ports Exposes: `10000`.
+- Watch Paths, so only code changes redeploy:
+  `intern/*.py`, `intern/requirements.txt`, `intern/Dockerfile`,
+  `intern/templates/**`, `intern/static/**`.
+- Persistent Storage: directory mount, source `/srv/jamesband/data`,
+  destination `/data`. All app data lives there, not in git, and the
+  nightly restic backup covers it.
+- Environment variables (runtime only, not build variables):
+  - `INTERN_PASSWORD`: the shared band password.
+  - `SESSION_SECRET`: any long random string (`python3 -c "import secrets; print(secrets.token_hex(32))"`).
+  - `DATA_DIR`: `/data`.
+- Domains: `https://intern.<your-domain>`. Coolify issues the TLS cert once
+  DNS resolves.
+- The public site loads `repertoire.json` and the four section backgrounds
+  from `https://intern.<your-domain>/public/`, so they stay out of this repo.
+- For local development, copy the live data down:
+  `scp -r web-1:/srv/jamesband/data intern/data`.
 
 ## 3. DNS on simply.com
 
@@ -38,11 +44,11 @@ In the simply.com DNS control panel for your domain, add:
   `185.199.108.153`, `.109.153`, `.110.153`, `.111.153` — double-check
   GitHub's own Pages docs for the current list before adding).
 - `www` → CNAME → `<you>.github.io`.
-- `intern` → CNAME → the `<service>.onrender.com` hostname Render shows you.
+- `intern` → A → the server's IPv4 address.
 
-DNS propagation can take anywhere from minutes to a few hours. Both GitHub
-Pages and Render will show a pending/verified status for the custom domain
-once it resolves.
+DNS propagation can take anywhere from minutes to a few hours. GitHub Pages
+shows a pending/verified status for the custom domain, and Coolify gets the
+intern certificate once it resolves.
 
 ## 4. Verify
 
@@ -51,4 +57,5 @@ once it resolves.
   rejected, correct password reaches the intern home page.
 - Push a change to `/public` → confirm the Pages Actions run succeeds and the
   live site updates.
-- Push a change to `/intern` → confirm Render auto-deploys.
+- Push a change to `/intern` code → confirm Coolify auto-deploys.
+- Save something in the intern app → confirm it creates no GitHub commit.
