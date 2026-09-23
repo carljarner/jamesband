@@ -515,6 +515,9 @@
   // it and print it, but nothing edits it (the CSS hides the editing tools).
   const viewerMQ = matchMedia('(max-width: 700px)');
   function isViewer() { return viewerMQ.matches; }
+  // The shareable PDF of the current render (see "share as PDF"); any
+  // re-render makes it stale.
+  let sharePdf = null;
   let activeSlot = null;
   let marquee = null;
 
@@ -2707,6 +2710,7 @@
   }
 
   function renderSvg() {
+    if (sharePdf) { sharePdf = null; viewerPrintBtn.textContent = 'Share PDF'; }
     const svg = document.getElementById('sheet-svg');
     svg.setAttribute('viewBox', `0 0 ${PAGE_W} ${PAGE_H}`);
     while (svg.firstChild) svg.removeChild(svg.firstChild);
@@ -4612,7 +4616,166 @@
   });
 
   document.getElementById('print-btn').addEventListener('click', () => window.print());
-  document.getElementById('viewer-print-btn').addEventListener('click', () => window.print());
+
+  /* ---------- share as PDF (phones) ---------- */
+  // On a phone the viewer's button hands the sheet, as it looks now
+  // (transposition included), to the OS share sheet as an A4 PDF -- Messages,
+  // WhatsApp, Mail, AirDrop... Where the browser can't share files it prints.
+  // The PDF is one full-page JPEG of the sheet drawn at ~240 dpi: the SVG is
+  // inlined (computed styles + the MuseJazz fonts as data URIs, since an SVG
+  // loaded as an image sees neither the page's CSS nor its fonts), drawn onto
+  // a canvas, and wrapped in a minimal hand-written PDF.
+  const SHARE_SCALE = 2.5;
+  const SHARE_STYLE_PROPS = [
+    'display', 'visibility', 'opacity', 'fill', 'fill-opacity', 'stroke', 'stroke-opacity',
+    'stroke-width', 'stroke-dasharray', 'stroke-linecap', 'stroke-linejoin', 'font-family',
+    'font-size', 'font-weight', 'font-style', 'letter-spacing', 'text-anchor', 'dominant-baseline',
+  ];
+  const SHARE_DROP = '.el-selection, .el-slot-active, .el-marquee, .el-resize-handle, .el-move-handle, .el-arrow-handle, .el-arrow-bow-handle';
+  const viewerPrintBtn = document.getElementById('viewer-print-btn');
+  const canShareFiles = (() => {
+    try {
+      return !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'x.pdf', { type: 'application/pdf' })] }));
+    } catch (err) { return false; }
+  })();
+  let shareFontCss = null;
+  let shareBusy = false;
+
+  async function loadShareFontCss() {
+    if (shareFontCss) return shareFontCss;
+    const faces = await Promise.all(['MuseJazzText', 'MuseJazz'].map(async name => {
+      const buf = await (await fetch(`/static/fonts/${name}.otf`)).arrayBuffer();
+      let bin = '';
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      return `@font-face{font-family:'${name}';src:url(data:font/otf;base64,${btoa(bin)}) format('opentype');}`;
+    }));
+    return (shareFontCss = faces.join(''));
+  }
+
+  function sheetSvgMarkup(fontCss) {
+    const src = document.getElementById('sheet-svg');
+    const clone = src.cloneNode(true);
+    const srcEls = src.querySelectorAll('*');
+    const cloneEls = clone.querySelectorAll('*');
+    srcEls.forEach((el, i) => {
+      const cs = getComputedStyle(el);
+      cloneEls[i].setAttribute('style', SHARE_STYLE_PROPS.map(p => `${p}:${cs.getPropertyValue(p)}`).join(';'));
+    });
+    // Same clean-up as the print stylesheet: no editing chrome, white paper.
+    clone.querySelectorAll(SHARE_DROP).forEach(n => n.remove());
+    clone.querySelectorAll('.el-chord-slot').forEach(n => { n.style.fill = 'none'; n.style.stroke = 'none'; });
+    clone.querySelectorAll('.page-bg, .el-title-box-fill').forEach(n => { n.style.fill = '#fff'; n.style.stroke = 'none'; });
+    clone.removeAttribute('id');
+    clone.removeAttribute('class');
+    clone.setAttribute('width', PAGE_W);
+    clone.setAttribute('height', PAGE_H);
+    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    style.textContent = fontCss;
+    clone.insertBefore(style, clone.firstChild);
+    return new XMLSerializer().serializeToString(clone);
+  }
+
+  async function sheetJpegBytes() {
+    const markup = sheetSvgMarkup(await loadShareFontCss());
+    const url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml' }));
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(PAGE_W * SHARE_SCALE);
+      canvas.height = Math.round(PAGE_H * SHARE_SCALE);
+      const ctx = canvas.getContext('2d');
+      const draw = () => {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+      // WebKit can paint an SVG image before its embedded fonts are ready;
+      // drawing a second time a moment later picks them up.
+      draw();
+      await new Promise(r => setTimeout(r, 150));
+      draw();
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+      return { bytes: new Uint8Array(await blob.arrayBuffer()), w: canvas.width, h: canvas.height };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  // A one-page A4 PDF whose page is the JPEG, edge to edge (DCTDecode takes
+  // the JPEG bytes as they are).
+  function jpegToPdf({ bytes, w, h }) {
+    const enc = new TextEncoder();
+    const parts = [];
+    const offsets = [];
+    let len = 0;
+    const push = p => { const b = typeof p === 'string' ? enc.encode(p) : p; parts.push(b); len += b.length; };
+    const obj = (n, body) => { offsets[n] = len; push(`${n} 0 obj\n${body}\nendobj\n`); };
+    const pw = 595.28, ph = 841.89;
+    const content = `q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`;
+    push('%PDF-1.4\n');
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
+    offsets[4] = len;
+    push(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bytes.length} >>\nstream\n`);
+    push(bytes);
+    push('\nendstream\nendobj\n');
+    obj(5, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+    const xref = len;
+    push(`xref\n0 6\n0000000000 65535 f \n${offsets.slice(1).map(o => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`);
+    push(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+
+  function shareFileName() {
+    const base = (model.title || 'Untitled').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Lead sheet';
+    const key = transposeState.semitones ? transposedKeyName() : '';
+    return key ? `${base} (${key}).pdf` : `${base}.pdf`;
+  }
+
+  async function sharePdfFile(file) {
+    try {
+      await navigator.share({ files: [file], title: model.title || 'Lead sheet' });
+    } catch (err) {
+      if (err.name === 'AbortError') return; // the share sheet was dismissed
+      if (err.name === 'NotAllowedError') {
+        // Building the PDF took longer than the browser lets a tap count as
+        // "the user asked to share". It's ready now, so the next tap shares
+        // straight away.
+        viewerPrintBtn.textContent = 'Tap to share';
+        return;
+      }
+      window.print();
+    }
+  }
+
+  viewerPrintBtn.addEventListener('click', async () => {
+    if (!canShareFiles) { window.print(); return; }
+    if (sharePdf) { viewerPrintBtn.textContent = 'Share PDF'; sharePdfFile(sharePdf); return; }
+    if (shareBusy) return;
+    shareBusy = true;
+    viewerPrintBtn.disabled = true;
+    viewerPrintBtn.textContent = 'Preparing…';
+    try {
+      const blob = jpegToPdf(await sheetJpegBytes());
+      sharePdf = new File([blob], shareFileName(), { type: 'application/pdf' });
+      viewerPrintBtn.textContent = 'Share PDF';
+      await sharePdfFile(sharePdf);
+    } catch (err) {
+      viewerPrintBtn.textContent = 'Share PDF';
+      window.print();
+    } finally {
+      shareBusy = false;
+      viewerPrintBtn.disabled = false;
+    }
+  });
+  if (canShareFiles) {
+    viewerPrintBtn.textContent = 'Share PDF';
+    loadShareFontCss().catch(() => {});
+  }
 
   // Entering the viewer (on load, or when a rotate/resize crosses the
   // breakpoint) drops any selection and closes the editing popups; leaving it
