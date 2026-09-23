@@ -125,7 +125,7 @@ section {
   justify-content: center;
   text-align: center;
   background: linear-gradient(180deg, rgba(11,12,15,0.55), rgba(11,12,15,0.85)),
-              url('../images/dsbs_1.jpg') center top / cover no-repeat;
+              url('https://intern.jamesband.dk/public/images/dsbs_1.jpg') center top / cover no-repeat;
 }
 
 .hero__title {
@@ -185,7 +185,7 @@ section {
   content: "";
   position: absolute;
   inset: -20px;
-  background: url('../images/video-bg.png') center / cover no-repeat;
+  background: url('https://intern.jamesband.dk/public/images/video-bg.png') center / cover no-repeat;
   filter: blur(12px);
   transform: scale(1.05);
   z-index: 0;
@@ -211,7 +211,7 @@ section {
   aspect-ratio: 16 / 9;
   border-radius: var(--radius);
   overflow: hidden;
-  background: url('../images/video-bg.png') center / cover no-repeat;
+  background: url('https://intern.jamesband.dk/public/images/video-bg.png') center / cover no-repeat;
 }
 
 .video-frame::after {
@@ -249,7 +249,7 @@ section {
 /* ---------- Koncept ---------- */
 .koncept {
   background: linear-gradient(180deg, rgba(22,24,29,0.88), rgba(22,24,29,0.92)),
-              url('../images/koncept-bg.png') center / cover no-repeat;
+              url('https://intern.jamesband.dk/public/images/koncept-bg.png') center / cover no-repeat;
 }
 
 .koncept__grid {
@@ -387,7 +387,7 @@ section {
 /* ---------- Kontakt ---------- */
 #kontakt {
   background: linear-gradient(180deg, rgba(11,12,15,0.75), rgba(11,12,15,0.9)),
-              url('../images/kontakt-bg.png') center / cover no-repeat;
+              url('https://intern.jamesband.dk/public/images/kontakt-bg.png') center / cover no-repeat;
 }
 
 .kontakt__card {

@@ -38,7 +38,7 @@ const search = document.querySelector('.repertoire__search');
 const COLLAPSE_LIMIT = 30;
 const singleColumnQuery = window.matchMedia('(max-width: 640px)');
 
-fetch('repertoire.json')
+fetch('https://intern.jamesband.dk/public/repertoire.json')
   .then((r) => (r.ok ? r.json() : []))
   .catch(() => [])
   .then((songs) => {
