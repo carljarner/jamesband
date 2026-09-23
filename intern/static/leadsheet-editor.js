@@ -4769,12 +4769,14 @@
   viewerPdfBtn.addEventListener('click', async () => {
     if (sheetPdf) { window.open(sheetPdf.url, '_blank'); return; }
     // Browsers only allow a new tab straight from the tap, so open it now and
-    // point it at the PDF once that's ready.
+    // point it at the PDF once that's ready -- with replace(), so the tab's
+    // history holds just the PDF and Back closes it and returns to this tab
+    // (as phones do for a tab opened from another one).
     const tab = window.open('', '_blank');
     if (tab) tab.document.write('<p style="font:16px system-ui;padding:1rem">Preparing PDF…</p>');
     try {
       const { url } = await getSheetPdf();
-      if (tab) tab.location.href = url;
+      if (tab) tab.location.replace(url);
       else location.href = url;
     } catch (err) {
       if (tab) tab.close();
