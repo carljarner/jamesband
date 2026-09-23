@@ -1442,10 +1442,14 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 
 .leadsheet-card {
   position: relative;
+  /* The padding lives on the link instead, so the whole card is clickable. */
+  padding: 0;
 }
 
 .leadsheet-card__link {
   display: block;
+  height: 100%;
+  padding: 1rem 1.25rem;
   color: inherit;
   text-decoration: none;
 }
