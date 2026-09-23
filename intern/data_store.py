@@ -9,8 +9,9 @@ Production: DATA_DIR=/data, bind-mounted from /srv/jamesband/data on the
 server, so it survives redeploys and is covered by the nightly backup.
 Local dev: defaults to ./data next to this file (gitignored).
 
-On first boot with an empty DATA_DIR, the data baked into the image
-(intern/data at build time) is copied in once as a seed.
+If DATA_DIR is empty on startup and differs from ./data, the contents of
+./data (when present) are copied in once as a seed. The Docker image
+excludes data/ (.dockerignore), so production never seeds from the image.
 """
 
 import json

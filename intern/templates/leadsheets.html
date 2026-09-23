@@ -5,9 +5,7 @@
 <div class="setlists-toolbar">
   <h1>Lead Sheets</h1>
   <div class="leadsheets-toolbar-actions">
-    <label class="button-link" for="import-file">Import JSON</label>
-    <input type="file" id="import-file" accept="application/json" hidden />
-    <button type="button" id="new-sheet-btn" class="button-link">+ Sheet</button>
+    <button type="button" id="new-sheet-btn" class="add-row-btn add-row-btn--inline" title="New lead sheet" aria-label="New lead sheet">+</button>
   </div>
 </div>
 
@@ -74,30 +72,5 @@
   newSheetTitle.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); createSheet(); } });
   document.getElementById('new-sheet-create').addEventListener('click', createSheet);
 
-  const importFile = document.getElementById('import-file');
-  importFile.addEventListener('change', () => {
-    const file = importFile.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      let doc;
-      try {
-        doc = JSON.parse(reader.result);
-      } catch (err) {
-        alert('That file is not valid JSON.');
-        return;
-      }
-      const resp = await fetch('/leadsheets/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(doc),
-      });
-      if (!resp.ok) { alert('Failed to import: ' + await resp.text()); return; }
-      const sheet = await resp.json();
-      location.href = `/leadsheets/${sheet.id}`;
-    };
-    reader.readAsText(file);
-    importFile.value = '';
-  });
 </script>
 {% endblock %}

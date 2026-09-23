@@ -10,7 +10,7 @@
   <span id="song-count" class="muted">{{ songs|length }} song{{ "" if songs|length == 1 else "s" }}</span>
   <div class="toolbar-right">
     <span id="save-status" class="save-status">Saved</span>
-    <button type="button" id="save-all" class="primary">Save</button>
+    <button type="button" id="save-all" class="primary btn-small">Save</button>
   </div>
 </div>
 <div class="repertoire-wrap">
@@ -59,11 +59,11 @@
 <button type="button" id="add-song" class="add-row-btn" title="Add a song" aria-label="Add a song">+</button>
 
 <div id="confirm-modal" class="modal-overlay" hidden>
-  <div class="modal-box">
-    <p>Remove this song from the repertoire?</p>
+  <div class="modal-box modal-box--centered modal-box--confirm">
+    <p id="confirm-text">Remove this song from the repertoire?</p>
     <div class="modal-actions">
-      <button type="button" id="confirm-cancel">Cancel</button>
-      <button type="button" id="confirm-ok" class="danger">Remove</button>
+      <button type="button" id="confirm-cancel" class="btn-small">Cancel</button>
+      <button type="button" id="confirm-ok" class="danger btn-small">Remove</button>
     </div>
   </div>
 </div>
@@ -272,6 +272,8 @@
   body.addEventListener('click', e => {
     if (!e.target.classList.contains('row-delete')) return;
     pendingDeleteRow = e.target.closest('tr');
+    const title = pendingDeleteRow.querySelector('input[data-field="title"]').value.trim();
+    document.getElementById('confirm-text').textContent = `Remove "${title || 'Untitled'}"?`;
     modal.hidden = false;
   });
 

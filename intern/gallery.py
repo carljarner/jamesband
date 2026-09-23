@@ -13,7 +13,7 @@ import data_store
 INDEX_PATH = "gallery/index.json"
 MEDIA_DIR = "gallery/media"
 
-MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # keep clips small -- this all lives in a git repo
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # keep clips small -- they live on the server disk and in the backups
 
 CONTENT_TYPES = {
     "image/jpeg": ("image", "jpg"),
