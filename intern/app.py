@@ -16,6 +16,7 @@ import leadsheets
 import repertoire
 import setlist
 import setlists
+import data_store
 
 # INTERN_PASSWORD may hold multiple comma-separated passwords, e.g.
 # "bryllupsband,sommerturne2027" — any of them logs in, no per-person identity.
@@ -48,7 +49,8 @@ templates.env.filters["dadate"] = format_date_da
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):
-    public = request.url.path == "/login" or request.url.path.startswith("/static/")
+    path = request.url.path
+    public = path == "/login" or path.startswith("/static/") or path.startswith("/public/")
     if not public and not request.session.get("authed"):
         return RedirectResponse("/login")
     return await call_next(request)
@@ -424,3 +426,31 @@ async def gallery_media(item_id: str):
     if not path:
         raise HTTPException(status_code=404)
     return FileResponse(path)
+
+
+# ── Public endpoints for the GitHub Pages site (no login) ─────────────
+# Only public-safe data: the repertoire export (title/artist/cover) and the
+# four section background images. Everything else stays behind the login.
+PUBLIC_IMAGE_NAMES = {
+    slot["public_path"].split("/")[-1] for slot in gallery.BACKGROUND_SLOTS.values()
+}
+
+
+@app.get("/public/repertoire.json")
+async def public_repertoire():
+    path = data_store.PUBLIC_DIR / "repertoire.json"
+    if not path.exists():
+        repertoire.export_public()
+    return FileResponse(
+        path,
+        media_type="application/json",
+        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=60"},
+    )
+
+
+@app.get("/public/images/{name}")
+async def public_image(name: str):
+    path = data_store.PUBLIC_DIR / "images" / name
+    if name not in PUBLIC_IMAGE_NAMES or not path.exists():
+        raise HTTPException(status_code=404)
+    return FileResponse(path, headers={"Cache-Control": "public, max-age=300"})

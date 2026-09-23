@@ -55,9 +55,10 @@ def export_public() -> None:
         {"title": song["title"], "artist": song["artist"], "cover": song.get("cover", "")}
         for song in list_songs()
     ]
-    path = data_store.REPO_DIR / "public" / PUBLIC_REPERTOIRE_PATH
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(public_songs, indent=2))
+    data_store.save_bytes(
+        data_store.PUBLIC_DIR / PUBLIC_REPERTOIRE_PATH,
+        json.dumps(public_songs, indent=2, ensure_ascii=False).encode("utf-8"),
+    )
 
 
 def _save(songs: list[dict]) -> None:
