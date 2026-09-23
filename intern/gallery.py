@@ -65,8 +65,7 @@ def add_item(file_bytes: bytes, content_type: str) -> dict:
     item_id = uuid.uuid4().hex[:8]
     filename = f"{item_id}.{ext}"
     path = data_store.DATA_DIR / MEDIA_DIR / filename
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(file_bytes)
+    data_store.save_bytes(path, file_bytes)
 
     item = {
         "id": item_id,
@@ -108,7 +107,7 @@ def media_path(item_id: str):
 def background_path(slot: str) -> Path:
     if slot not in BACKGROUND_SLOTS:
         raise GalleryError(f"Unknown background slot '{slot}'.")
-    return data_store.REPO_DIR / "public" / BACKGROUND_SLOTS[slot]["public_path"]
+    return data_store.PUBLIC_DIR / BACKGROUND_SLOTS[slot]["public_path"]
 
 
 def set_background(slot: str, item_id: str) -> dict:
@@ -119,7 +118,7 @@ def set_background(slot: str, item_id: str) -> dict:
         raise GalleryError("Only photos can be used as a background.")
 
     src = data_store.DATA_DIR / MEDIA_DIR / item["filename"]
-    background_path(slot).write_bytes(src.read_bytes())
+    data_store.save_bytes(background_path(slot), src.read_bytes())
 
     data_store.commit_and_push(f"Set {BACKGROUND_SLOTS[slot]['label']} background to {item_id}")
     return {"slot": slot, "item": item}
