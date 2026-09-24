@@ -203,8 +203,7 @@
     }
     const filler = restsForGap(barUnits ? newEnd % barUnits : newEnd, cursor - newEnd);
     const out = [...cells.slice(0, idx), { ...newCell }, ...filler, ...cells.slice(i)];
-    // A tie needs a note on both ends: one whose next cell became a rest goes.
-    out.forEach((c, k) => { if (c.tie && !canTieCell(out, k)) delete c.tie; });
+    dropDanglingTies(out);
     return out;
   }
   // rebuildRhythmCells for a picked duration: a note changed to another note
@@ -219,8 +218,13 @@
     CHORD_FIELDS.forEach(k => { if (from && from[k] != null) to[k] = from[k]; });
     return to;
   }
+  const SLUR_FIELDS = ['slurStart', 'slurEnd'];
   function replaceCellKeeping(cells, idx, newCell, staffEl) {
     const prior = cells[idx];
+    if (newCell.type === 'note' && prior.type === 'note') {
+      newCell = { ...newCell };
+      SLUR_FIELDS.forEach(k => { if (prior[k]) newCell[k] = true; });
+    }
     const next = rebuildRhythmCells(cells, idx, newCell, staffEl ? staffBarUnits(staffEl) : null);
     const nc = next[idx];
     carryChord(prior, nc); // a chord stays over its beat whatever the cell becomes
@@ -339,24 +343,88 @@
   }
 
   /* ---------- Ties ---------- */
-  // `tie: true` on a note cell joins it to the note right after it (across a
-  // barline too). It is only drawn while that next cell is a note, and picking
-  // a rest for that cell clears it (see rebuildRhythmCells).
-  function canTieCell(cells, idx) {
-    return !!cells[idx] && cells[idx].type === 'note' && !!cells[idx + 1] && cells[idx + 1].type === 'note';
+  // `tie: true` on a note joins it to the note right after it in reading
+  // order: across a barline, and into, within or out of a tuplet (a tuplet
+  // slot is addressed by `subIdx`, see staffAddresses). It is only drawn
+  // while that next place is a note, and a rest landing there clears it (see
+  // dropDanglingTies).
+  function noteAt(cells, idx, subIdx = null) {
+    const c = cells[idx];
+    return c && subIdx != null ? c.cells[subIdx] : c;
   }
-  function isTiedToNext(cells, idx) { return canTieCell(cells, idx) && !!cells[idx].tie; }
+  // The place right after (idx, subIdx): the tuplet's next slot, else the
+  // next cell (its first slot, if it is a tuplet). Null at the end.
+  function nextPlace(cells, idx, subIdx = null) {
+    const c = cells[idx];
+    if (subIdx != null && subIdx < c.cells.length - 1) return { idx, subIdx: subIdx + 1 };
+    const n = cells[idx + 1];
+    if (!n) return null;
+    return { idx: idx + 1, subIdx: n.type === 'tuplet' ? 0 : null };
+  }
+  function prevPlace(cells, idx, subIdx = null) {
+    if (subIdx != null && subIdx > 0) return { idx, subIdx: subIdx - 1 };
+    const p = cells[idx - 1];
+    if (!p) return null;
+    return { idx: idx - 1, subIdx: p.type === 'tuplet' ? p.cells.length - 1 : null };
+  }
+  function canTieCell(cells, idx, subIdx = null) {
+    const c = noteAt(cells, idx, subIdx), next = nextPlace(cells, idx, subIdx);
+    return !!c && c.type === 'note' && !!next && noteAt(cells, next.idx, next.subIdx).type === 'note';
+  }
+  function isTiedToNext(cells, idx, subIdx = null) { return canTieCell(cells, idx, subIdx) && !!noteAt(cells, idx, subIdx).tie; }
+  // Every note and rest in reading order, tuplet slots included, as `{ idx, subIdx, cell }`.
+  function cellPlaces(cells) {
+    const out = [];
+    cells.forEach((c, idx) => {
+      if (c.type === 'tuplet') c.cells.forEach((cell, subIdx) => out.push({ idx, subIdx, cell }));
+      else out.push({ idx, subIdx: null, cell: c });
+    });
+    return out;
+  }
+  // A tie needs a note on both ends: one whose next place became a rest
+  // goes, and so does a slur that lost either end (see slurSpans).
+  function dropDanglingTies(cells) {
+    cellPlaces(cells).forEach(p => { if (p.cell.tie && !canTieCell(cells, p.idx, p.subIdx)) delete p.cell.tie; });
+    dropDanglingSlurs(cells);
+  }
+
+  /* ---------- Slurs ---------- */
+  // A slur runs from a note marked `slurStart` to the next note after it
+  // marked `slurEnd`, in reading order (tuplet slots included). Slurs don't
+  // overlap, but one may end on the note the next one starts on.
+  // `slurSpans` pairs them up, as `{ from, to }` indexes into cellPlaces.
+  function slurSpans(cells) {
+    const spans = [];
+    let open = null;
+    cellPlaces(cells).forEach((p, k) => {
+      if (p.cell.type !== 'note') return;
+      if (open != null && p.cell.slurEnd) { spans.push({ from: open, to: k }); open = null; }
+      if (p.cell.slurStart && open == null) open = k;
+    });
+    return spans;
+  }
+  function dropDanglingSlurs(cells) {
+    const places = cellPlaces(cells);
+    const paired = new Set();
+    slurSpans(cells).forEach(sp => { paired.add(`${sp.from}s`); paired.add(`${sp.to}e`); });
+    places.forEach((p, k) => {
+      if (p.cell.slurStart && !paired.has(`${k}s`)) delete p.cell.slurStart;
+      if (p.cell.slurEnd && !paired.has(`${k}e`)) delete p.cell.slurEnd;
+    });
+  }
   function toggleCellTie(cell) {
     if (cell.tie) delete cell.tie; else cell.tie = true;
   }
   // A tie is a crescent, thickest in the middle, from (x1, y1) to (x2, y2),
   // bowing down (`dir` 1) or up (-1). `unit` is a size reference (roughly the
-  // staff / bar height).
-  function drawTie(container, x1, y1, x2, y2, dir, unit) {
+  // staff / bar height). A slur is drawn the same way, with its own `bulge`
+  // (how far the control points stand off the line; the curve itself peaks
+  // at 3/4 of that).
+  function drawTie(container, x1, y1, x2, y2, dir, unit, bulgeOverride = null) {
     const len = x2 - x1;
     if (len < 2) return;
     const thick = Math.max(1.3, unit * 0.06);
-    const bulge = clamp(len * 0.25, thick + unit * 0.05, unit * 0.32);
+    const bulge = bulgeOverride != null ? Math.max(bulgeOverride, thick + unit * 0.05) : clamp(len * 0.25, thick + unit * 0.05, unit * 0.32);
     const k = len * 0.28;
     container.appendChild(svgPath(
       `M ${x1} ${y1} C ${x1 + k} ${y1 + dir * bulge}, ${x2 - k} ${y2 + dir * bulge}, ${x2} ${y2} ` +
@@ -365,20 +433,32 @@
   }
 
   /* ---------- Tuplet grouping marks ---------- */
+  // The number is sized here (inline, so it scales with the staff instead of
+  // the stylesheet's fixed size) and placed by its digit height, which is
+  // about 0.72 of the font size.
+  const TUPLET_DIGIT_H = 0.72;
+  function tupletNumberText(number, x, baselineY, numberSize) {
+    return svgText(String(number), x, baselineY, {
+      cls: 'el-tuplet-number', anchor: 'middle', size: numberSize, style: `font-size:${numberSize}px`,
+    });
+  }
   // A run of tuplet sub-notes that's beamed together (an eighth-note
   // triplet whose 3 slots are all notes) reads as one group from the beam
   // alone -- it just needs its number ("3", "5") centered over it, no bracket. `y` is the
-  // beam's own y; the number sits just clear of it on the beam's outer side
-  // (`dir` 1 = below the beam, -1 = above, matching a stem pointing that way).
-  function drawTupletNumber(container, x1, x2, y, dir, numberSize, number = 3) {
-    container.appendChild(svgText(String(number), (x1 + x2) / 2, y + dir * numberSize * 0.55, { cls: 'el-tuplet-number', anchor: 'middle', size: numberSize }));
+  // beam's own y, `beamThick` its thickness; the number sits clear of it on the
+  // beam's outer side (`dir` 1 = below the beam, -1 = above, matching a stem
+  // pointing that way).
+  function drawTupletNumber(container, x1, x2, y, dir, numberSize, number = 3, beamThick = 0) {
+    const clear = beamThick / 2 + numberSize * 0.3;
+    const baseline = dir < 0 ? y - clear : y + clear + numberSize * TUPLET_DIGIT_H;
+    container.appendChild(tupletNumberText(number, (x1 + x2) / 2, baseline, numberSize));
   }
   // Anything else (a quarter-note triplet, never beam-eligible, or any
   // triplet with a rest in it) gets a real bracket instead: two short
   // horizontal strokes in from the group's outer x's, leaving a gap at the
-  // middle for the "3", each end bent toward the notes with a short tick.
-  // `dir` 1 draws it below the notes (ticks pointing up into them), -1
-  // above (ticks pointing down).
+  // middle for the number (centered on the line), each end bent toward the
+  // notes with a short tick. `dir` 1 draws it below the notes (ticks pointing
+  // up into them), -1 above (ticks pointing down).
   function drawTupletBracket(container, x1, x2, y, dir, tickLen, numberSize, number = 3) {
     const gap = Math.min((x2 - x1) * 0.34, numberSize * 1.3);
     const midL = (x1 + x2) / 2 - gap / 2, midR = (x1 + x2) / 2 + gap / 2;
@@ -386,7 +466,7 @@
     if (x2 > midR) container.appendChild(svgLine(midR, y, x2, y, { cls: 'el-tuplet-bracket' }));
     container.appendChild(svgLine(x1, y, x1, y - dir * tickLen, { cls: 'el-tuplet-bracket' }));
     container.appendChild(svgLine(x2, y, x2, y - dir * tickLen, { cls: 'el-tuplet-bracket' }));
-    container.appendChild(svgText(String(number), (x1 + x2) / 2, y + dir * numberSize * 0.3, { cls: 'el-tuplet-number', anchor: 'middle', size: numberSize }));
+    container.appendChild(tupletNumberText(number, (x1 + x2) / 2, y + numberSize * TUPLET_DIGIT_H / 2, numberSize));
   }
 
   /* ---------- Note staff (pitched notation) ---------- */
@@ -1271,6 +1351,12 @@
     drawTie(svg, 3, 3, 25, 3, 1, 44);
     return svg;
   }
+  // A long, high arch: the staff editor's slur button.
+  function slurIcon() {
+    const svg = svgEl('svg', { width: 28, height: 16, viewBox: '0 0 28 16', class: 'rhythm-menu-icon' });
+    drawTie(svg, 3, 13, 25, 13, -1, 44, 11);
+    return svg;
+  }
   // Two stems on one head, one up and one down: the staff editor's "flip stem" button.
   function stemFlipIcon() {
     const svg = svgEl('svg', { width: 28, height: 16, viewBox: '0 0 28 16', class: 'rhythm-menu-icon' });
@@ -2125,7 +2211,7 @@
       const primary = svgLine(stemXs[0], beamY, stemXs[stemXs.length - 1], beamY, { cls: 'el-notegroup-beam' });
       primary.setAttribute('stroke-width', beamThick);
       container.appendChild(primary);
-      drawTupletNumber(container, stemXs[0], stemXs[stemXs.length - 1], beamY, -1, h * 0.55, n);
+      drawTupletNumber(container, stemXs[0], stemXs[stemXs.length - 1], beamY, -1, h * 0.55, n, beamThick);
     } else {
       cell.cells.forEach((sub, k) => {
         const nx = slotX(k);
@@ -2287,13 +2373,25 @@
       }
     });
 
-    // A tie under the slashes, from one note to the next (past its dot).
-    cells.forEach((cell, i) => {
-      if (!isTiedToNext(cells, i)) return;
+    // A tie under the slashes, from one note to the next (past its dot),
+    // tuplet slots included: a slot's slash sits at its slot's left edge.
+    const places = cellPlaces(cells);
+    const noteX = p => (p.subIdx != null ? cellBoxes[p.idx].subs[p.subIdx].x : x + positionsPx[p.idx]);
+    places.forEach((p, k) => {
+      if (!isTiedToNext(cells, p.idx, p.subIdx)) return;
+      const cell = p.cell, next = places[k + 1];
       const dotted = cell.duration === 6 || cell.duration === 12 || cell.duration === 24 || cell.duration === 48;
-      const depth = Math.max(articulationDepth(cell.articulations, h * 1.2, 1), articulationDepth(cells[i + 1].articulations, h * 1.2, 1));
+      const depth = Math.max(articulationDepth(cell.articulations, h * 1.2, 1), articulationDepth(next.cell.articulations, h * 1.2, 1));
       const tieY = y + h * 0.05 + headW * 0.38 + (depth ? h * 0.05 + depth : h * 0.08);
-      drawTie(container, x + positionsPx[i] + headW * 0.8 + (dotted ? h * 0.25 : 0), tieY, x + positionsPx[i + 1] + headW * 0.2, tieY, 1, h * 1.2);
+      drawTie(container, noteX(p) + headW * 0.8 + (dotted ? h * 0.25 : 0), tieY, noteX(next) + headW * 0.2, tieY, 1, h * 1.2);
+    });
+    // A slur, under the slashes too, a little below where a tie would go.
+    slurSpans(cells).forEach(({ from, to }) => {
+      const a = places[from], b = places[to];
+      const depth = Math.max(articulationDepth(a.cell.articulations, h * 1.2, 1), articulationDepth(b.cell.articulations, h * 1.2, 1));
+      const slurY = y + h * 0.05 + headW * 0.38 + (depth ? h * 0.05 + depth : h * 0.12);
+      const x1 = noteX(a) + headW * 0.5, x2 = noteX(b) + headW * 0.5;
+      drawTie(container, x1, slurY, x2, slurY, 1, h * 1.2, clamp((x2 - x1) * 0.12, h * 0.3, h * 0.55));
     });
 
     return { topY: beamY - beamThick - 4, bottomY: y + h * 0.4, cellBoxes };
@@ -2434,7 +2532,7 @@
   // a plain cell (see wireStaffCellHit), routing back through
   // `callbacks.onCellClick` / `onNoteDrag` with the slot index. `i` is the
   // tuplet's own index in the outer `cells`.
-  function renderTupletGroupStaff(container, cell, x, w, el, callbacks, i) {
+  function renderTupletGroupStaff(container, cell, x, w, el, callbacks, i, showsAccidental = () => true) {
     const subCells = cell.cells;
     const n = subCells.length;
     const slotW = w / n;
@@ -2462,7 +2560,7 @@
       }
       const pitch = pitchOf(k), noteY = pitchToY(pitch, el), halfW = halfWOf(k);
       drawLedgerLines(container, el, cx(k), pitch, halfW + noteSize * 0.1);
-      if (sub.accidental) {
+      if (sub.accidental && showsAccidental(i, k)) {
         container.appendChild(svgText(ACCIDENTAL_CODES[sub.accidental], cx(k) - halfW - noteSize * 0.14, noteY, {
           cls: `el-notestaff-accidental${sel(k)}`, anchor: 'end', size: noteSize,
         }));
@@ -2479,6 +2577,9 @@
     // stems/flags plus a bracket (with the number in its gap) -- same choice
     // as the rhythm tool.
     const beamed = subCells.every(sub => sub.type === 'note') && BEAM_ELIGIBLE_DURATIONS.has(cell.unit);
+    // Per slot, which way its stem points (a tie bows the other way) and
+    // where it ends (what a slur over it has to clear).
+    const stems = [];
     if (beamed) {
       const stemUp = groupStemUp(subCells, subCells.map((sub, k) => pitchOf(k)));
       const extremePitch = stemUp
@@ -2487,6 +2588,7 @@
       const beamY = pitchToY(extremePitch, el) + (stemUp ? -stemLen : stemLen);
       const stemXs = [];
       subCells.forEach((sub, k) => {
+        stems[k] = { stemUp, tipY: beamY + (stemUp ? -1 : 1) * beamThick / 2 };
         const stemX = stemXOf(k, stemUp);
         stemXs.push(stemX);
         const stemStartY = pitchToY(pitchOf(k), el) + (stemUp ? -1 : 1) * noteSize * 0.04;
@@ -2503,7 +2605,7 @@
         beam.setAttribute('stroke-width', beamThick);
         container.appendChild(beam);
       });
-      drawTupletNumber(container, stemXs[0], stemXs[stemXs.length - 1], beamY, stemUp ? -1 : 1, el.h * 0.5, n);
+      drawTupletNumber(container, stemXs[0], stemXs[stemXs.length - 1], beamY, stemUp ? -1 : 1, el.h * 0.4, n, beamThick);
     } else {
       let topY = pitchToY(STAFF_PITCH_MAX, el);
       subCells.forEach((sub, k) => {
@@ -2514,6 +2616,7 @@
         const noteY = pitchToY(pitch, el);
         const stemStartY = noteY + (stemUp ? -1 : 1) * noteSize * 0.04;
         const stemTipY = stemUp ? noteY - stemLen : noteY + stemLen;
+        stems[k] = { stemUp, tipY: stemTipY };
         container.appendChild(svgLine(stemX, stemStartY, stemX, stemTipY, { cls: `el-notegroup-stem${sel(k)}` }));
         topY = Math.min(topY, stemTipY);
         if (sub.duration === 2 || sub.duration === 4 || sub.duration === 6) {
@@ -2527,8 +2630,9 @@
           : { aboveX: cx(k), aboveY: noteY - el.h / 8, belowX: stemX, belowY: stemTipY },
           sub.articulations, el.h * 0.85, stemUp ? 1 : -1);
       });
-      drawTupletBracket(container, x + w * 0.04, x + w * 0.96, topY - el.h * 0.12, -1, el.h * 0.1, el.h * 0.5, n);
+      drawTupletBracket(container, x + w * 0.04, x + w * 0.96, topY - el.h * 0.2, -1, el.h * 0.1, el.h * 0.4, n);
     }
+    return stems;
   }
 
   // Sibling of renderRhythmCells: real pitched noteheads (the font's actual
@@ -2594,9 +2698,22 @@
       if (callbacks.onOpen) body.addEventListener('dblclick', () => callbacks.onOpen());
     }
 
+    // A note tied from one in the same bar goes without its accidental: the
+    // first note's covers it. Across a barline, each note shows its own.
+    const barUnits = staffBarUnits(el);
+    const accidentalCarried = new Set();
+    cellPlaces(cells).forEach((p, k, all) => {
+      const next = all[k + 1];
+      if (isTiedToNext(cells, p.idx, p.subIdx) && Math.floor(positions[p.idx] / barUnits) === Math.floor(positions[next.idx] / barUnits)) {
+        accidentalCarried.add(`${next.idx}.${next.subIdx}`);
+      }
+    });
+    const showsAccidental = (idx, subIdx = null) => !accidentalCarried.has(`${idx}.${subIdx}`);
+
+    const tupletStems = new Map(); // tuplet index -> its slots' stems (see renderTupletGroupStaff)
     cells.forEach((cell, i) => {
       if (cell.type === 'tuplet') {
-        renderTupletGroupStaff(container, cell, x + positionsPx[i], cellWidths[i], el, callbacks, i);
+        tupletStems.set(i, renderTupletGroupStaff(container, cell, x + positionsPx[i], cellWidths[i], el, callbacks, i, showsAccidental));
         return;
       }
       wireStaffCellHit(container, el, callbacks, cell, i, null, x + positionsPx[i], cellWidths[i], noteCx(i), pitchOf(i), halfWOf(i));
@@ -2608,6 +2725,7 @@
     // else the notehead -- and the x to center on at each end.
     const articulationAnchor = new Map();
     const stemUpAt = new Map(); // which way each note's stem points (a tie bows the other way)
+    const stemTipAt = new Map(); // where it ends (what a slur over it has to clear); none on a whole note
     const headTopY = k => pitchToY(pitchOf(k), el) - el.h / 8;
     const headBottomY = k => pitchToY(pitchOf(k), el) + el.h / 8;
     cells.forEach((cell, i) => {
@@ -2623,7 +2741,7 @@
       const noteY = pitchToY(pitch, el);
       drawLedgerLines(container, el, cx, pitch, halfW + noteSize * 0.1);
 
-      if (cell.accidental) {
+      if (cell.accidental && showsAccidental(i)) {
         container.appendChild(svgText(ACCIDENTAL_CODES[cell.accidental], cx - halfW - noteSize * 0.14, noteY, {
           cls: `el-notestaff-accidental${sel(i)}`, anchor: 'end', size: noteSize,
         }));
@@ -2659,6 +2777,7 @@
         for (let k = run.start; k <= run.end; k++) {
           const stemX = stemXOf(k, stemUp);
           stemXs.push(stemX);
+          stemTipAt.set(k, beamY + (stemUp ? -1 : 1) * beamThick / 2);
           container.appendChild(svgLine(stemX, stemStartYOf(k, stemUp), stemX, beamY, { cls: `el-notegroup-stem${sel(k)}` }));
           articulationAnchor.set(k, stemUp
             ? { aboveX: stemX, aboveY: beamY - beamThick / 2, belowX: noteCx(k), belowY: headBottomY(k) }
@@ -2695,6 +2814,7 @@
         stemUpAt.set(i, stemUp);
         const stemX = stemXOf(i, stemUp);
         const stemTipY = stemUp ? noteY - stemLen : noteY + stemLen;
+        stemTipAt.set(i, stemTipY);
         container.appendChild(svgLine(stemX, stemStartYOf(i, stemUp), stemX, stemTipY, { cls: `el-notegroup-stem${sel(i)}` }));
         articulationAnchor.set(i, stemUp
           ? { aboveX: stemX, aboveY: stemTipY, belowX: cx, belowY: headBottomY(i) }
@@ -2714,19 +2834,51 @@
 
     // A tie runs from a note to the one after it, on the side opposite its
     // stem (its notehead's side), starting after its augmentation dot and
-    // stopping short of the next note's accidental.
-    cells.forEach((cell, i) => {
-      if (!isTiedToNext(cells, i)) return;
-      const next = cells[i + 1];
-      const dir = stemUpAt.get(i) ? 1 : -1;
+    // stopping short of the next note's accidental. Tuplet slots tie the
+    // same way, into, within and out of the group.
+    const places = cellPlaces(cells).map(p => {
+      if (p.subIdx == null) return { ...p, cx: noteCx(p.idx), stemUp: stemUpAt.get(p.idx), tipY: stemTipAt.get(p.idx) };
+      const stem = (tupletStems.get(p.idx) || [])[p.subIdx] || {};
+      return { ...p, cx: cellBoxes[p.idx].subs[p.subIdx].cx, stemUp: stem.stemUp, tipY: stem.tipY };
+    });
+    const placePitch = p => (p.cell.pitch != null ? p.cell.pitch : STAFF_DEFAULT_PITCH);
+    places.forEach((p, k) => {
+      if (!isTiedToNext(cells, p.idx, p.subIdx)) return;
+      const cell = p.cell, next = places[k + 1];
+      const dir = p.stemUp ? 1 : -1;
+      const halfW = noteheadHalfW(cell.duration, noteSize), nextHalfW = noteheadHalfW(next.cell.duration, noteSize);
       const dotted = cell.duration === 6 || cell.duration === 12 || cell.duration === 24 || cell.duration === 48;
-      const x1 = noteCx(i) + halfWOf(i) * 0.5 + (dotted ? noteSize * 0.3 : 0);
-      const x2 = noteCx(i + 1) - (next.accidental ? halfWOf(i + 1) + noteSize * 0.5 : halfWOf(i + 1) * 0.5);
+      const x1 = p.cx + halfW * 0.5 + (dotted ? noteSize * 0.3 : 0);
+      const x2 = next.cx - (next.cell.accidental && showsAccidental(next.idx, next.subIdx) ? nextHalfW + noteSize * 0.5 : nextHalfW * 0.5);
       // Just off the heads, or past whatever articulations sit on that side.
       const depth = Math.max(articulationDepth(cell.articulations, el.h * 0.85, dir, dir),
-        articulationDepth(next.articulations, el.h * 0.85, dir, stemUpAt.get(i + 1) ? 1 : -1));
+        articulationDepth(next.cell.articulations, el.h * 0.85, dir, next.stemUp ? 1 : -1));
       const edge = depth ? el.h / 8 + depth : el.h * 0.1;
-      drawTie(container, x1, pitchToY(pitchOf(i), el) + dir * edge, x2, pitchToY(pitchOf(i + 1), el) + dir * edge, dir, el.h);
+      drawTie(container, x1, pitchToY(placePitch(p), el) + dir * edge, x2, pitchToY(placePitch(next), el) + dir * edge, dir, el.h);
+    });
+
+    // A slur goes under the notes when every stem in it points up, else over
+    // them. It starts and ends just off its end notes (their stem tips, when
+    // the stem is on the slur's side) and arches high enough to clear the
+    // notes in between.
+    slurSpans(cells).forEach(({ from, to }) => {
+      const span = places.slice(from, to + 1).filter(p => p.cell.type === 'note');
+      const dir = span.every(p => p.stemUp) ? 1 : -1;
+      const inkY = p => {
+        const stemOnSide = p.tipY != null && (p.stemUp ? -1 : 1) === dir;
+        const y = stemOnSide ? p.tipY : pitchToY(placePitch(p), el) + dir * el.h / 8;
+        return y + dir * (el.h * 0.12 + articulationDepth(p.cell.articulations, el.h * 0.85, dir, p.stemUp ? 1 : -1));
+      };
+      const a = places[from], b = places[to];
+      const x1 = a.cx, x2 = b.cx, y1 = inkY(a), y2 = inkY(b);
+      if (x2 - x1 < 2) return;
+      let bulge = clamp((x2 - x1) * 0.12, el.h * 0.25, el.h * 0.6);
+      span.slice(1, -1).forEach(p => {
+        const t = clamp((p.cx - x1) / (x2 - x1), 0.05, 0.95);
+        const need = dir * (inkY(p) - (y1 + (y2 - y1) * t));
+        bulge = Math.max(bulge, need / (3 * t * (1 - t)));
+      });
+      drawTie(container, x1, y1, x2, y2, dir, el.h, Math.min(bulge, el.h * 2));
     });
 
     return {
@@ -3064,12 +3216,20 @@
   }
   // A plain note and the notes tied to it on either side: a pitch change
   // moves them all, as in MuseScore.
+  function tieChainStart(cells, addr) {
+    let a = addr;
+    for (let p = prevPlace(cells, a.idx, a.subIdx); p && isTiedToNext(cells, p.idx, p.subIdx); p = prevPlace(cells, p.idx, p.subIdx)) a = p;
+    return a;
+  }
   function tieChain(el, addr) {
-    if (addr.subIdx != null) return [cellAt(el, addr)];
-    let a = addr.idx, b = addr.idx;
-    while (a > 0 && isTiedToNext(el.cells, a - 1)) a--;
-    while (isTiedToNext(el.cells, b)) b++;
-    return el.cells.slice(a, b + 1);
+    const out = [];
+    let a = tieChainStart(el.cells, addr);
+    out.push(cellAt(el, a));
+    while (isTiedToNext(el.cells, a.idx, a.subIdx)) {
+      a = nextPlace(el.cells, a.idx, a.subIdx);
+      out.push(cellAt(el, a));
+    }
+    return out;
   }
   function setShownNote(el, cell, pitch, accidental) {
     const stored = storedStaffNote(el, pitch, accidental);
@@ -3172,6 +3332,7 @@
     if (addr.subIdx != null) {
       if (cell.cells[addr.subIdx].type === 'rest') wholeCellToRests();
       else cell.cells[addr.subIdx] = carryChord(cell.cells[addr.subIdx], { type: 'rest', duration: cell.unit });
+      dropDanglingTies(el.cells);
       return true;
     }
     if (cell.type === 'rest') return false;
@@ -3193,15 +3354,38 @@
   // Ties the note at `addr` to the next one, which takes its pitch (a tie
   // joins two of the same note); a second time unties them.
   function toggleTie(el, addr) {
-    if (addr.subIdx != null || !canTieCell(el.cells, addr.idx)) return false;
-    const cell = el.cells[addr.idx];
+    if (!canTieCell(el.cells, addr.idx, addr.subIdx)) return false;
+    const cell = cellAt(el, addr);
     toggleCellTie(cell);
     if (cell.tie && el.type === 'notestaff') {
-      const next = el.cells[addr.idx + 1];
+      const next = cellAt(el, nextPlace(el.cells, addr.idx, addr.subIdx));
       next.pitch = cell.pitch;
       next.accidental = cell.accidental || null;
     }
     return true;
+  }
+  // Slurs the notes from `from` to `to`, or with no `to` the note at `from`
+  // to the note right after it. Again on the same notes (or, with no `to`,
+  // on a note a slur starts on) takes the slur off. A slur the new one would
+  // overlap goes; one that only shares an end note stays.
+  function toggleSlur(el, from, to = null) {
+    const places = cellPlaces(el.cells);
+    const at = a => places.findIndex(p => p.idx === a.idx && p.subIdx === a.subIdx);
+    const a = at(from), b = to ? at(to) : a + 1;
+    const spans = slurSpans(el.cells);
+    const existing = to ? spans.find(sp => sp.from === a && sp.to === b) : spans.find(sp => sp.from === a);
+    const unslur = sp => { delete places[sp.from].cell.slurStart; delete places[sp.to].cell.slurEnd; };
+    if (existing) { unslur(existing); return true; }
+    if (a < 0 || b <= a || !places[b] || places[a].cell.type !== 'note' || places[b].cell.type !== 'note') return false;
+    spans.filter(sp => sp.from < b && sp.to > a).forEach(unslur);
+    places[a].cell.slurStart = true;
+    places[b].cell.slurEnd = true;
+    return true;
+  }
+  // Whether the note at `addr` is under a slur.
+  function isSlurred(el, addr) {
+    const k = cellPlaces(el.cells).findIndex(p => p.idx === addr.idx && p.subIdx === addr.subIdx);
+    return slurSpans(el.cells).some(sp => sp.from <= k && k <= sp.to);
   }
   function toggleArticulation(el, addr, kind) {
     const cell = cellAt(el, addr);
@@ -4251,12 +4435,8 @@
       const c = cellAt(el, a);
       if (!c || c.type !== 'note') return false;
       if (!byChain) return true;
-      let key = `${a.idx}.${a.subIdx}`;
-      if (a.subIdx == null) {
-        let start = a.idx;
-        while (start > 0 && isTiedToNext(el.cells, start - 1)) start--;
-        key = String(start);
-      }
+      const start = tieChainStart(el.cells, a);
+      const key = `${start.idx}.${start.subIdx}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -4360,6 +4540,18 @@
       return undefined;
     });
   }
+  // S: a slur over the selected notes, or from the selected note to the next.
+  function slurAction() {
+    if (!staffEditor.anchor) {
+      editSelected((el, sel) => toggleSlur(el, sel), 'A slur joins a note to the note right after it (select several with Shift+← → to slur them all)');
+      return;
+    }
+    editStaff(el => {
+      const notes = selectedAddrs().filter(a => cellAt(el, a).type === 'note');
+      if (notes.length < 2 || !toggleSlur(el, notes[0], notes[notes.length - 1])) return 'Select at least two notes to slur';
+      return undefined;
+    });
+  }
   function tupletAction(count) {
     const why = count === 3
       ? 'A triplet is made from a quarter (8th triplet) or a half (quarter triplet) that fits in the bar'
@@ -4457,7 +4649,10 @@
     { keys: 'T', label: 'Tie to next note', group: 'mark', glyph: tieIcon,
       match: e => plain(e) && !e.shiftKey && keyIs(e, 't'),
       run: () => editSelected(toggleTie, 'A tie joins a note to the note right after it'),
-      isOn: () => !!staffEditor.el && staffEditor.sel.subIdx == null && isTiedToNext(staffEditor.el.cells, staffEditor.sel.idx) },
+      isOn: () => !!staffEditor.el && isTiedToNext(staffEditor.el.cells, staffEditor.sel.idx, staffEditor.sel.subIdx) },
+    { keys: 'S', label: 'Slur to the next note, or over the selected notes (again: remove it)', group: 'mark', glyph: slurIcon,
+      match: e => plain(e) && !e.shiftKey && keyIs(e, 's'), run: slurAction,
+      isOn: () => !!staffEditor.el && isSlurred(staffEditor.el, staffEditor.sel) },
     { keys: `${MOD_LABEL}3`, label: 'Triplet', group: 'mark', glyph: '3',
       match: e => isMod(e) && !e.altKey && e.key === '3', run: () => tupletAction(3) },
     { keys: `${MOD_LABEL}5`, label: 'Quintuplet', group: 'mark', glyph: '5', staffOnly: true,
