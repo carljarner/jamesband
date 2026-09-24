@@ -518,6 +518,9 @@
   // The PDF of the current render (see "sheet as PDF"); any re-render makes
   // it stale.
   let sheetPdf = null;
+  // The singer drawn in the top left corner -- set only while building a
+  // gig's lead-sheet PDF (see buildLeadSheetBundle).
+  let bundleSinger = '';
   let activeSlot = null;
   let marquee = null;
 
@@ -2725,9 +2728,16 @@
     if (artistStr) {
       svg.appendChild(svgText(artistStr, PAGE_W / 2, PAGE_MARGIN + 22, { cls: 'page-key-text', anchor: 'middle', size: 13 }));
     }
-    const keyStr = transposeState.semitones ? transposedKeyName() : model.key;
+    // Transposed, the key also says how far from the sheet's own key it is,
+    // in whole tones like the transpose box: "Key: F (0.5 ↓)".
+    const t = transposeState.semitones;
+    const keyStr = t ? `${transposedKeyName()} (${Math.abs(t) / 2} ${t > 0 ? '↑' : '↓'})` : model.key;
     if (keyStr) {
       svg.appendChild(svgText(`Key: ${keyStr}`, PAGE_W - PAGE_MARGIN, PAGE_MARGIN, { cls: 'page-key-text', anchor: 'end', size: 15 }));
+    }
+    // Only in a gig's lead-sheet PDF: who sings it at that gig.
+    if (bundleSinger) {
+      svg.appendChild(svgText(`Singer: ${bundleSinger}`, PAGE_MARGIN, PAGE_MARGIN, { cls: 'page-key-text', anchor: 'start', size: 15 }));
     }
 
     model.elements.forEach(el => renderElement(svg, el));
@@ -2741,6 +2751,7 @@
     document.getElementById('sheet-title').value = model.title;
     document.getElementById('sheet-artist').value = model.artist || '';
     document.getElementById('sheet-key').value = model.key;
+    renderRepertoireLink();
     renderTransposeBox();
     renderSvg();
   }
@@ -4587,7 +4598,39 @@
   /* ---------- toolbar wiring ---------- */
   document.getElementById('sheet-title').addEventListener('input', e => { model.title = e.target.value; markDirty(); renderSvg(); });
   document.getElementById('sheet-artist').addEventListener('input', e => { model.artist = e.target.value; markDirty(); renderSvg(); });
-  document.getElementById('sheet-key').addEventListener('input', e => { model.key = e.target.value; markDirty(); renderTransposeBox(); renderStaffBuilderSvg(); renderSvg(); });
+  document.getElementById('sheet-key').addEventListener('input', e => { model.key = e.target.value; markDirty(); renderTransposeBox(); renderStaffBuilderSvg(); renderSvg(); renderRepertoireLink(); });
+
+  /* ---------- repertoire song ---------- */
+  // Which repertoire song this sheet is for (the gig lead-sheet PDF finds
+  // sheets through it). A song can only have one sheet, so songs another
+  // sheet already has are shown but can't be picked. Saved with the sheet.
+  const repertoireSelect = document.getElementById('sheet-repertoire');
+  const repertoireHint = document.getElementById('sheet-repertoire-hint');
+  function renderRepertoireLink() {
+    const songs = typeof repertoireSongs === 'undefined' ? [] : repertoireSongs;
+    repertoireSelect.textContent = '';
+    repertoireSelect.appendChild(new Option('— not connected —', ''));
+    songs.forEach(song => {
+      const takenBy = song.sheet_id && song.sheet_id !== leadsheetId ? song.sheet_title : null;
+      const label = song.title + (takenBy ? ` (→ ${takenBy})` : '');
+      const opt = new Option(label, song.id);
+      opt.disabled = !!takenBy;
+      repertoireSelect.appendChild(opt);
+    });
+    repertoireSelect.value = model.repertoire_id || '';
+    const song = songs.find(s => s.id === model.repertoire_id);
+    const sheetKey = String(model.key || '').trim();
+    const differs = song && song.key && sheetKey && song.key !== sheetKey;
+    repertoireHint.hidden = !differs;
+    repertoireHint.textContent = differs
+      ? `The repertoire key is ${song.key}. Gig PDFs transpose from this sheet’s key (${sheetKey}) to the singer’s key.`
+      : '';
+  }
+  repertoireSelect.addEventListener('change', () => {
+    model.repertoire_id = repertoireSelect.value || null;
+    markDirty();
+    renderRepertoireLink();
+  });
 
   document.getElementById('save-btn').addEventListener('click', async () => {
     const status = document.getElementById('save-status');
@@ -4709,9 +4752,10 @@
     }
   }
 
-  // A one-page A4 PDF whose page is the JPEG, edge to edge (DCTDecode takes
-  // the JPEG bytes as they are).
-  function jpegToPdf({ bytes, w, h }) {
+  // An A4 PDF with one JPEG per page, edge to edge (DCTDecode takes the JPEG
+  // bytes as they are). Objects: 1 catalog, 2 page tree, then for page i a
+  // page (3+3i), its image (4+3i) and its content stream (5+3i).
+  function jpegsToPdf(jpegs) {
     const enc = new TextEncoder();
     const parts = [];
     const offsets = [];
@@ -4720,19 +4764,65 @@
     const obj = (n, body) => { offsets[n] = len; push(`${n} 0 obj\n${body}\nendobj\n`); };
     const pw = 595.28, ph = 841.89;
     const content = `q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`;
+    const pageObj = i => 3 + 3 * i;
     push('%PDF-1.4\n');
     obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
-    obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-    obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
-    offsets[4] = len;
-    push(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bytes.length} >>\nstream\n`);
-    push(bytes);
-    push('\nendstream\nendobj\n');
-    obj(5, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+    obj(2, `<< /Type /Pages /Kids [${jpegs.map((_, i) => `${pageObj(i)} 0 R`).join(' ')}] /Count ${jpegs.length} >>`);
+    jpegs.forEach(({ bytes, w, h }, i) => {
+      const n = pageObj(i);
+      obj(n, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 ${n + 1} 0 R >> >> /Contents ${n + 2} 0 R >>`);
+      offsets[n + 1] = len;
+      push(`${n + 1} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${bytes.length} >>\nstream\n`);
+      push(bytes);
+      push('\nendstream\nendobj\n');
+      obj(n + 2, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+    });
+    const size = pageObj(jpegs.length);
     const xref = len;
-    push(`xref\n0 6\n0000000000 65535 f \n${offsets.slice(1).map(o => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`);
-    push(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+    push(`xref\n0 ${size}\n0000000000 65535 f \n${offsets.slice(1).map(o => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`);
+    push(`trailer\n<< /Size ${size} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
     return new Blob(parts, { type: 'application/pdf' });
+  }
+  function jpegToPdf(jpeg) { return jpegsToPdf([jpeg]); }
+
+  // A plain A4 page with a heading and a bulleted list, as a JPEG for
+  // jpegsToPdf -- the gig PDF's front page listing songs without a sheet
+  // (like the lyrics PDF's note page).
+  async function notePageJpeg(heading, lines) {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(PAGE_W * SHARE_SCALE);
+    canvas.height = Math.round(PAGE_H * SHARE_SCALE);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(SHARE_SCALE, SHARE_SCALE);
+    ctx.fillStyle = '#1a1815';
+    ctx.textBaseline = 'alphabetic';
+    const left = PAGE_MARGIN, maxW = PAGE_W - 2 * PAGE_MARGIN;
+    let y = PAGE_MARGIN + 10;
+    ctx.font = 'bold 18px Helvetica, Arial, sans-serif';
+    ctx.fillText(heading, left, y);
+    y += 30;
+    ctx.font = '12px Helvetica, Arial, sans-serif';
+    for (const line of lines) {
+      // Wrap on words so a long note stays on the page.
+      const words = `• ${line}`.split(' ');
+      let current = '';
+      for (const word of words) {
+        const next = current ? `${current} ${word}` : word;
+        if (current && ctx.measureText(next).width > maxW) {
+          ctx.fillText(current, left, y);
+          y += 16;
+          current = `   ${word}`;
+        } else {
+          current = next;
+        }
+      }
+      ctx.fillText(current, left, y);
+      y += 20;
+    }
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+    return { bytes: new Uint8Array(await blob.arrayBuffer()), w: canvas.width, h: canvas.height };
   }
 
   function shareFileName() {
@@ -4842,6 +4932,85 @@
     if (resp.ok) { dirty = false; location.href = '/leadsheets'; }
     else alert('Failed to delete: ' + await resp.text());
   });
+
+  /* ---------- gig lead-sheet PDF ---------- */
+  // The gig's lead-sheets page (leadsheets_bundle.html) loads this script
+  // with the editor's markup hidden, and uses the same drawing to make one
+  // PDF of every song's sheet in setlist order. `plan` comes from
+  // gig_bundle.build_leadsheet_plan: each page's sheet plus how far to
+  // transpose it and whether to spell it with flats.
+  // The gig's setlist as a page of its own, drawn on the sheet like a lead
+  // sheet's header: "Treasure (C#m)" per song in the title font, one column
+  // per set (at most three). The text is sized as if there were three
+  // columns whatever the count, so one or two sets don't get huge type, and
+  // shrinks further only when a set is too long for the page.
+  function renderSetlistSvg(sets, subtitle) {
+    const svg = document.getElementById('sheet-svg');
+    svg.setAttribute('viewBox', `0 0 ${PAGE_W} ${PAGE_H}`);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.appendChild(svgRect(0, 0, PAGE_W, PAGE_H, { cls: 'page-bg' }));
+    svg.appendChild(svgText('Setlist', PAGE_W / 2, PAGE_MARGIN, { cls: 'page-title-text', anchor: 'middle', size: 22 }));
+    if (subtitle) {
+      svg.appendChild(svgText(subtitle, PAGE_W / 2, PAGE_MARGIN + 22, { cls: 'page-key-text', anchor: 'middle', size: 13 }));
+    }
+
+    const cols = sets.slice(0, 3);
+    const labelled = cols.length > 1;
+    const top = PAGE_MARGIN + 70;
+    const bottom = PAGE_H - PAGE_MARGIN;
+    const colW = (PAGE_W - 2 * PAGE_MARGIN) / cols.length;
+    const gap = 24;
+    const rows = Math.max(...cols.map(c => c.length)) + (labelled ? 1.5 : 0);
+    const lines = cols.map(c => c.map(song => song.key ? `${song.title} (${song.key})` : song.title));
+    const widest = Math.max(...lines.flat().map(t => measureTextWidth(t, 100) / 100));
+    const threeColW = (PAGE_W - 2 * PAGE_MARGIN) / 3;
+    const lineH = Math.min(44, (bottom - top) / rows);
+    const size = Math.min(26, (threeColW - gap) / widest, lineH * 0.62);
+
+    lines.forEach((col, i) => {
+      const x = PAGE_MARGIN + i * colW + gap / 2;
+      let y = top;
+      if (labelled) {
+        svg.appendChild(svgText(`Set ${i + 1}`, x, y, { cls: 'page-key-text', size: 15 }));
+        y += lineH * 1.5;
+      }
+      col.forEach(text => {
+        svg.appendChild(svgText(text, x, y, { cls: 'page-title-text', size }));
+        y += lineH;
+      });
+    });
+  }
+
+  async function buildLeadSheetBundle(plan, onProgress) {
+    await Promise.all(['MuseJazzText', 'MuseJazz'].map(f => document.fonts.load(`20px ${f}`))).catch(() => {});
+    const jpegs = [];
+    const noteLines = plan.missing.map(t => `No lead sheet: ${t}`).concat(plan.notes);
+    if (noteLines.length) jpegs.push(await notePageJpeg('Lead sheets — please check', noteLines));
+    if (plan.sets && plan.sets.length) {
+      renderSetlistSvg(plan.sets, plan.subtitle || '');
+      jpegs.push(await sheetJpegBytes());
+    }
+    for (let i = 0; i < plan.pages.length; i++) {
+      const page = plan.pages[i];
+      onProgress(i + 1, plan.pages.length);
+      model = JSON.parse(JSON.stringify(page.sheet));
+      model.elements = model.elements || [];
+      selectedIds.clear();
+      activeSlot = null;
+      transposeState.semitones = page.semitones;
+      transposeState.flats = page.flats;
+      bundleSinger = page.singer || '';
+      renderSvg();
+      jpegs.push(await sheetJpegBytes());
+    }
+    if (!jpegs.length) jpegs.push(await notePageJpeg('No lead sheets', ['This gig has no songs yet.']));
+    return new File([jpegsToPdf(jpegs)], plan.filename, { type: 'application/pdf' });
+  }
+
+  if (window.LEADSHEET_BUNDLE_PAGE) {
+    window.buildLeadSheetBundle = buildLeadSheetBundle;
+    return;
+  }
 
   render();
 })();

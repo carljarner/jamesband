@@ -82,7 +82,7 @@
                   <span class="singer-btn{{ ' is-active' if song.singer == 'duet' }}">Duet</span>
                 </div>
               </td>
-              <td>{{ song[song.singer] if song.singer else '' }}</td>
+              <td>{{ song[song.singer] | offsetlabel(song.key) if song.singer else '' }}</td>
               <td>{{ song.indstilling }}</td>
             </tr>
             {% endif %}
@@ -99,6 +99,13 @@
 </form>
 
 <div id="toast" class="toast" hidden></div>
+
+<div id="bundle-modal" class="modal-overlay" hidden>
+  <div class="modal-box modal-box--centered">
+    <p id="bundle-modal-text">Preparing lead sheets…</p>
+    <div class="progress"><div id="bundle-modal-bar" class="progress__bar"></div></div>
+  </div>
+</div>
 
 <div id="confirm-modal" class="modal-overlay" hidden>
   <div class="modal-box modal-box--centered modal-box--confirm">
@@ -277,6 +284,56 @@
       showToast('Saved');
     } catch (err) {
       showToast('Failed to save.', true);
+    }
+  });
+
+  /* ---------- Lead sheets PDF (stays on the page) ---------- */
+  // The sheets can only be drawn by the lead sheet editor's script, so the
+  // gig's lead-sheets page runs in a hidden frame, reports its progress here
+  // and hands back the finished PDF, which we download.
+  const bundleModal = document.getElementById('bundle-modal');
+  const bundleText = document.getElementById('bundle-modal-text');
+  const bundleBar = document.getElementById('bundle-modal-bar');
+  let bundleFrame = null;
+
+  function endBundle() {
+    bundleModal.hidden = true;
+    if (bundleFrame) { bundleFrame.remove(); bundleFrame = null; }
+  }
+
+  leadsheetsLink.addEventListener('click', e => {
+    e.preventDefault();
+    if (bundleFrame || !currentId) return;
+    bundleText.textContent = 'Preparing lead sheets…';
+    bundleBar.style.width = '0%';
+    bundleModal.hidden = false;
+    bundleFrame = document.createElement('iframe');
+    bundleFrame.className = 'bundle-frame';
+    bundleFrame.setAttribute('aria-hidden', 'true');
+    bundleFrame.src = `/gigs/${currentId}/leadsheets`;
+    document.body.appendChild(bundleFrame);
+  });
+
+  window.addEventListener('message', e => {
+    if (!bundleFrame || e.source !== bundleFrame.contentWindow || e.origin !== location.origin) return;
+    const msg = e.data || {};
+    if (msg.type === 'progress') {
+      bundleText.textContent = `Preparing lead sheets… ${msg.done}/${msg.total}`;
+      bundleBar.style.width = `${msg.total ? (msg.done / msg.total) * 100 : 100}%`;
+    } else if (msg.type === 'done') {
+      bundleBar.style.width = '100%';
+      const url = URL.createObjectURL(msg.file);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = msg.file.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      endBundle();
+    } else if (msg.type === 'error') {
+      endBundle();
+      showToast(`Couldn't make the lead sheets PDF: ${msg.message}`, true);
     }
   });
 

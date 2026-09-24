@@ -1,6 +1,6 @@
 """Feature 4: repertoire -- the band's known-song list, editable like a
-spreadsheet. Signe/Jonas hold each singer's transposition for a song once
-they've actually sung it; left blank until then.
+spreadsheet. Signe/Jonas/Duet hold each singer's transposition for a song
+(half-steps from its key) once they've actually sung it; None until then.
 """
 
 import json
@@ -9,12 +9,25 @@ import uuid
 
 import requests
 
+import chords
 import data_store
 
 REPERTOIRE_PATH = "repertoire/songs.json"
 PUBLIC_REPERTOIRE_PATH = "repertoire.json"  # public/repertoire.json, fetched by the public site
 
 FIELDS = ("title", "artist", "year", "key", "signe", "jonas", "duet", "indstilling")
+OFFSET_FIELDS = ("signe", "jonas", "duet")
+
+
+def clean_field(field: str, value):
+    """A song field as stored: the key is one of chords.KEYS, each singer's
+    transposition a number of half-steps (or None), the rest plain text.
+    Raises ValueError for a key or transposition that isn't one of those."""
+    if field == "key":
+        return chords.clean_key(value)
+    if field in OFFSET_FIELDS:
+        return chords.clean_offset(value)
+    return str(value or "").strip()
 
 
 def list_songs() -> list[dict]:
@@ -68,7 +81,7 @@ def _save(songs: list[dict]) -> None:
 
 def add_song(fields: dict) -> dict:
     song = {"id": uuid.uuid4().hex[:8]}
-    song.update({field: (fields.get(field) or "").strip() for field in FIELDS})
+    song.update({field: clean_field(field, fields.get(field)) for field in FIELDS})
     song["cover"] = _fetch_cover(song["title"], song["artist"])
     songs = list_songs()
     songs.append(song)
@@ -84,7 +97,7 @@ def update_song(song_id: str, fields: dict) -> dict:
             retitled = False
             for field in FIELDS:
                 if field in fields:
-                    new_value = str(fields[field] or "").strip()
+                    new_value = clean_field(field, fields[field])
                     if field in ("title", "artist") and new_value != song.get(field):
                         retitled = True
                     song[field] = new_value
@@ -132,7 +145,7 @@ def merge_from_setlist(setlist_songs: list[dict]) -> list[tuple[int, str]]:
             created.append((idx, target["id"]))
         prev_title, prev_artist = target.get("title"), target.get("artist")
         for field in FIELDS:
-            target[field] = str(row.get(field) or "").strip()
+            target[field] = clean_field(field, row.get(field))
         if target["title"] != prev_title or target["artist"] != prev_artist or not target.get("cover"):
             target["cover"] = _fetch_cover(target["title"], target["artist"])
 

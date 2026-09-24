@@ -83,6 +83,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/keys.js"></script>
 <script>
   const repertoireSongs = {{ repertoire_songs_json|safe }};
   const initialSongs = {{ setlist_songs_json|safe }};
@@ -271,7 +272,7 @@
   function blankSong(overrides) {
     return Object.assign({
       title: '', artist: '', year: '', key: '',
-      signe: '', jonas: '', duet: '', indstilling: '',
+      signe: null, jonas: null, duet: null, indstilling: '',
       singer: 'signe', repertoire_id: null, type: 'song',
     }, overrides);
   }
@@ -290,9 +291,9 @@
   // Duet transposition (if noted) wins; else whichever of Signe/Jonas has one;
   // if both (or neither) have one, Signe is the tie-break default.
   function pickDefaultSinger(song) {
-    if (song.duet.trim()) return 'duet';
-    const hasSigne = !!song.signe.trim();
-    const hasJonas = !!song.jonas.trim();
+    if (song.duet != null) return 'duet';
+    const hasSigne = song.signe != null;
+    const hasJonas = song.jonas != null;
     if (hasJonas && !hasSigne) return 'jonas';
     return 'signe';
   }
@@ -401,13 +402,25 @@
     return td;
   }
 
+  // Key and transposition are dropdowns (see static/keys.js). The
+  // transposition shown is the chosen singer's, labelled with the key it
+  // lands on, so changing the key re-renders the row's labels.
+  function makeKeyCell(song) {
+    const td = document.createElement('td');
+    const select = Keys.makeKeySelect(song.key);
+    select.addEventListener('change', () => {
+      song.key = select.value;
+      renderTable();
+    });
+    td.appendChild(select);
+    return td;
+  }
+
   function makeTransposedCell(song) {
     const td = document.createElement('td');
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = song[song.singer];
-    input.addEventListener('input', () => { song[song.singer] = input.value; });
-    td.appendChild(input);
+    const select = Keys.makeOffsetSelect(song[song.singer], song.key);
+    select.addEventListener('change', () => { song[song.singer] = Keys.parseOffset(select.value); });
+    td.appendChild(select);
     return td;
   }
 
@@ -462,7 +475,7 @@
       tr.appendChild(makeInputCell(song, 'title'));
       tr.appendChild(makeInputCell(song, 'artist'));
       tr.appendChild(makeInputCell(song, 'year'));
-      tr.appendChild(makeInputCell(song, 'key'));
+      tr.appendChild(makeKeyCell(song));
       tr.appendChild(makeSingerCell(song));
       tr.appendChild(makeTransposedCell(song));
       tr.appendChild(makeInputCell(song, 'indstilling'));

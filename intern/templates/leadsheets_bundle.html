@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Lead sheets &middot; {{ gig.venue or gig.date }}{% endblock %}
+{% block content %}
+<p><a class="back" href="/gigs/{{ gig.id }}">&larr; {{ gig.venue or "Untitled gig" }} &middot; {{ gig.date|dadate }}</a></p>
+<h1>Lead sheets</h1>
+
+<p id="bundle-status" class="muted">Preparing lead sheets…</p>
+<div id="bundle-actions" class="bundle-actions" hidden>
+  <button type="button" id="bundle-download" class="primary btn-small">Download PDF</button>
+  <button type="button" id="bundle-share" class="btn-small" hidden>Share</button>
+</div>
+
+{% if plan.missing %}
+<h2>No lead sheet</h2>
+<p class="muted">Not connected to a lead sheet, so left out of the PDF. Connect them from the sheet's editor under <a href="/leadsheets">Lead Sheets</a>.</p>
+<ul class="bundle-list">
+  {% for title in plan.missing %}<li>{{ title }}</li>{% endfor %}
+</ul>
+{% endif %}
+{% if plan.notes %}
+<h2>Please check</h2>
+<ul class="bundle-list">
+  {% for note in plan.notes %}<li>{{ note }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+{# The editor's own sheet page, off screen: each song is drawn here in turn
+   and captured for the PDF. #}
+<div class="bundle-render" aria-hidden="true">
+  {% include "_leadsheet_editor_body.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.LEADSHEET_BUNDLE_PAGE = true;
+  const plan = {{ plan_json|safe }};
+  const initialSheet = plan.pages.length ? plan.pages[0].sheet : { title: '', elements: [] };
+  const leadsheetId = '';
+</script>
+<script src="/static/leadsheet-editor.js"></script>
+<script>
+  (function () {
+    const status = document.getElementById('bundle-status');
+    const actions = document.getElementById('bundle-actions');
+    const downloadBtn = document.getElementById('bundle-download');
+    const shareBtn = document.getElementById('bundle-share');
+    let file = null;
+
+    function download() {
+      const url = URL.createObjectURL(file);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+
+    downloadBtn.addEventListener('click', download);
+    shareBtn.addEventListener('click', async () => {
+      try {
+        await navigator.share({ files: [file], title: file.name });
+      } catch (err) { /* dismissed, or not allowed -- the download button still works */ }
+    });
+
+    // Opened from the gig page, this runs in a hidden frame: it reports
+    // progress to the gig page and hands it the PDF to download instead.
+    const parentPage = window.parent !== window ? window.parent : null;
+    const tell = msg => parentPage.postMessage(msg, location.origin);
+
+    if (parentPage) tell({ type: 'progress', done: 0, total: plan.pages.length });
+    window.buildLeadSheetBundle(plan, (i, n) => {
+      status.textContent = `Preparing lead sheets… ${i}/${n}`;
+      if (parentPage) tell({ type: 'progress', done: i - 1, total: n });
+    }).then(result => {
+      if (parentPage) { tell({ type: 'done', file: result }); return; }
+      file = result;
+      const n = plan.pages.length;
+      status.textContent = `${n} lead sheet${n === 1 ? '' : 's'} ready.`;
+      actions.hidden = false;
+      let canShare = false;
+      try { canShare = !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (err) { /* no sharing */ }
+      shareBtn.hidden = !canShare;
+      download();
+    }).catch(err => {
+      if (parentPage) { tell({ type: 'error', message: String(err && err.message ? err.message : err) }); return; }
+      status.textContent = `Couldn't build the PDF: ${err && err.message ? err.message : err}`;
+    });
+  })();
+</script>
+{% endblock %}

@@ -15,7 +15,7 @@ import repertoire
 SETLISTS_PATH = "setlists/setlists.json"
 
 FIELDS = ("date", "venue", "lineup", "notes")
-SONG_TEXT_FIELDS = ("title", "artist", "year", "key", "signe", "jonas", "duet", "indstilling")
+SONG_FIELDS = repertoire.FIELDS
 VALID_SINGERS = {"", "signe", "jonas", "duet"}
 VALID_SONG_TYPES = {"song", "break"}
 
@@ -58,7 +58,7 @@ def _clean_songs(songs) -> list[dict]:
             # A pause marker between sets -- no song fields to keep.
             cleaned.append({"type": "break"})
             continue
-        entry = {field: str(song.get(field) or "").strip() for field in SONG_TEXT_FIELDS}
+        entry = {field: repertoire.clean_field(field, song.get(field)) for field in SONG_FIELDS}
         singer = str(song.get("singer") or "").strip().lower()
         if singer not in VALID_SINGERS:
             raise ValueError(f"invalid singer '{singer}'")
