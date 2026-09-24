@@ -27,11 +27,13 @@
 {% endif %}
 
 <div id="new-sheet-modal" class="modal-overlay" hidden>
-  <div class="modal-box modal-box--centered modal-box--wide">
+  <div class="modal-box modal-box--centered modal-box--new-sheet">
     <p>New lead sheet</p>
-    <div class="field">
-      <span>Title</span>
+    <div class="field new-sheet-field">
       <input type="text" id="new-sheet-title" placeholder="Song title" />
+    </div>
+    <div class="field new-sheet-field">
+      <input type="text" id="new-sheet-artist" placeholder="Artist" />
     </div>
     <div class="modal-actions">
       <button type="button" id="new-sheet-cancel">Cancel</button>
@@ -47,9 +49,11 @@
   const newSheetModal = document.getElementById('new-sheet-modal');
   const newSheetBtn = document.getElementById('new-sheet-btn');
   const newSheetTitle = document.getElementById('new-sheet-title');
+  const newSheetArtist = document.getElementById('new-sheet-artist');
 
   newSheetBtn.addEventListener('click', () => {
     newSheetTitle.value = '';
+    newSheetArtist.value = '';
     newSheetModal.hidden = false;
     newSheetTitle.focus();
   });
@@ -58,18 +62,21 @@
 
   async function createSheet() {
     const title = newSheetTitle.value.trim();
+    const artist = newSheetArtist.value.trim();
     if (!title) { newSheetTitle.focus(); return; }
     const resp = await fetch('/leadsheets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, artist }),
     });
     if (!resp.ok) { alert('Failed to create sheet: ' + await resp.text()); return; }
     const sheet = await resp.json();
     location.href = `/leadsheets/${sheet.id}`;
   }
 
-  newSheetTitle.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); createSheet(); } });
+  for (const input of [newSheetTitle, newSheetArtist]) {
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); createSheet(); } });
+  }
   document.getElementById('new-sheet-create').addEventListener('click', createSheet);
 
 </script>

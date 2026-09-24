@@ -94,12 +94,12 @@ def _clean_doc(leadsheet_id: str, doc: dict) -> dict:
     return cleaned
 
 
-def add_leadsheet(title: str) -> dict:
+def add_leadsheet(title: str, artist: str = "") -> dict:
     title = str(title or "").strip()
     if not title:
         raise ValueError("Sheet title can't be empty.")
     leadsheet_id = _unique_id(title, _existing_ids())
-    sheet = _clean_doc(leadsheet_id, {"title": title, "elements": []})
+    sheet = _clean_doc(leadsheet_id, {"title": title, "artist": artist, "elements": []})
     _save(sheet)
     data_store.commit_and_push(f"Add lead sheet '{sheet['title']}'")
     return sheet

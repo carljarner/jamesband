@@ -326,7 +326,7 @@ async def leadsheets_page(request: Request):
 async def leadsheets_create(request: Request):
     body = await request.json()
     try:
-        sheet = leadsheets.add_leadsheet(body.get("title", ""))
+        sheet = leadsheets.add_leadsheet(body.get("title", ""), body.get("artist", ""))
     except ValueError as exc:
         return Response(content=str(exc), status_code=400)
     return sheet

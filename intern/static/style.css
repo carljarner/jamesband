@@ -663,6 +663,11 @@ table.repertoire button.row-delete:hover {
 .modal-box input[type="url"] { width: 100%; margin-bottom: 1.25rem; }
 .modal-box .field { margin-bottom: 1.25rem; }
 .modal-box .field input { width: 100%; box-sizing: border-box; }
+/* New lead sheet: the modal hugs its narrow, squarer fields. */
+.modal-box--new-sheet { width: max-content; max-width: calc(100vw - 2rem); }
+.modal-box .new-sheet-field { align-items: center; }
+.modal-box .new-sheet-field input { width: 295px; max-width: 100%; border-radius: var(--radius); }
+.modal-box .new-sheet-field + .new-sheet-field { margin-top: -0.5rem; }
 .modal-box .save-status { display: block; }
 
 .modal-actions {
