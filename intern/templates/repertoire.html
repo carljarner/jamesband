@@ -42,10 +42,10 @@
         <td><input type="text" data-field="title" value="{{ song.title }}" /></td>
         <td><input type="text" data-field="artist" value="{{ song.artist }}" /></td>
         <td><input type="text" data-field="year" value="{{ song.year }}" /></td>
-        <td><input type="text" data-field="key" value="{{ song.key }}" /></td>
-        <td><input type="text" data-field="signe" value="{{ song.signe }}" /></td>
-        <td><input type="text" data-field="jonas" value="{{ song.jonas }}" /></td>
-        <td><input type="text" data-field="duet" value="{{ song.duet }}" /></td>
+        <td class="select-cell" data-select="key" data-value="{{ song.key }}"></td>
+        {% for singer in ("signe", "jonas", "duet") %}
+        <td class="select-cell" data-select="{{ singer }}" data-value="{{ '' if song[singer] is none else song[singer] }}"></td>
+        {% endfor %}
         <td><input type="text" data-field="indstilling" value="{{ song.indstilling }}" /></td>
         <td class="actions">
           <button type="button" class="row-delete">&times;</button>
@@ -80,6 +80,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/keys.js"></script>
 <script>
   const body = document.getElementById('repertoire-body');
   const saveStatus = document.getElementById('save-status');
@@ -97,6 +98,29 @@
   }
 
   const ROW_FIELDS = ['cover', 'title', 'artist', 'year', 'key', 'signe', 'jonas', 'duet', 'indstilling'];
+  const SELECT_FIELDS = ['key', 'signe', 'jonas', 'duet'];
+  const OFFSET_FIELDS = ['signe', 'jonas', 'duet'];
+
+  // Key and transposition cells are dropdowns (see static/keys.js); an
+  // offset's labels show the resulting key, so they follow the row's key.
+  function fillSelectCell(td, field, value, key) {
+    const select = field === 'key'
+      ? Keys.makeKeySelect(value)
+      : Keys.makeOffsetSelect(Keys.parseOffset(value), key);
+    select.dataset.field = field;
+    td.textContent = '';
+    td.appendChild(select);
+  }
+
+  function refreshOffsetLabels(row) {
+    const key = row.querySelector('[data-field="key"]').value;
+    OFFSET_FIELDS.forEach(f => Keys.fillOffsetSelect(row.querySelector(`[data-field="${f}"]`), key));
+  }
+
+  body.querySelectorAll('tr').forEach(row => {
+    const key = row.querySelector('td[data-select="key"]').dataset.value;
+    row.querySelectorAll('td[data-select]').forEach(td => fillSelectCell(td, td.dataset.select, td.dataset.value, key));
+  });
 
   function updateCoverPreview(input) {
     const td = input.closest('td');
@@ -111,7 +135,7 @@
   function currentFields(row) {
     const fields = {};
     ROW_FIELDS.forEach(f => {
-      const input = row.querySelector(`input[data-field="${f}"]`);
+      const input = row.querySelector(`[data-field="${f}"]`);
       fields[f] = input ? input.value : '';
     });
     return fields;
@@ -132,8 +156,9 @@
   body.querySelectorAll('tr').forEach(setBaseline);
 
   body.addEventListener('input', e => {
-    if (e.target.tagName === 'INPUT') {
+    if (e.target.dataset.field) {
       if (e.target.dataset.field === 'cover') updateCoverPreview(e.target);
+      if (e.target.dataset.field === 'key') refreshOffsetLabels(e.target.closest('tr'));
       refreshDirty(e.target.closest('tr'));
       updateStatus();
     }
@@ -206,6 +231,11 @@
         tr.appendChild(td);
         return;
       }
+      if (SELECT_FIELDS.includes(field)) {
+        fillSelectCell(td, field, '', '');
+        tr.appendChild(td);
+        return;
+      }
       const input = document.createElement('input');
       input.type = 'text';
       input.dataset.field = field;
@@ -235,7 +265,7 @@
         return;
       }
       const fields = {};
-      ROW_FIELDS.forEach(f => { fields[f] = tr.querySelector(`input[data-field="${f}"]`).value; });
+      ROW_FIELDS.forEach(f => { fields[f] = tr.querySelector(`[data-field="${f}"]`).value; });
       const resp = await fetch('/repertoire', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -340,7 +370,7 @@
 
     const results = await Promise.all(rows.map(row => {
       const fields = {};
-      row.querySelectorAll('input[data-field]').forEach(input => {
+      row.querySelectorAll('[data-field]').forEach(input => {
         fields[input.dataset.field] = input.value;
       });
       return fetch(`/repertoire/${row.dataset.id}`, {

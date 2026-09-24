@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
+import chords
 import gallery
 import gig_bundle
 import leadsheets
@@ -45,6 +46,7 @@ def format_date_da(value: str) -> str:
 
 
 templates.env.filters["dadate"] = format_date_da
+templates.env.filters["offsetlabel"] = chords.offset_label
 
 
 @app.middleware("http")
@@ -184,7 +186,10 @@ async def repertoire_create(request: Request):
     body = await request.json()
     if not str(body.get("title") or "").strip():
         return Response(content="Song title can't be empty.", status_code=400)
-    return repertoire.add_song(body)
+    try:
+        return repertoire.add_song(body)
+    except ValueError as exc:
+        return Response(content=str(exc), status_code=400)
 
 
 @app.post("/repertoire/{song_id}")
@@ -279,17 +284,20 @@ async def gigs_delete(gig_id: str):
 
 @app.get("/gigs/{gig_id}/leadsheets", response_class=HTMLResponse)
 async def gigs_leadsheets(request: Request, gig_id: str):
-    # Intentionally deferred: this used to render a combined PDF via
-    # chords.get_song()/transpose_song(), which were removed when lead
-    # sheets moved to the browser-based builder (see leadsheets.py). No
-    # server-side renderer exists yet for the new sheet model -- print each
-    # song from its own editor (Print button) and combine by hand for now.
+    # Lead sheets are only drawn in the browser, so this page draws each
+    # song's sheet (as gig_bundle plans it) and builds the PDF there.
     try:
-        setlists.get_setlist(gig_id)
+        gig = setlists.get_setlist(gig_id)
+        plan = gig_bundle.build_leadsheet_plan(gig_id)
     except KeyError:
         raise HTTPException(status_code=404)
+    plan["subtitle"] = " · ".join(
+        part for part in (gig.get("venue"), format_date_da(gig.get("date", ""))) if part
+    )
     return templates.TemplateResponse(
-        request, "leadsheets_bundle_unavailable.html", {"gig_id": gig_id}
+        request,
+        "leadsheets_bundle.html",
+        {"gig": gig, "plan": plan, "plan_json": json.dumps(plan).replace("</", "<\\/")},
     )
 
 
@@ -308,6 +316,7 @@ async def gigs_lyrics(gig_id: str):
 
 @app.get("/leadsheets", response_class=HTMLResponse)
 async def leadsheets_page(request: Request):
+    leadsheets.auto_link()
     return templates.TemplateResponse(
         request, "leadsheets.html", {"sheets": leadsheets.list_leadsheets()}
     )
@@ -325,6 +334,7 @@ async def leadsheets_create(request: Request):
 
 @app.get("/leadsheets/{leadsheet_id}", response_class=HTMLResponse)
 async def leadsheet_editor_page(request: Request, leadsheet_id: str):
+    leadsheets.auto_link()
     try:
         sheet = leadsheets.get_leadsheet(leadsheet_id)
     except KeyError:
@@ -332,8 +342,29 @@ async def leadsheet_editor_page(request: Request, leadsheet_id: str):
     return templates.TemplateResponse(
         request,
         "leadsheet_editor.html",
-        {"sheet": sheet, "sheet_json": json.dumps(sheet)},
+        {
+            "sheet": sheet,
+            "sheet_json": json.dumps(sheet),
+            "repertoire_songs_json": json.dumps(_repertoire_choices()),
+        },
     )
+
+
+def _repertoire_choices() -> list[dict]:
+    """Repertoire songs for a sheet's "Repertoire song" dropdown, each with
+    the sheet it's already connected to (if any)."""
+    linked = leadsheets.links()
+    return [
+        {
+            "id": song["id"],
+            "title": song["title"],
+            "artist": song.get("artist", ""),
+            "key": song.get("key", ""),
+            "sheet_id": linked[song["id"]]["id"] if song["id"] in linked else None,
+            "sheet_title": linked[song["id"]]["title"] if song["id"] in linked else None,
+        }
+        for song in repertoire.list_songs()
+    ]
 
 
 @app.post("/leadsheets/{leadsheet_id}")

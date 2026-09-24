@@ -550,7 +550,8 @@ table.repertoire td {
 
 table.repertoire tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
 
-table.repertoire input[type="text"] {
+table.repertoire input[type="text"],
+table.repertoire select {
   width: 100%;
   min-width: 90px;
   background: transparent;
@@ -562,16 +563,24 @@ table.repertoire input[type="text"] {
   font-family: inherit;
 }
 
-table.repertoire input[type="text"]:hover {
+table.repertoire input[type="text"]:hover,
+table.repertoire select:hover {
   border-color: rgba(255,255,255,0.15);
   background: var(--surface-alt);
 }
 
-table.repertoire input[type="text"]:focus {
+table.repertoire input[type="text"]:focus,
+table.repertoire select:focus {
   outline: none;
   border-color: var(--accent);
   background: var(--surface-alt);
 }
+
+/* No dropdown arrows in the repertoire -- they clutter the table. */
+table.repertoire select { appearance: none; -webkit-appearance: none; cursor: pointer; }
+
+table.repertoire select option,
+table.setlist-table select option { background: var(--surface); color: var(--text); }
 
 td.actions { white-space: nowrap; }
 
@@ -1152,7 +1161,8 @@ table.setlist-table th:nth-child(7), table.setlist-table td:nth-child(7) { width
 table.setlist-table th:nth-child(8), table.setlist-table td:nth-child(8) { width: calc(12% - 20px); }
 table.setlist-table th:nth-child(9), table.setlist-table td:nth-child(9) { width: 30px; }
 
-table.setlist-table input[type="text"] {
+table.setlist-table input[type="text"],
+table.setlist-table select {
   width: 100%;
   min-width: 0;
   background: transparent;
@@ -1164,12 +1174,14 @@ table.setlist-table input[type="text"] {
   font-family: inherit;
 }
 
-table.setlist-table input[type="text"]:hover {
+table.setlist-table input[type="text"]:hover,
+table.setlist-table select:hover {
   border-color: rgba(255,255,255,0.15);
   background: var(--surface-alt);
 }
 
-table.setlist-table input[type="text"]:focus {
+table.setlist-table input[type="text"]:focus,
+table.setlist-table select:focus {
   outline: none;
   border-color: var(--accent);
   background: var(--surface-alt);
@@ -1513,6 +1525,8 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .editor-title-input { width: 260px; min-width: 0; flex: 0 1 auto; }
 .editor-artist-input { width: 200px; min-width: 0; flex: 0 1 auto; }
 .tr-sheet-key { margin: 0.3rem 0 0.2rem; }
+.link-box .eb-field { display: flex; width: 100%; }
+.link-box .eb-field select { flex: 1; width: 100%; min-width: 0; max-width: none; }
 .tr-sheet-key input[type="text"] { width: 5rem; }
 
 .editor-layout {
@@ -2373,3 +2387,41 @@ body.lead-viewer .transpose-box .eb-btn { min-height: 40px; font-size: 0.9rem; }
 }
 
 .toast--error { box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 0 1px var(--accent); color: var(--accent); }
+
+/* ---------- Gig lead-sheet PDF ---------- */
+.bundle-actions { display: flex; gap: 0.5rem; margin: 0.5rem 0 1.25rem; }
+.bundle-list { margin: 0.25rem 0 1.25rem; padding-left: 1.2rem; }
+.bundle-list li { margin: 0.15rem 0; }
+/* The sheet is drawn here, off screen, for the PDF. Not display:none or
+   visibility:hidden -- the capture copies each element's computed style. */
+.bundle-render {
+  position: fixed;
+  left: -20000px;
+  top: 0;
+  width: 1400px;
+  pointer-events: none;
+}
+
+/* The gig page's progress bar while it builds the lead sheets PDF, and the
+   off-screen frame doing the drawing (not display:none -- see above). */
+.progress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+.progress__bar {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+.bundle-frame {
+  position: fixed;
+  left: -20000px;
+  top: 0;
+  width: 1400px;
+  height: 1200px;
+  border: 0;
+  pointer-events: none;
+}
