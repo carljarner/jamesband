@@ -21,10 +21,10 @@
     </div>
     <div class="edit-box transpose-box">
       <div class="eb-head"><span class="eb-head-title">Transpose</span></div>
-      <label class="eb-field tr-sheet-key edit-only">
+      <div class="eb-field tr-sheet-key edit-only">
         <span class="eb-label">Sheet key</span>
-        <input type="text" id="sheet-key" placeholder="e.g. Am" />
-      </label>
+        <span id="sheet-key"></span>
+      </div>
       <div id="transpose-box"></div>
     </div>
     <div id="edit-box" class="edit-box edit-only"></div>
@@ -115,36 +115,20 @@
     </div>
 
     <div class="rhythm-builder">
-      <div class="rhythm-builder-timesig">
-        <label>Time signature
-          <input type="number" id="rhythm-time-num" min="1" max="32" value="4" />
-          /
-          <input type="number" id="rhythm-time-den" min="1" max="32" value="4" />
-        </label>
-      </div>
+      <div class="rhythm-builder-timesig" id="rhythm-time-sig"></div>
       <svg id="rhythm-builder-svg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div class="rhythm-builder-controls">
         <span id="rhythm-builder-drag" class="rhythm-builder-drag" draggable="true" title="Drag this rhythm bar onto the page">&#10021; drag to page</span>
-        <button type="button" id="rhythm-builder-reset">Reset</button>
       </div>
     </div>
 
     <div class="staff-builder">
       <div class="staff-builder-controls-row">
-        <label>Time
-          <input type="number" id="staff-time-num" min="1" max="32" value="4" />
-          /
-          <input type="number" id="staff-time-den" min="1" max="32" value="4" />
-        </label>
+        <span id="staff-time-sig"></span>
         <label>Bars
           <input type="number" id="staff-bars" min="1" max="4" value="1" />
         </label>
-        <label>Clef
-          <select id="staff-clef">
-            <option value="treble">Treble</option>
-            <option value="bass">Bass</option>
-          </select>
-        </label>
+        <span id="staff-clef"></span>
       </div>
       <div id="staff-key-label" class="staff-builder-key" title="A new staff starts on the sheet's key. Change a placed staff's key in its edit box."></div>
       <svg id="notestaff-builder-svg" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -177,13 +161,15 @@
         <div id="staff-editor-info" class="staff-editor__info"></div>
       </div>
       <div class="modal-actions">
-        <button type="button" id="staff-editor-cancel" title="Undo everything since the editor opened">Cancel</button>
-        <button type="button" id="staff-editor-done" class="primary" title="Keep the changes (Esc)">Done</button>
+        <button type="button" id="staff-editor-cancel" class="eb-btn" title="Undo everything since the editor opened">Cancel</button>
+        <button type="button" id="staff-editor-done" class="eb-btn eb-btn--primary" title="Keep the changes (Esc)">Done</button>
       </div>
     </div>
+    <div id="staff-editor-props" class="staff-editor__props"></div>
     <div id="staff-editor-toolbar" class="staff-editor__toolbar"></div>
     <div class="staff-editor__page">
       <svg id="staff-editor-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <input type="text" id="staff-editor-chord" class="staff-editor-chord-input" autocomplete="off" spellcheck="false" aria-label="Chord symbol" hidden />
     </div>
     <div class="staff-editor__status">
       <span id="staff-editor-status"></span>
