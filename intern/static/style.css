@@ -1457,6 +1457,28 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   gap: 0.6rem;
 }
 
+/* Title left, search centred, actions right. */
+.leadsheets-toolbar {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 360px) 1fr;
+}
+.leadsheets-toolbar .leadsheets-toolbar-actions { grid-column: 3; justify-self: end; }
+
+.leadsheets-search {
+  grid-column: 2;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--radius);
+}
+
+.setlist-card.leadsheet-card[hidden] { display: none; }
+
+@media (max-width: 600px) {
+  .leadsheets-toolbar { grid-template-columns: 1fr auto; }
+  .leadsheets-search { grid-column: 1 / -1; grid-row: 2; }
+  .leadsheets-toolbar .leadsheets-toolbar-actions { grid-column: 2; }
+}
+
 .leadsheet-card {
   position: relative;
   /* The padding lives on the link instead, so the whole card is clickable. */

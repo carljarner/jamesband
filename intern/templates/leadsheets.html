@@ -2,8 +2,11 @@
 {% block title %}Lead Sheets{% endblock %}
 {% block container_class %}container--full{% endblock %}
 {% block content %}
-<div class="setlists-toolbar">
+<div class="setlists-toolbar leadsheets-toolbar">
   <h1>Lead Sheets</h1>
+  {% if sheets %}
+  <input type="search" id="sheet-search" class="leadsheets-search" placeholder="Search title or artist" aria-label="Search lead sheets" autocomplete="off" />
+  {% endif %}
   <div class="leadsheets-toolbar-actions">
     <button type="button" id="new-sheet-btn" class="add-row-btn add-row-btn--inline" title="New lead sheet" aria-label="New lead sheet">+</button>
   </div>
@@ -12,7 +15,7 @@
 {% if sheets %}
 <ul class="setlist-cards">
   {% for sheet in sheets %}
-  <li class="setlist-card leadsheet-card">
+  <li class="setlist-card leadsheet-card" data-search="{{ (sheet.title ~ ' ' ~ (sheet.artist or '')) | lower }}">
     <a href="/leadsheets/{{ sheet.id }}" class="leadsheet-card__link">
       <div class="setlist-card__header">
         <span>{{ sheet.title }}</span>
@@ -22,6 +25,7 @@
   </li>
   {% endfor %}
 </ul>
+<p id="sheet-search-empty" class="muted" hidden>No lead sheets match your search.</p>
 {% else %}
 <p class="muted">No lead sheets yet &mdash; add one to get started.</p>
 {% endif %}
@@ -78,6 +82,22 @@
     input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); createSheet(); } });
   }
   document.getElementById('new-sheet-create').addEventListener('click', createSheet);
+
+  const sheetSearch = document.getElementById('sheet-search');
+  if (sheetSearch) {
+    const cards = [...document.querySelectorAll('.leadsheet-card')];
+    const empty = document.getElementById('sheet-search-empty');
+    sheetSearch.addEventListener('input', () => {
+      const terms = sheetSearch.value.toLowerCase().split(/\s+/).filter(Boolean);
+      let shown = 0;
+      for (const card of cards) {
+        const match = terms.every(t => card.dataset.search.includes(t));
+        card.hidden = !match;
+        if (match) shown++;
+      }
+      empty.hidden = shown > 0;
+    });
+  }
 
 </script>
 {% endblock %}
