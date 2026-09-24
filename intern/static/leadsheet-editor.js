@@ -538,8 +538,7 @@
     if (el.hideClef) return el.h * 0.1;
     return el.h * 0.03 + CLEF_ADVANCE_EM[el.clef || 'treble'] * clefSize(el.h) + el.h * 0.12;
   }
-  function notestaffKeySigWidth(el) {
-    const k = displayedKeySignature(el);
+  function notestaffKeySigWidth(el, k = displayedKeySignature(el)) {
     if (!k || el.hideKey) return 0;
     return (Math.abs(k) - 1) * KEYSIG_STEP * el.h + KEYSIG_ADVANCE_EM[k > 0 ? 'sharp' : 'flat'] * KEYSIG_SIZE * el.h + el.h * 0.2;
   }
@@ -558,6 +557,17 @@
   }
   function notestaffLeadWidth(el) {
     return notestaffClefWidth(el) + notestaffKeySigWidth(el) + notestaffTimeSigWidth(el) + el.h * 0.13;
+  }
+  // The width the notes get as drawn. `el.w` is stored for the staff's own
+  // key; transposing the sheet redraws the signature with more or fewer
+  // accidentals, and the notes give up or take that room so the staff keeps
+  // its overall length (as keepStaffWidth does for a key picked in the edit
+  // box) -- unless they can't be squeezed that far (see staffMinWidth).
+  function staffKeyShift(el) {
+    return notestaffKeySigWidth(el, el.keySignature || 0) - notestaffKeySigWidth(el);
+  }
+  function staffNotesWidth(el) {
+    return Math.max(el.w + staffKeyShift(el), staffMinWidth(el));
   }
   // Bottom line = step 0, top line = step 8, so the full 5-line staff spans
   // el.h; el.h/8 is one staff step in pixels.
@@ -1126,7 +1136,7 @@
       case 'notestaff': {
         const pad = el.h * 0.4;
         const leadW = notestaffLeadWidth(el);
-        return { x: el.x - 8, y: el.y - pad, w: leadW + el.w + 8, h: el.h + 2 * pad };
+        return { x: el.x - 8, y: el.y - pad, w: leadW + staffNotesWidth(el) + 8, h: el.h + 2 * pad };
       }
       default:
         return { x: el.x || 0, y: el.y || 0, w: 0, h: 0 };
@@ -2416,9 +2426,9 @@
   }
 
   /* ---------- note staff (pitched notation) rendering ---------- */
-  function drawStaffLines(container, el) {
+  function drawStaffLines(container, el, notesW = el.w) {
     const lineGap = el.h / 4;
-    const fullW = notestaffLeadWidth(el) + el.w;
+    const fullW = notestaffLeadWidth(el) + notesW;
     for (let i = 0; i < 5; i++) {
       const ly = el.y + i * lineGap;
       container.appendChild(svgLine(el.x, ly, el.x + fullW, ly, { cls: 'el-staff-line' }));
@@ -2934,15 +2944,16 @@
     const g = svgGroup({ cls: 'el-group' });
     const startX = el.x, startY = el.y;
     const leadW = notestaffLeadWidth(el);
+    const notesW = staffNotesWidth(el);
     const moveTo = (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); };
 
-    drawStaffLines(g, el);
+    drawStaffLines(g, el, notesW);
     drawClef(g, el);
     drawKeySignature(g, el);
     drawTimeSignature(g, el);
-    drawStaffBarlines(g, el, el.x + leadW, el.w, el.cells);
+    drawStaffBarlines(g, el, el.x + leadW, notesW, el.cells);
 
-    const { cellBoxes } = renderStaffCells(g, displayedCells(el), el.x + leadW, el.y, el.w, el, {
+    const { cellBoxes } = renderStaffCells(g, displayedCells(el), el.x + leadW, el.y, notesW, el, {
       onCellClick: (idx, subIdx) => openStaffEditor(el, { idx, subIdx }),
       onOpen: () => openStaffEditor(el),
       onMove: moveTo,
@@ -2959,7 +2970,7 @@
     // Same as the rhythm bar: width re-spaces cells, height rescales the notes
     // and staff. The grab zone sits on the bottom-right corner of the
     // selection outline (see elementBounds), where it is looked for.
-    addResizeHandle(g, el.x + leadW + el.w, el.y + el.h * 1.4, sizeDrag(el), el);
+    addResizeHandle(g, el.x + leadW + notesW, el.y + el.h * 1.4, sizeDrag(el), el);
 
     svg.appendChild(g);
   }
@@ -3137,9 +3148,9 @@
   // clef and key signature give up or take -- unless they can't be squeezed
   // that far (see staffMinWidth), when the staff grows by the difference.
   function keepStaffWidth(el, change) {
-    const total = notestaffLeadWidth(el) + el.w;
+    const total = notestaffLeadWidth(el) + staffNotesWidth(el);
     change();
-    applySize(el, total - notestaffLeadWidth(el), null);
+    applySize(el, total - notestaffLeadWidth(el) - staffKeyShift(el), null);
   }
   // A pick from the time signature menu (see openTimeSigMenu).
   function setTimeSig(el, ts) {
