@@ -13,5 +13,5 @@
   const leadsheetId = "{{ sheet.id }}";
   const repertoireSongs = {{ repertoire_songs_json|safe }};
 </script>
-<script src="/static/leadsheet-editor.js"></script>
+<script src="/static/leadsheet-editor.js?v={{ static_version }}"></script>
 {% endblock %}

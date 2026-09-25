@@ -2510,3 +2510,12 @@ body.lead-viewer .transpose-box .eb-btn { min-height: 40px; font-size: 0.9rem; }
   border: 0;
   pointer-events: none;
 }
+
+/* ---------- Page transitions ---------- */
+/* Cross-fade between pages instead of flashing blank, with the header and
+   nav held in place. Browsers without support navigate as before. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  .topbar { view-transition-name: topbar; }
+  .main-nav { view-transition-name: main-nav; }
+}

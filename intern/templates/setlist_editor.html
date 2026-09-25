@@ -83,7 +83,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/keys.js"></script>
+<script src="/static/keys.js?v={{ static_version }}"></script>
 <script>
   const repertoireSongs = {{ repertoire_songs_json|safe }};
   const initialSongs = {{ setlist_songs_json|safe }};

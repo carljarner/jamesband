@@ -1,7 +1,9 @@
+import hashlib
 import json
 import os
 import secrets
 from datetime import date
+from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -24,9 +26,34 @@ import data_store
 VALID_PASSWORDS = [p.strip() for p in os.environ["INTERN_PASSWORD"].split(",") if p.strip()]
 SESSION_SECRET = os.environ["SESSION_SECRET"]
 
+
+
+def _static_version() -> str:
+    """Short hash of everything under static/, so URLs like
+    /static/style.css?v=<hash> change whenever a deploy changes a file."""
+    digest = hashlib.sha1()
+    for path in sorted(Path("static").rglob("*")):
+        if path.is_file():
+            digest.update(str(path).encode())
+            digest.update(path.read_bytes())
+    return digest.hexdigest()[:10]
+
+
+class VersionedStaticFiles(StaticFiles):
+    """Versioned requests (?v=...) are cached for good; the URL changes on
+    the next deploy. Unversioned ones keep the default revalidation."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if b"v=" in scope.get("query_string", b""):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", VersionedStaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["static_version"] = _static_version()
 
 DA_MONTHS_ABBR = (
     "jan.", "feb.", "mar.", "apr.", "maj", "jun.",

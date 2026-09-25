@@ -4,21 +4,26 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}Intern tools{% endblock %} &middot; James Band</title>
-  <link rel="icon" type="image/png" href="/static/favicon.png" />
-  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png?v={{ static_version }}" />
+  <link rel="icon" href="/static/favicon.ico?v={{ static_version }}" sizes="any" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v={{ static_version }}" />
   {% block extra_style %}{% endblock %}
+
+  {# Fetch a tab's page on hover so the click lands instantly (Chrome/Edge). #}
+  <script type="speculationrules">
+  {"prefetch": [{"where": {"selector_matches": ".page-tabs__tab"}, "eagerness": "moderate"}]}
+  </script>
 </head>
 <body>
   {% block topbar %}
   <header class="topbar">
     <a href="/gigs" class="topbar__brand">
-      <img src="/static/logo.png" alt="James Band" class="topbar__logo" />
+      <img src="/static/logo.png?v={{ static_version }}" alt="James Band" class="topbar__logo" />
       JAMES BAND &middot; INTERN
     </a>
   </header>

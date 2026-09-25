@@ -80,7 +80,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/keys.js"></script>
+<script src="/static/keys.js?v={{ static_version }}"></script>
 <script>
   const body = document.getElementById('repertoire-body');
   const saveStatus = document.getElementById('save-status');
