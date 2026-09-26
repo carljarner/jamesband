@@ -629,10 +629,12 @@
   // In Practice mode (the default on opening a sheet; ?mode=edit opens it in
   // Edit) the page is a viewer: see the sheet, transpose it, follow its
   // practice links and print it, but nothing edits it (the CSS hides the
-  // editing tools). A phone-sized screen is always a viewer.
+  // editing tools). A screen too narrow for the three columns side by side
+  // is always a viewer too, and a phone-sized one gets the phone layout.
   const viewerMQ = matchMedia('(max-width: 700px)');
+  const narrowMQ = matchMedia('(max-width: 1199px)');
   let mode = new URLSearchParams(location.search).get('mode') === 'edit' ? 'edit' : 'practice';
-  function isViewer() { return viewerMQ.matches || mode === 'practice'; }
+  function isViewer() { return narrowMQ.matches || mode === 'practice'; }
   // The PDF of the current render (see "sheet as PDF"); any re-render makes
   // it stale.
   let sheetPdf = null;
@@ -5388,8 +5390,15 @@
   // just brings the tools back.
   function applyViewerMode() {
     const on = isViewer();
+    const narrow = narrowMQ.matches && !viewerMQ.matches;
     document.body.classList.toggle('lead-viewer', viewerMQ.matches);
+    document.body.classList.toggle('lead-narrow', narrow);
     document.body.classList.toggle('lead-practice', on);
+    // Between phone and full width there's no right column, so the links
+    // box moves to the top of the left one.
+    const practiceBox = document.querySelector('.practice-box');
+    if (narrow) document.getElementById('left-column').prepend(practiceBox);
+    else document.querySelector('.mode-box').after(practiceBox);
     document.querySelectorAll('.mode-seg [data-mode]').forEach(b => {
       b.classList.toggle('eb-btn--on', b.dataset.mode === mode);
     });
@@ -5408,6 +5417,7 @@
   }
   function refreshForMode() { applyViewerMode(); renderPracticeLinks(); renderTransposeBox(); renderSvg(); }
   viewerMQ.addEventListener('change', refreshForMode);
+  narrowMQ.addEventListener('change', refreshForMode);
   document.querySelectorAll('.mode-seg [data-mode]').forEach(b => {
     b.addEventListener('click', () => {
       if (mode === b.dataset.mode) return;

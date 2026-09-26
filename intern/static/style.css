@@ -2409,7 +2409,7 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 
 /* ---------- Lead sheet viewer (phones) ---------- */
 /* body.lead-practice is set by leadsheet-editor.js in Practice mode, and
-   always below 700px: the sheet can be seen, transposed and printed, but not
+   always below 1200px: the sheet can be seen, transposed and printed, but not
    edited. body.lead-viewer (below 700px only) adds the phone layout. */
 .only-viewer { display: none; }
 .practice-only { display: none; }
@@ -2427,16 +2427,27 @@ body.lead-practice #sheet-svg { pointer-events: none; }
 .viewer-share[hidden] { display: none !important; }
 .viewer-share button { width: 100%; max-width: 420px; min-height: 44px; }
 
+/* body.lead-narrow (701-1199px): too narrow for the right column, so there's
+   no Edit mode -- just the left column beside the sheet, with the links box
+   moved to its top (see applyViewerMode). */
+body.lead-narrow .mode-box, body.lead-narrow #glyph-palette { display: none; }
+body.lead-narrow .editor-layout { flex-direction: row; flex-wrap: nowrap; align-items: flex-start; }
+body.lead-narrow .editor-palette--left { position: sticky; max-height: calc(100vh - 2rem); overflow-y: auto; width: 250px; max-width: none; }
+body.lead-narrow .practice-box { width: 100%; max-width: none; }
+body.lead-narrow .page-column { flex: 1 1 auto; width: auto; order: 0; }
+
 body.lead-viewer .editor-layout { padding-bottom: 1rem; gap: 0.75rem; margin-top: 0; }
 body.lead-viewer .editor-palette--left { order: -1; width: 100%; max-width: none; position: static; }
 body.lead-viewer .page-column { order: 0; }
 body.lead-viewer .transpose-box { width: 100%; }
-body.lead-viewer #glyph-palette { order: -1; width: 100%; max-width: none; }
+/* The links box sits under the sheet, above the Share button. */
+body.lead-viewer #glyph-palette { order: 1; width: 100%; max-width: none; }
 body.lead-viewer .practice-box { width: 100%; max-width: none; }
 body.lead-viewer .practice-link { padding: 0.65rem 0.8rem; font-size: 0.95rem; }
 body.lead-viewer .tr-key { font-size: 0.95rem; }
 body.lead-viewer .tr-keys { grid-template-columns: repeat(6, 1fr); gap: 0.35rem; }
 body.lead-viewer .transpose-box .eb-btn { min-height: 40px; font-size: 0.9rem; }
+body.lead-viewer .tr-acc .eb-btn { width: 40px; padding: 0; font-size: 1.1rem; }
 
 /* ---------- Print ---------- */
 @media print {
