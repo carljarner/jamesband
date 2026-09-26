@@ -99,7 +99,7 @@
   // A fresh rhythm bar or staff is filled with one rest per beat (not 16ths):
   // 16 sixteenth rests need more width (RHYTHM_MIN_CELL_PX each) than the
   // standard bar size, or the builder preview, has.
-  const STAFF_MAX_BARS = 4;
+  const STAFF_MAX_BARS = 8;
   const NOTESTAFF_DEFAULT_H = 30;
   const NOTESTAFF_DEFAULT_BAR_W = 100; // W of one 4/4 bar, so a 4-bar staff is 400 (the edit box's W, clef and key not counted)
   const RHYTHMBAR_DEFAULT_H = 20, RHYTHMBAR_DEFAULT_W = 70; // a placed rhythm bar, W for 4/4
@@ -626,10 +626,13 @@
   // being drawn (SVG units).
   const selectedIds = new Set();
 
-  // On a phone-sized screen the page is a viewer: see the sheet, transpose
-  // it and get it as a PDF, but nothing edits it (the CSS hides the editing tools).
+  // In Practice mode (the default on opening a sheet; ?mode=edit opens it in
+  // Edit) the page is a viewer: see the sheet, transpose it, follow its
+  // practice links and print it, but nothing edits it (the CSS hides the
+  // editing tools). A phone-sized screen is always a viewer.
   const viewerMQ = matchMedia('(max-width: 700px)');
-  function isViewer() { return viewerMQ.matches; }
+  let mode = new URLSearchParams(location.search).get('mode') === 'edit' ? 'edit' : 'practice';
+  function isViewer() { return viewerMQ.matches || mode === 'practice'; }
   // The PDF of the current render (see "sheet as PDF"); any re-render makes
   // it stale.
   let sheetPdf = null;
@@ -708,7 +711,7 @@
   const FLAT_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
   const NOTE_SEMITONE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
   const FLAT_MAJOR_ROOTS = [1, 3, 5, 8, 10]; // Db Eb F Ab Bb
-  const transposeState = { semitones: 0, flats: false, flatsChosen: false, pickerOpen: true };
+  const transposeState = { semitones: 0, flats: false, flatsChosen: false, pickerOpen: isViewer() };
   // Whether what's drawn differs from what's stored: transposed, or -- in the
   // sheet's own key -- spelled with the other accidentals (C# for Db) because
   // that was picked in the transpose box.
@@ -1342,15 +1345,23 @@
 
   /* ---------- popup menu ---------- */
   // The one small menu open at a time (the time signature menu, see
-  // openTimeSigMenu), fixed to the viewport; a press outside it or Esc closes it.
+  // openTimeSigMenu), fixed to the viewport; a press outside it or Esc closes
+  // it. A press on the button that opened it closes it too, and the click
+  // that follows mustn't open it again (see openTileMenu).
   let activePopup = null;
+  let popupAnchor = null;
+  let popupClosedBy = null;
   function closePopup() {
     if (!activePopup) return;
     activePopup.remove();
     activePopup = null;
+    popupAnchor = null;
   }
   document.addEventListener('mousedown', e => {
-    if (activePopup && !activePopup.contains(e.target)) closePopup();
+    popupClosedBy = null;
+    if (!activePopup || activePopup.contains(e.target)) return;
+    if (popupAnchor && popupAnchor.contains(e.target)) popupClosedBy = popupAnchor;
+    closePopup();
   }, true);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && activePopup && !staffEditor.el) closePopup();
@@ -1418,6 +1429,9 @@
   // choice); a click calls `onPick(value)`. `opts.cols` sets the columns and
   // `opts.footer(pick)` adds nodes after the tiles.
   function openTileMenu(anchor, items, onPick, opts = {}) {
+    // A second click on the button closes its menu instead of reopening it.
+    if (popupClosedBy === anchor) { popupClosedBy = null; return; }
+    if (activePopup && popupAnchor === anchor) { closePopup(); return; }
     closePopup();
     const menu = mk('div', `rhythm-menu tile-menu${opts.cls ? ` ${opts.cls}` : ''}`);
     menu.style.gridTemplateColumns = `repeat(${opts.cols || 4}, 1fr)`;
@@ -1439,6 +1453,7 @@
     menu.style.left = `${clamp(r.left, 4, window.innerWidth - menu.offsetWidth - 4)}px`;
     menu.style.top = `${clamp(r.bottom + 4, 4, window.innerHeight - menu.offsetHeight - 4)}px`;
     activePopup = menu;
+    popupAnchor = anchor;
   }
   // The button showing the current choice, which opens its menu: `show()`
   // gives `{ icon (a node, optional), label, title }`, `open(btn)` opens the
@@ -3028,6 +3043,8 @@
     document.getElementById('sheet-artist').value = model.artist || '';
     sheetKeyButton.refresh();
     renderRepertoireLink();
+    renderLinkInputs();
+    renderPracticeLinks();
     renderTransposeBox();
     renderSvg();
   }
@@ -3601,9 +3618,9 @@
     chordText: textSchema,
     text: textSchema,
     row: el => [
-      { fields: [
+      { cls: 'eb-section--lines', fields: [
         numField('Bars', 'barCount', { stepper: true, integer: true, min: 1, max: ROW_MAX_BARS, set: setRowBars, structural: true }),
-        numField('Chords / bar (all)', 'chordsPerBar', { stepper: true, integer: true, min: 0, max: ROW_MAX_CHORDS, get: e => e.chordsPerBar || 0, set: setRowChordsPerBar, structural: true }),
+        numField('Chords / bar', 'chordsPerBar', { stepper: true, integer: true, min: 0, max: ROW_MAX_CHORDS, get: e => e.chordsPerBar || 0, set: setRowChordsPerBar, structural: true }),
         { kind: 'toggle', id: 'repeatStart', label: 'Repeat start', get: e => !!e.repeatStart, set: (e, v) => { e.repeatStart = v; } },
         { kind: 'toggle', id: 'repeatEnd', label: 'Repeat end', get: e => !!e.repeatEnd, set: (e, v) => { e.repeatEnd = v; } },
       ] },
@@ -3905,7 +3922,6 @@
       list.appendChild(line);
     });
     wrap.appendChild(list);
-    wrap.appendChild(mk('p', 'eb-hint', 'The - / + on each line changes that bar only; "Chords / bar (all)" above sets every bar. Type - for a rest as long as the box, r for a repeat-bar sign. Tab moves to the next box; Cmd/Ctrl + or - adds or removes a box in the bar you are typing in.'));
     return wrap;
   }
 
@@ -4165,58 +4181,64 @@
   });
 
   /* ---------- bars builder ---------- */
-  // Type a bar count (and optionally tick repeat start/end), then drag the
-  // preview onto the page as a row of that many bars with those repeat marks
-  // already attached. The count is read again at drag time, so a value typed
-  // but not yet committed (blur/Enter) still counts.
-  const barsCountInput = document.getElementById('bars-count');
-  const barsRepeatStart = document.getElementById('bars-repeat-start');
-  const barsRepeatEnd = document.getElementById('bars-repeat-end');
-  const barsChordsInput = document.getElementById('bars-chords');
+  // Pick a bar count, then drag the preview onto the page as a row of that
+  // many bars, one chord box each. Repeat marks and chords per bar are set
+  // afterwards in the edit box.
+  // A number field between − and + buttons, like the edit box's steppers:
+  // `get()` gives the value, `set(v)` takes a new one (already clamped to
+  // min..max). Returns the stepper and a function that redraws it.
+  function stepperField(label, min, max, get, set) {
+    const box = mk('span', 'eb-stepper');
+    const input = mk('input');
+    input.type = 'number';
+    input.min = min;
+    input.max = max;
+    input.step = 1;
+    input.setAttribute('aria-label', label);
+    const minus = mk('button', 'eb-btn eb-btn--step', '−');
+    const plus = mk('button', 'eb-btn eb-btn--step', '+');
+    minus.type = plus.type = 'button';
+    minus.setAttribute('aria-label', `${label} minus`);
+    plus.setAttribute('aria-label', `${label} plus`);
+    const refresh = () => { if (document.activeElement !== input) input.value = get(); };
+    const commit = v => {
+      if (!Number.isNaN(v)) v = clamp(Math.round(v), min, max);
+      if (!Number.isNaN(v) && v !== get()) set(v);
+      input.value = get();
+    };
+    input.addEventListener('change', () => commit(parseFloat(input.value)));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
+    minus.addEventListener('click', () => commit(get() - 1));
+    plus.addEventListener('click', () => commit(get() + 1));
+    box.append(minus, input, plus);
+    refresh();
+    return { box, refresh };
+  }
+
+  let barsBuilderCount = 4;
   const BARS_PREVIEW_W = 240, BARS_PREVIEW_H = 44;
-  function barsBuilderCount() {
-    return clamp(parseInt(barsCountInput.value, 10) || 4, 1, ROW_MAX_BARS);
-  }
-  function barsBuilderChords() {
-    const v = parseInt(barsChordsInput.value, 10);
-    return clamp(Number.isNaN(v) ? 1 : v, 0, ROW_MAX_CHORDS);
-  }
   function renderBarsBuilderSvg() {
     const svg = document.getElementById('bars-builder-svg');
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    const n = barsBuilderCount();
+    const n = barsBuilderCount;
     const padX = 8, top = 8, h = BARS_PREVIEW_H - 16;
     const barW = (BARS_PREVIEW_W - 2 * padX) / n;
-    chordSlotRects(padX, top, BARS_PREVIEW_W - 2 * padX, h, Array(n).fill(barsBuilderChords()), barsRepeatStart.checked, barsRepeatEnd.checked)
+    chordSlotRects(padX, top, BARS_PREVIEW_W - 2 * padX, h, Array(n).fill(1), false, false)
       .forEach(s => svg.appendChild(svgRect(s.x + 1, s.y + 1.5, Math.max(s.w - 2, 1), h - 3, { cls: 'el-chord-slot empty' })));
     for (let i = 0; i <= n; i++) {
-      if (i === 0 && barsRepeatStart.checked) continue; // repeat mark replaces the plain barline, as on the page
-      if (i === n && barsRepeatEnd.checked) continue;
       svg.appendChild(svgHandDrawnBarline(padX + i * barW, top, h, seedFromString(`bars-preview-${i}`), 'el-row-divider'));
     }
-    if (barsRepeatStart.checked) drawRepeatMark(svg, padX, top, REPEAT_MARK_W, h, 'start', 'bars-preview-repeatStart');
-    if (barsRepeatEnd.checked) drawRepeatMark(svg, BARS_PREVIEW_W - padX - REPEAT_MARK_W, top, REPEAT_MARK_W, h, 'end', 'bars-preview-repeatEnd');
     svg.setAttribute('viewBox', `0 0 ${BARS_PREVIEW_W} ${BARS_PREVIEW_H}`);
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   }
   renderBarsBuilderSvg();
-  barsCountInput.addEventListener('input', renderBarsBuilderSvg);
-  barsCountInput.addEventListener('change', () => {
-    barsCountInput.value = barsBuilderCount();
+  const barsCountStepper = stepperField('Bars', 1, ROW_MAX_BARS, () => barsBuilderCount, v => {
+    barsBuilderCount = v;
     renderBarsBuilderSvg();
   });
-  barsChordsInput.addEventListener('input', renderBarsBuilderSvg);
-  barsChordsInput.addEventListener('change', () => {
-    barsChordsInput.value = barsBuilderChords();
-    renderBarsBuilderSvg();
-  });
-  barsRepeatStart.addEventListener('change', renderBarsBuilderSvg);
-  barsRepeatEnd.addEventListener('change', renderBarsBuilderSvg);
+  document.getElementById('bars-count-stepper').appendChild(barsCountStepper.box);
   document.getElementById('bars-builder-drag').addEventListener('dragstart', e => {
-    startPlacementDrag(e, {
-      type: 'row', barCount: barsBuilderCount(), chordsPerBar: barsBuilderChords(),
-      repeatStart: barsRepeatStart.checked, repeatEnd: barsRepeatEnd.checked,
-    });
+    startPlacementDrag(e, { type: 'row', barCount: barsBuilderCount, chordsPerBar: 1, repeatStart: false, repeatEnd: false });
   });
 
   /* ---------- rhythm bar builder ---------- */
@@ -4262,12 +4284,12 @@
   document.getElementById('rhythm-time-sig').appendChild(rhythmTimeSig.btn);
 
   /* ---------- note staff builder ---------- */
-  // Sets up an empty staff (time, clef, bars) to drag onto the page; the
-  // preview only shows it. The notes are written in the staff editor, which
-  // opens as soon as the staff is dropped (see addElement).
+  // Sets up an empty one-bar staff (time, clef) to drag onto the page; the
+  // preview only shows it. The notes -- and more bars -- are written in the
+  // staff editor, which opens as soon as the staff is dropped (see addElement).
   let staffBuilderNumerator = 4, staffBuilderDenominator = 4;
   let staffBuilderClef = 'treble';
-  let staffBuilderBars = 1;
+  const staffBuilderBars = 1;
   // The key isn't set here: a new staff starts on the sheet's key (see
   // keySignatureForKey) and is changed afterwards in its edit box.
   const STAFF_BUILDER_H = 24;
@@ -4288,7 +4310,12 @@
     const leadW = notestaffLeadWidth(builderEl);
     const builderW = STAFF_BUILDER_VIEW_W - builderEl.x - leadW - 10;
     builderEl.w = builderW;
-    document.getElementById('staff-key-label').textContent = `Key: ${keySignatureLabel(builderEl.keySignature)}${model.key ? '' : ' (no song key)'}`;
+    // Named after the sheet's key, so a minor sheet reads "D#m (6 sharps)"
+    // rather than its relative major.
+    const [sigName, sigCount] = keySignatureLabel(builderEl.keySignature).split(' (');
+    const sheetKey = parseKey(model.key);
+    const keyName = sheetKey && sheetKey.minor ? String(model.key).trim() : sigName;
+    document.getElementById('staff-key-label').textContent = `Key: ${keyName} (${sigCount}${model.key ? '' : ' (no song key)'}`;
 
     drawStaffLines(svg, builderEl);
     drawClef(svg, builderEl);
@@ -4319,11 +4346,6 @@
       renderStaffBuilderSvg();
     });
   document.getElementById('staff-time-sig').appendChild(staffTimeSig.btn);
-  document.getElementById('staff-bars').addEventListener('change', e => {
-    staffBuilderBars = clamp(parseInt(e.target.value, 10) || 1, 1, STAFF_MAX_BARS);
-    e.target.value = staffBuilderBars;
-    renderStaffBuilderSvg();
-  });
   const staffBuilderClefButton = clefButton(() => staffBuilderClef, v => {
     staffBuilderClef = v;
     staffBuilderClefButton.refresh();
@@ -4808,6 +4830,10 @@
     const timeShow = showTick('showTime', false);
     timeShow.dataset.staffOnly = '';
     field('Time', ts.btn, timeShow);
+    const bars = stepperField('Bars', 1, STAFF_MAX_BARS, () => (staffEditor.el ? staffBarCount(staffEditor.el) : 1),
+      n => editStaff(el => { setStaffBars(el, n); }));
+    staffEditorProps.push(() => bars.refresh());
+    field('Bars', bars.box);
     const edited = el => el || staffEditor.el || { clef: 'treble', keySignature: 0 };
     const clef = clefButton(() => edited().clef || 'treble',
       v => editStaff(el => keepStaffWidth(el, () => { el.clef = v; })));
@@ -4948,10 +4974,13 @@
 
     const line = mk('div', 'tr-key-line');
     line.appendChild(mk('span', 'tr-key', `Key: ${transposedKeyName()} (${formatAmount(t.semitones)})`));
-    const change = mk('button', 'eb-btn', t.pickerOpen ? 'Close' : 'Change');
-    change.type = 'button';
-    change.addEventListener('click', () => { t.pickerOpen = !t.pickerOpen; renderTransposeBox(); });
-    line.appendChild(change);
+    const toggle = mk('button', 'eb-btn tr-toggle');
+    toggle.type = 'button';
+    toggle.appendChild(mk('span', null, '▸'));
+    toggle.setAttribute('aria-expanded', String(t.pickerOpen));
+    toggle.title = t.pickerOpen ? 'Hide keys' : 'Show keys';
+    toggle.addEventListener('click', () => { t.pickerOpen = !t.pickerOpen; renderTransposeBox(); });
+    line.appendChild(toggle);
     transposeBox.appendChild(line);
 
     if (t.pickerOpen) {
@@ -5061,6 +5090,56 @@
   });
 
   document.getElementById('print-btn').addEventListener('click', () => window.print());
+  document.getElementById('practice-print-btn').addEventListener('click', () => window.print());
+
+  /* ---------- practice links ---------- */
+  // Links to the song's lyrics and recordings, saved with the sheet: edited
+  // in the Links box, followed from the Practice box.
+  const PRACTICE_LINKS = [
+    ['lyrics_url', 'link-lyrics', 'Lyrics'],
+    ['youtube_url', 'link-youtube', 'YouTube'],
+    ['spotify_url', 'link-spotify', 'Spotify'],
+  ];
+  function renderLinkInputs() {
+    PRACTICE_LINKS.forEach(([field, id]) => { document.getElementById(id).value = model[field] || ''; });
+  }
+  function renderPracticeLinks() {
+    const box = document.getElementById('practice-links');
+    box.textContent = '';
+    PRACTICE_LINKS.forEach(([field, , label]) => {
+      let url = String(model[field] || '').trim();
+      if (!url) return;
+      if (!url.includes('://')) url = 'https://' + url;
+      const a = mk('a', 'practice-link', label);
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      box.appendChild(a);
+    });
+    if (!box.firstChild) {
+      box.appendChild(mk('div', 'eb-hint', viewerMQ.matches ? 'No links yet.' : 'No links yet — add them in Edit mode.'));
+    }
+  }
+  // A box whose chevron (in its title line) shows and hides everything under
+  // the title. The Links box starts closed, the Transpose box open.
+  function wireBoxToggle(toggleId, bodyId, name) {
+    const toggle = document.getElementById(toggleId);
+    toggle.addEventListener('click', () => {
+      const open = toggle.getAttribute('aria-expanded') !== 'true';
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.title = `${open ? 'Hide' : 'Show'} ${name}`;
+      document.getElementById(bodyId).hidden = !open;
+    });
+  }
+  wireBoxToggle('links-toggle', 'links-fields', 'links');
+  wireBoxToggle('transpose-toggle', 'transpose-body', 'transpose');
+  PRACTICE_LINKS.forEach(([field, id]) => {
+    document.getElementById(id).addEventListener('input', e => {
+      model[field] = e.target.value.trim();
+      markDirty();
+      renderPracticeLinks();
+    });
+  });
 
   /* ---------- sheet as PDF (phones) ---------- */
   // The phone viewer has two ways out for the sheet as it looks now
@@ -5308,16 +5387,32 @@
   // just brings the tools back.
   function applyViewerMode() {
     const on = isViewer();
-    document.body.classList.toggle('lead-viewer', on);
+    document.body.classList.toggle('lead-viewer', viewerMQ.matches);
+    document.body.classList.toggle('lead-practice', on);
+    document.querySelectorAll('.mode-seg [data-mode]').forEach(b => {
+      b.classList.toggle('eb-btn--on', b.dataset.mode === mode);
+    });
+    transposeState.pickerOpen = on;
     if (!on) return;
     if (staffEditor.el) closeStaffEditor(true);
     if (activePopup) closePopup();
     selectedIds.clear();
     activeSlot = null;
     marquee = null;
-    transposeState.pickerOpen = true;
   }
-  viewerMQ.addEventListener('change', () => { applyViewerMode(); renderTransposeBox(); renderSvg(); });
+  function refreshForMode() { applyViewerMode(); renderPracticeLinks(); renderTransposeBox(); renderSvg(); }
+  viewerMQ.addEventListener('change', refreshForMode);
+  document.querySelectorAll('.mode-seg [data-mode]').forEach(b => {
+    b.addEventListener('click', () => {
+      if (mode === b.dataset.mode) return;
+      mode = b.dataset.mode;
+      const url = new URL(location.href);
+      if (mode === 'edit') url.searchParams.set('mode', 'edit');
+      else url.searchParams.delete('mode');
+      history.replaceState(null, '', url);
+      refreshForMode();
+    });
+  });
   applyViewerMode();
 
   const confirmModal = document.getElementById('confirm-modal');

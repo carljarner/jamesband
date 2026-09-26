@@ -75,7 +75,7 @@
     });
     if (!resp.ok) { alert('Failed to create sheet: ' + await resp.text()); return; }
     const sheet = await resp.json();
-    location.href = `/leadsheets/${sheet.id}`;
+    location.href = `/leadsheets/${sheet.id}?mode=edit`;
   }
 
   for (const input of [newSheetTitle, newSheetArtist]) {
