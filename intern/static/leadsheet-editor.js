@@ -4974,7 +4974,8 @@
 
     const line = mk('div', 'tr-key-line');
     line.appendChild(mk('span', 'tr-key', `Key: ${transposedKeyName()} (${formatAmount(t.semitones)})`));
-    const toggle = mk('button', 'eb-btn tr-toggle');
+    // Practice mode always shows the keys, so the chevron is edit-only.
+    const toggle = mk('button', 'eb-btn tr-toggle edit-only');
     toggle.type = 'button';
     toggle.appendChild(mk('span', null, '▸'));
     toggle.setAttribute('aria-expanded', String(t.pickerOpen));
@@ -5117,7 +5118,7 @@
       box.appendChild(a);
     });
     if (!box.firstChild) {
-      box.appendChild(mk('div', 'eb-hint', viewerMQ.matches ? 'No links yet.' : 'No links yet — add them in Edit mode.'));
+      box.appendChild(mk('div', 'eb-hint', viewerMQ.matches ? 'No links yet.' : 'Add links in Edit mode.'));
     }
   }
   // A box whose chevron (in its title line) shows and hides everything under
@@ -5394,6 +5395,11 @@
     });
     transposeState.pickerOpen = on;
     if (!on) return;
+    // Practice mode has no chevron on the Transpose box, so it's always open.
+    const trToggle = document.getElementById('transpose-toggle');
+    trToggle.setAttribute('aria-expanded', 'true');
+    trToggle.title = 'Hide transpose';
+    document.getElementById('transpose-body').hidden = false;
     if (staffEditor.el) closeStaffEditor(true);
     if (activePopup) closePopup();
     selectedIds.clear();
