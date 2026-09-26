@@ -1709,39 +1709,11 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   gap: 0.3rem;
 }
 
-/* Bar count and chords-per-bar side by side. */
+/* "Bars" and its stepper on one line. */
 .bars-builder-count {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 0.9rem;
-}
-
-/* Repeat start/end options, on their own row under the bar count. */
-.bars-builder-repeats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 0.9rem;
-  margin-bottom: 0.4rem;
-  font-size: 0.72rem;
-  color: var(--text-dim);
-}
-
-.bars-builder-repeats label {
-  display: flex;
   align-items: center;
-  gap: 0.3rem;
-}
-
-.bars-builder-repeats input[type="checkbox"] {
-  margin: 0;
-  accent-color: var(--accent);
-}
-
-.rhythm-builder-timesig input[type="number"],
-.bars-builder-count input[type="number"] {
-  width: 2.6rem;
-  padding: 0.15rem 0.3rem;
-  font-size: 0.72rem;
+  gap: 0.4rem;
 }
 
 .staff-builder {
@@ -1779,12 +1751,6 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   display: flex;
   align-items: center;
   gap: 0.3rem;
-}
-
-.staff-builder-controls-row input[type="number"] {
-  width: 2.6rem;
-  padding: 0.15rem 0.3rem;
-  font-size: 0.72rem;
 }
 
 .staff-builder-controls-row select {
@@ -1988,6 +1954,20 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   gap: 0.3rem;
 }
 .eb-field--wide { flex: 1 1 100%; }
+/* A section of one field per line: the label on the left, its stepper or
+   checkbox lined up on the right. */
+.eb-section--lines .eb-row { flex-direction: column; align-items: stretch; gap: 0.3rem; }
+.eb-section--lines .eb-field { justify-content: space-between; }
+/* Each checkbox sits centred under the steppers' number fields: the step
+   buttons get a fixed width, so the checkbox's right margin is one button
+   plus the gap plus half the field's leftover width. */
+.eb-section--lines .eb-btn--step { width: 1.4rem; padding-left: 0; padding-right: 0; }
+.eb-section--lines label.eb-field input[type="checkbox"] {
+  order: 1;
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-right: calc(1.4rem + 0.2rem + (2.6rem - 0.85rem) / 2);
+}
 .eb-field--wide input[type="text"] { flex: 1; min-width: 0; }
 .eb-field input[type="number"] {
   width: 3.9rem;
@@ -2009,7 +1989,14 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 }
 .eb-field input[type="checkbox"] { margin: 0; accent-color: var(--accent); }
 .eb-stepper { display: inline-flex; align-items: center; gap: 0.2rem; }
-.eb-stepper input[type="number"] { width: 2.6rem; text-align: center; -moz-appearance: textfield; }
+.eb-stepper input[type="number"] {
+  width: 2.6rem;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
 .eb-stepper input[type="number"]::-webkit-outer-spin-button,
 .eb-stepper input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .eb-btn {
@@ -2038,6 +2025,37 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .tr-key { color: var(--text); font-size: 0.78rem; }
 .tr-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.25rem; margin: 0.4rem 0 0.1rem; }
 .tr-keys .eb-btn { padding: 0.25rem 0; text-align: center; }
+/* Shows/hides the key grid: a chevron pointing right when closed, down when open. */
+.tr-toggle { padding: 0.1rem 0.45rem; font-size: 0.85rem; line-height: 1; }
+.tr-toggle span { display: inline-block; transition: transform 0.15s; }
+.tr-toggle[aria-expanded="true"] span { transform: rotate(90deg); }
+
+/* ---------- Mode / Practice / Links boxes (top of the right column) ---------- */
+.eb-seg.mode-seg { display: flex; flex-wrap: nowrap; margin-top: 0.3rem; }
+.mode-seg .eb-btn { flex: 1; text-align: center; font-size: 0.75rem; padding: 0.3rem 0; }
+.practice-links { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.3rem; }
+.practice-link {
+  display: block;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 6px;
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.practice-link:hover { background: rgba(79,215,209,0.18); border-color: var(--accent-2); }
+.practice-print { width: 100%; }
+.eb-head--toggle { align-items: center; margin-bottom: 0; }
+.links-field { margin-top: 0.3rem; }
+.links-field .eb-label { width: 3.6rem; flex-shrink: 0; }
+.links-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
 .tr-acc { margin-top: 0.4rem; }
 .tr-acc .eb-btn { font-size: 0.9rem; line-height: 1; padding: 0.15rem 0.5rem; }
 .eb-btn--primary { border-color: var(--accent-2); }
@@ -2074,15 +2092,14 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .eb-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .eb-chords { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.3rem; }
 .eb-chord-bar { display: flex; align-items: flex-start; gap: 0.25rem; }
-.eb-chord-bar-num { flex: 0 0 1.3rem; text-align: right; font-size: 0.62rem; padding-top: 0.35rem; }
-/* A bar's boxes wrap onto extra lines once it has more than about 4. */
-.eb-chord-boxes { flex: 1 1 0; min-width: 0; display: flex; flex-wrap: wrap; gap: 0.25rem; min-height: 1.6rem; }
+.eb-chord-bar-num { flex: 0 0 0.9rem; text-align: right; font-size: 0.62rem; padding-top: 0.35rem; }
+/* Four boxes to a line, in columns; a bar with more wraps onto another line. */
+.eb-chord-boxes { flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.2rem; min-height: 1.6rem; }
 .eb-chord-bar input[type="text"] {
-  flex: 1 1 3.2rem;
   min-width: 0;
-  width: 3.2rem;
-  padding: 0.2rem 0.3rem;
-  font-size: 0.75rem;
+  width: 100%;
+  padding: 0.2rem 0.1rem;
+  font-size: 0.72rem;
   text-align: center;
   border-radius: 6px;
 }
@@ -2105,7 +2122,8 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   .editor-palette--side .palette-tile { width: auto; }
   .editor-palette--left { position: static; max-height: none; overflow: visible; width: 100%; max-width: 420px; }
   .palette-tiles { justify-content: center; }
-  .bars-builder, .rhythm-builder, .staff-builder { width: 100%; max-width: 300px; }
+  .bars-builder, .rhythm-builder, .staff-builder,
+  .mode-box, .practice-box, .links-box { width: 100%; max-width: 300px; }
   .page-column { flex: 0 0 auto; width: 100%; max-width: 100%; order: -1; }
 }
 
@@ -2390,12 +2408,16 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 }
 
 /* ---------- Lead sheet viewer (phones) ---------- */
-/* body.lead-viewer is set by leadsheet-editor.js below 700px: the sheet can
-   be seen, transposed and printed, but not edited. */
+/* body.lead-practice is set by leadsheet-editor.js in Practice mode, and
+   always below 700px: the sheet can be seen, transposed and printed, but not
+   edited. body.lead-viewer (below 700px only) adds the phone layout. */
 .only-viewer { display: none; }
+.practice-only { display: none; }
 body.lead-viewer .only-viewer { display: flex; }
-body.lead-viewer .edit-only { display: none !important; }
-body.lead-viewer #sheet-svg { pointer-events: none; }
+body.lead-viewer .desktop-only { display: none !important; }
+body.lead-practice .practice-only { display: block; }
+body.lead-practice .edit-only { display: none !important; }
+body.lead-practice #sheet-svg { pointer-events: none; }
 
 .viewer-bar { align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
 .viewer-bar__text { min-width: 0; }
@@ -2409,6 +2431,9 @@ body.lead-viewer .editor-layout { padding-bottom: 1rem; gap: 0.75rem; margin-top
 body.lead-viewer .editor-palette--left { order: -1; width: 100%; max-width: none; position: static; }
 body.lead-viewer .page-column { order: 0; }
 body.lead-viewer .transpose-box { width: 100%; }
+body.lead-viewer #glyph-palette { order: -1; width: 100%; max-width: none; }
+body.lead-viewer .practice-box { width: 100%; max-width: none; }
+body.lead-viewer .practice-link { padding: 0.65rem 0.8rem; font-size: 0.95rem; }
 body.lead-viewer .tr-key { font-size: 0.95rem; }
 body.lead-viewer .tr-keys { grid-template-columns: repeat(6, 1fr); gap: 0.35rem; }
 body.lead-viewer .transpose-box .eb-btn { min-height: 40px; font-size: 0.9rem; }

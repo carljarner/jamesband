@@ -91,7 +91,23 @@ def _clean_doc(leadsheet_id: str, doc: dict) -> dict:
     }
     if "repertoire_id" in doc:
         cleaned["repertoire_id"] = str(doc["repertoire_id"] or "").strip() or None
+    for field in LINK_FIELDS:
+        url = _clean_url(doc.get(field))
+        if url:
+            cleaned[field] = url
     return cleaned
+
+
+# The practice links shown in the sheet's Practice box.
+LINK_FIELDS = ("lyrics_url", "youtube_url", "spotify_url")
+
+
+def _clean_url(value) -> str:
+    """A link as stored: trimmed, with https:// added when it has no scheme."""
+    url = str(value or "").strip()
+    if url and "://" not in url:
+        url = "https://" + url
+    return url
 
 
 def add_leadsheet(title: str, artist: str = "") -> dict:

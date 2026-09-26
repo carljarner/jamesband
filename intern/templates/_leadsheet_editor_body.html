@@ -20,13 +20,19 @@
       <div id="sheet-repertoire-hint" class="eb-hint" hidden></div>
     </div>
     <div class="edit-box transpose-box">
-      <div class="eb-head"><span class="eb-head-title">Transpose</span></div>
-      <div class="eb-field tr-sheet-key edit-only">
-        <span class="eb-label">Sheet key</span>
-        <span id="sheet-key"></span>
+      <div class="eb-head eb-head--toggle">
+        <span class="eb-head-title">Transpose</span>
+        <button type="button" id="transpose-toggle" class="eb-btn tr-toggle" aria-expanded="true" aria-controls="transpose-body" title="Hide transpose"><span>▸</span></button>
       </div>
-      <div id="transpose-box"></div>
+      <div id="transpose-body">
+        <div class="eb-field tr-sheet-key edit-only">
+          <span class="eb-label">Sheet key</span>
+          <span id="sheet-key"></span>
+        </div>
+        <div id="transpose-box"></div>
+      </div>
     </div>
+    <button type="button" id="practice-print-btn" class="btn-small practice-print practice-only desktop-only">Print</button>
     <div id="edit-box" class="edit-box edit-only"></div>
     <div class="palette-tiles edit-only">
       <div class="palette-tile" draggable="true" data-type="title" title="Title box">
@@ -37,22 +43,6 @@
       </div>
       <div class="palette-tile" draggable="true" data-type="text" title="Text">
         <span class="tile-text-text">Note</span>
-      </div>
-      <div class="palette-tile" draggable="true" data-type="repeat-start" title="Repeat start">
-        <svg class="tile-svg" width="16" height="24" viewBox="0 0 18 28">
-          <line x1="2" y1="1" x2="2" y2="27" stroke-width="3" />
-          <line x1="6" y1="1" x2="6" y2="27" stroke-width="1" />
-          <circle cx="11" cy="9" r="2" />
-          <circle cx="11" cy="19" r="2" />
-        </svg>
-      </div>
-      <div class="palette-tile" draggable="true" data-type="repeat-end" title="Repeat end">
-        <svg class="tile-svg" width="16" height="24" viewBox="0 0 18 28">
-          <circle cx="3" cy="9" r="2" />
-          <circle cx="3" cy="19" r="2" />
-          <line x1="8" y1="1" x2="8" y2="27" stroke-width="1" />
-          <line x1="12" y1="1" x2="12" y2="27" stroke-width="3" />
-        </svg>
       </div>
       <div class="palette-tile" draggable="true" data-type="volta" title="Volta (1st/2nd ending)">
         <svg class="tile-svg" width="42" height="24" viewBox="0 0 46 28">
@@ -90,23 +80,45 @@
     <button type="button" id="delete-btn" class="danger btn-small sheet-delete edit-only no-print">Delete</button>
   </div>
 
-  <div id="glyph-palette" class="editor-palette editor-palette--side edit-only no-print">
-    <div class="bars-builder">
-      <div class="bars-builder-count">
-        <label>Bars
-          <input type="number" id="bars-count" min="1" max="12" value="4" />
+  <div id="glyph-palette" class="editor-palette editor-palette--side no-print">
+    <div class="edit-box mode-box desktop-only">
+      <div class="eb-head"><span class="eb-head-title">Mode</span></div>
+      <span class="eb-seg mode-seg">
+        <button type="button" class="eb-btn" data-mode="practice">Practice</button>
+        <button type="button" class="eb-btn" data-mode="edit">Edit</button>
+      </span>
+    </div>
+
+    <div class="edit-box practice-box practice-only">
+      <div class="eb-head"><span class="eb-head-title">Links</span></div>
+      <div id="practice-links" class="practice-links"></div>
+    </div>
+
+    <div id="links-box" class="edit-box links-box edit-only">
+      <div class="eb-head eb-head--toggle">
+        <span class="eb-head-title">Links</span>
+        <button type="button" id="links-toggle" class="eb-btn tr-toggle" aria-expanded="false" aria-controls="links-fields" title="Show links"><span>▸</span></button>
+      </div>
+      <div id="links-fields" hidden>
+        <label class="eb-field eb-field--wide links-field">
+          <span class="eb-label">Lyrics</span>
+          <input type="url" id="link-lyrics" placeholder="https://…" />
         </label>
-        <label title="How many chord boxes each new bar gets when you drag it onto the page (0 = plain bars). Change any single bar afterwards in the edit box. Type - in a box for a rest as long as the box, or r for a repeat bar; Tab moves between boxes">Chords / bar
-          <input type="number" id="bars-chords" min="0" max="8" value="1" />
+        <label class="eb-field eb-field--wide links-field">
+          <span class="eb-label">YouTube</span>
+          <input type="url" id="link-youtube" placeholder="https://youtube.com/…" />
+        </label>
+        <label class="eb-field eb-field--wide links-field">
+          <span class="eb-label">Spotify</span>
+          <input type="url" id="link-spotify" placeholder="https://open.spotify.com/…" />
         </label>
       </div>
-      <div class="bars-builder-repeats">
-        <label title="Start the row with a repeat sign">
-          <input type="checkbox" id="bars-repeat-start" /> Repeat start
-        </label>
-        <label title="End the row with a repeat sign">
-          <input type="checkbox" id="bars-repeat-end" /> Repeat end
-        </label>
+    </div>
+
+    <div class="bars-builder edit-only">
+      <div class="bars-builder-count">
+        <span class="eb-label">Bars</span>
+        <span id="bars-count-stepper"></span>
       </div>
       <svg id="bars-builder-svg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div class="bars-builder-controls">
@@ -114,7 +126,7 @@
       </div>
     </div>
 
-    <div class="rhythm-builder">
+    <div class="rhythm-builder edit-only">
       <div class="rhythm-builder-timesig" id="rhythm-time-sig"></div>
       <svg id="rhythm-builder-svg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div class="rhythm-builder-controls">
@@ -122,13 +134,10 @@
       </div>
     </div>
 
-    <div class="staff-builder">
+    <div class="staff-builder edit-only">
       <div class="staff-builder-controls-row">
-        <span id="staff-time-sig"></span>
-        <label>Bars
-          <input type="number" id="staff-bars" min="1" max="4" value="1" />
-        </label>
         <span id="staff-clef"></span>
+        <span id="staff-time-sig"></span>
       </div>
       <div id="staff-key-label" class="staff-builder-key" title="A new staff starts on the sheet's key. Change a placed staff's key in its edit box."></div>
       <svg id="notestaff-builder-svg" xmlns="http://www.w3.org/2000/svg"></svg>
