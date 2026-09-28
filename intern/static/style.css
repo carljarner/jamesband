@@ -601,6 +601,7 @@ table.repertoire button.row-delete:hover {
 }
 
 .add-row-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -612,11 +613,25 @@ table.repertoire button.row-delete:hover {
   border: 2px solid var(--accent);
   background: transparent;
   color: var(--text);
-  font-size: 1.3rem;
+  font-size: 0;
   line-height: 1;
   text-decoration: none;
   cursor: pointer;
 }
+
+/* Draw the "+" with two bars: a text glyph sits off-centre depending on the font's metrics. */
+.add-row-btn::before,
+.add-row-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 2px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+.add-row-btn::after { transform: translate(-50%, -50%) rotate(90deg); }
 
 .add-row-btn:hover { background: var(--accent); color: #12130f; }
 /* In a page toolbar (Gigs, Lead Sheets) rather than centred under a list. */
