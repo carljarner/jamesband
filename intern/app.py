@@ -10,12 +10,14 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 
 import chords
 import gallery
 import gig_bundle
 import leadsheets
+import leadsheets_remote
 import repertoire
 import setlist
 import setlists
@@ -349,14 +351,42 @@ async def leadsheets_page(request: Request):
     )
 
 
-@app.post("/leadsheets")
-async def leadsheets_create(request: Request):
-    body = await request.json()
+# New sheets are made on leadsheets.dk; here the band imports copies of them
+# and edits those as its own versions (nothing is written back).
+@app.get("/leadsheets/available")
+async def leadsheets_available():
+    """The leadsheets.dk sheets not imported yet, for the "+" picker."""
     try:
-        sheet = leadsheets.add_leadsheet(body.get("title", ""), body.get("artist", ""))
-    except ValueError as exc:
-        return Response(content=str(exc), status_code=400)
-    return sheet
+        remote = await run_in_threadpool(leadsheets_remote.list_sheets)
+    except leadsheets_remote.RemoteError as exc:
+        return Response(content=str(exc), status_code=502)
+    imported = leadsheets.imported_source_ids()
+    available = [
+        {"id": s.get("id", ""), "title": s.get("title", ""), "artist": s.get("artist", "")}
+        for s in remote
+        if s.get("id") and s["id"] not in imported
+    ]
+    return sorted(available, key=lambda s: s["title"].casefold())
+
+
+@app.post("/leadsheets/import")
+async def leadsheets_import(request: Request):
+    body = await request.json()
+    ids = body.get("ids") if isinstance(body, dict) else None
+    if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
+        return Response(content="Pick the sheets to import.", status_code=400)
+    imported, errors = [], []
+    already = leadsheets.imported_source_ids()
+    for source_id in dict.fromkeys(ids):
+        if source_id in already:
+            continue
+        try:
+            doc = await run_in_threadpool(leadsheets_remote.get_sheet, source_id)
+            imported.append(leadsheets.import_sheet(doc))
+        except (leadsheets_remote.RemoteError, ValueError) as exc:
+            errors.append({"id": source_id, "error": str(exc)})
+    leadsheets.auto_link()
+    return {"imported": imported, "errors": errors}
 
 
 @app.get("/leadsheets/{leadsheet_id}", response_class=HTMLResponse)
@@ -403,6 +433,21 @@ async def leadsheet_save(leadsheet_id: str, request: Request):
         raise HTTPException(status_code=404)
     except (ValueError, TypeError) as exc:
         return Response(content=str(exc), status_code=400)
+    return Response(status_code=204)
+
+
+@app.post("/leadsheets/{leadsheet_id}/reset")
+async def leadsheet_reset(leadsheet_id: str):
+    """Replace the band's copy with the current leadsheets.dk version."""
+    try:
+        sheet = leadsheets.get_leadsheet(leadsheet_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    try:
+        doc = await run_in_threadpool(leadsheets_remote.get_sheet, leadsheets.source_of(sheet))
+        leadsheets.reset_from_source(leadsheet_id, doc)
+    except (leadsheets_remote.RemoteError, ValueError) as exc:
+        return Response(content=str(exc), status_code=502)
     return Response(status_code=204)
 
 

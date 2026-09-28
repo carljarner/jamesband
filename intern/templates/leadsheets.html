@@ -8,8 +8,12 @@
   <input type="search" id="sheet-search" class="leadsheets-search" placeholder="Search title or artist" aria-label="Search lead sheets" autocomplete="off" />
   {% endif %}
   <div class="leadsheets-toolbar-actions">
-    <button type="button" id="new-sheet-btn" class="add-row-btn add-row-btn--inline" title="New lead sheet" aria-label="New lead sheet">+</button>
+    <button type="button" id="import-btn" class="add-row-btn add-row-btn--inline" title="Import from leadsheets.dk" aria-label="Import from leadsheets.dk">+</button>
   </div>
+</div>
+
+<div class="repertoire-toolbar">
+  <span class="muted">{{ sheets|length }} song{{ "" if sheets|length == 1 else "s" }}</span>
 </div>
 
 {% if sheets %}
@@ -27,21 +31,18 @@
 </ul>
 <p id="sheet-search-empty" class="muted" hidden>No lead sheets match your search.</p>
 {% else %}
-<p class="muted">No lead sheets yet &mdash; add one to get started.</p>
+<p class="muted">No lead sheets yet &mdash; import some from leadsheets.dk with +.</p>
 {% endif %}
 
-<div id="new-sheet-modal" class="modal-overlay" hidden>
-  <div class="modal-box modal-box--centered modal-box--new-sheet">
-    <p>New lead sheet</p>
-    <div class="field new-sheet-field">
-      <input type="text" id="new-sheet-title" placeholder="Song title" />
-    </div>
-    <div class="field new-sheet-field">
-      <input type="text" id="new-sheet-artist" placeholder="Artist" />
-    </div>
+<div id="import-modal" class="modal-overlay" hidden>
+  <div class="modal-box modal-box--import" role="dialog" aria-modal="true" aria-labelledby="import-heading">
+    <p id="import-heading" class="import-heading">Import from leadsheets.dk</p>
+    <input type="search" id="import-search" class="import-search" placeholder="Search title or artist" aria-label="Search leadsheets.dk" autocomplete="off" hidden />
+    <p id="import-status" class="muted import-status"></p>
+    <ul id="import-list" class="import-list"></ul>
     <div class="modal-actions">
-      <button type="button" id="new-sheet-cancel">Cancel</button>
-      <button type="button" id="new-sheet-create" class="primary">Create</button>
+      <button type="button" id="import-cancel" class="btn-small">Cancel</button>
+      <button type="button" id="import-ok" class="primary btn-small" disabled>Import</button>
     </div>
   </div>
 </div>
@@ -50,38 +51,101 @@
 
 {% block scripts %}
 <script>
-  const newSheetModal = document.getElementById('new-sheet-modal');
-  const newSheetBtn = document.getElementById('new-sheet-btn');
-  const newSheetTitle = document.getElementById('new-sheet-title');
-  const newSheetArtist = document.getElementById('new-sheet-artist');
+  // "+" imports copies of leadsheets.dk sheets; new sheets are made there.
+  const importModal = document.getElementById('import-modal');
+  const importList = document.getElementById('import-list');
+  const importStatus = document.getElementById('import-status');
+  const importSearch = document.getElementById('import-search');
+  const importOk = document.getElementById('import-ok');
 
-  newSheetBtn.addEventListener('click', () => {
-    newSheetTitle.value = '';
-    newSheetArtist.value = '';
-    newSheetModal.hidden = false;
-    newSheetTitle.focus();
+  function checkedIds() {
+    return [...importList.querySelectorAll('.import-card.is-picked')].map(card => card.dataset.id);
+  }
+  function updateImportButton() {
+    const n = checkedIds().length;
+    importOk.disabled = n === 0;
+    importOk.textContent = n ? `Import (${n})` : 'Import';
+  }
+
+  async function openImport() {
+    importList.textContent = '';
+    importSearch.value = '';
+    importSearch.hidden = true;
+    importStatus.textContent = 'Loading…';
+    importStatus.hidden = false;
+    updateImportButton();
+    importModal.hidden = false;
+    let sheets;
+    try {
+      const resp = await fetch('/leadsheets/available');
+      if (!resp.ok) throw new Error(await resp.text());
+      sheets = await resp.json();
+    } catch (err) {
+      importStatus.textContent = err.message || 'Couldn’t reach leadsheets.dk.';
+      return;
+    }
+    if (!sheets.length) {
+      importStatus.textContent = 'Every sheet on leadsheets.dk is already here.';
+      return;
+    }
+    importStatus.hidden = true;
+    importSearch.hidden = false;
+    for (const sheet of sheets) {
+      const li = document.createElement('li');
+      li.dataset.search = `${sheet.title} ${sheet.artist}`.toLowerCase();
+      // A card per sheet; clicking it picks it (highlighted) or unpicks it.
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'import-card';
+      card.dataset.id = sheet.id;
+      card.setAttribute('aria-pressed', 'false');
+      const title = document.createElement('span');
+      title.className = 'import-card__title';
+      title.textContent = sheet.title;
+      card.appendChild(title);
+      if (sheet.artist) {
+        const artist = document.createElement('span');
+        artist.className = 'import-card__artist';
+        artist.textContent = sheet.artist;
+        card.appendChild(artist);
+      }
+      card.addEventListener('click', () => {
+        const picked = card.classList.toggle('is-picked');
+        card.setAttribute('aria-pressed', String(picked));
+        updateImportButton();
+      });
+      li.appendChild(card);
+      importList.appendChild(li);
+    }
+    importSearch.focus();
+  }
+
+  importSearch.addEventListener('input', () => {
+    const terms = importSearch.value.toLowerCase().split(/\s+/).filter(Boolean);
+    for (const li of importList.children) li.hidden = !terms.every(t => li.dataset.search.includes(t));
   });
-  document.getElementById('new-sheet-cancel').addEventListener('click', () => { newSheetModal.hidden = true; });
-  newSheetModal.addEventListener('click', e => { if (e.target === newSheetModal) newSheetModal.hidden = true; });
 
-  async function createSheet() {
-    const title = newSheetTitle.value.trim();
-    const artist = newSheetArtist.value.trim();
-    if (!title) { newSheetTitle.focus(); return; }
-    const resp = await fetch('/leadsheets', {
+  document.getElementById('import-btn').addEventListener('click', openImport);
+  document.getElementById('import-cancel').addEventListener('click', () => { importModal.hidden = true; });
+  importModal.addEventListener('click', e => { if (e.target === importModal) importModal.hidden = true; });
+
+  importOk.addEventListener('click', async () => {
+    const ids = checkedIds();
+    if (!ids.length) return;
+    importOk.disabled = true;
+    importOk.textContent = 'Importing…';
+    const resp = await fetch('/leadsheets/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, artist }),
+      body: JSON.stringify({ ids }),
     });
-    if (!resp.ok) { alert('Failed to create sheet: ' + await resp.text()); return; }
-    const sheet = await resp.json();
-    location.href = `/leadsheets/${sheet.id}?mode=edit`;
-  }
-
-  for (const input of [newSheetTitle, newSheetArtist]) {
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); createSheet(); } });
-  }
-  document.getElementById('new-sheet-create').addEventListener('click', createSheet);
+    if (!resp.ok) { alert('Failed to import: ' + await resp.text()); updateImportButton(); return; }
+    const result = await resp.json();
+    if (result.errors.length) {
+      alert('Some sheets couldn’t be imported:\n' + result.errors.map(e => `${e.id}: ${e.error}`).join('\n'));
+    }
+    location.reload();
+  });
 
   const sheetSearch = document.getElementById('sheet-search');
   if (sheetSearch) {

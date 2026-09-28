@@ -664,10 +664,54 @@ table.repertoire button.row-delete:hover {
 .modal-box .field { margin-bottom: 1.25rem; }
 .modal-box .field input { width: 100%; box-sizing: border-box; }
 /* New lead sheet: the modal hugs its narrow, squarer fields. */
-.modal-box--new-sheet { width: max-content; max-width: calc(100vw - 2rem); }
-.modal-box .new-sheet-field { align-items: center; }
-.modal-box .new-sheet-field input { width: 295px; max-width: 100%; border-radius: var(--radius); }
-.modal-box .new-sheet-field + .new-sheet-field { margin-top: -0.5rem; }
+/* Lead Sheets "+": pick leadsheets.dk sheets to import. */
+.modal-box--import { max-width: 460px; display: flex; flex-direction: column; max-height: calc(100vh - 4rem); }
+.modal-box--import .import-heading { font-weight: 600; margin-bottom: 0.75rem; text-align: center; }
+.modal-box--import .import-status { text-align: center; }
+.modal-box--import .modal-actions { justify-content: center; }
+.modal-box .import-search { width: 100%; box-sizing: border-box; border-radius: var(--radius); margin-bottom: 0.75rem; }
+.modal-box .import-status { margin: 0 0 1rem; font-weight: 400; }
+/* A fixed height with room for about five cards; longer lists scroll. */
+.import-list {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0 0.25rem 0 0;
+  height: min(353px, calc(100vh - 16rem));
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+.import-list li[hidden] { display: none; }
+.import-list { display: flex; flex-direction: column; gap: 0.3rem; }
+/* Song cards like the Lead Sheets page's; a picked one is highlighted. */
+.import-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: inherit;
+}
+.import-card:hover { background: var(--surface-alt); color: var(--text); border-color: var(--accent-2); }
+.import-card.is-picked,
+.import-card.is-picked:hover {
+  border-color: var(--accent);
+  background: rgba(255,90,78,0.14);
+}
+.import-card__title {
+  display: block;
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.03em;
+  font-size: 0.85rem;
+  line-height: 1.25;
+}
+.import-card__artist { display: block; color: var(--text-dim); font-size: 0.72rem; line-height: 1.25; }
+/* Under the confirm question: what the action does. */
+.modal-box--centered p.confirm-detail { font-weight: 400; margin-top: -0.75rem; max-width: 320px; margin-inline: auto; }
 .modal-box .save-status { display: block; }
 
 .modal-actions {
@@ -1825,7 +1869,7 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 }
 
 /* Under the sheet, out of the way of the everyday toolbar buttons. */
-.sheet-delete { display: block; margin: 1.5rem auto 0; }
+.sheet-actions { display: flex; justify-content: center; gap: 0.75rem; margin: 1.5rem auto 0; }
 
 .page-wrap.drag-over { box-shadow: 0 0 0 3px var(--accent), 0 10px 40px rgba(0,0,0,0.5); }
 

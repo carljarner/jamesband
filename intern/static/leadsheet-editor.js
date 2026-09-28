@@ -5431,18 +5431,42 @@
   });
   applyViewerMode();
 
+  // Delete and Reset share one confirm dialog; `confirmAction` is what its
+  // OK button does this time.
   const confirmModal = document.getElementById('confirm-modal');
-  document.getElementById('delete-btn').addEventListener('click', () => {
-    document.getElementById('confirm-text').textContent = `Delete "${model.title.trim() || 'Untitled'}"?`;
+  const confirmOk = document.getElementById('confirm-ok');
+  let confirmAction = null;
+  function askConfirm(text, detail, okLabel, action) {
+    document.getElementById('confirm-text').textContent = text;
+    const detailEl = document.getElementById('confirm-detail');
+    detailEl.textContent = detail;
+    detailEl.hidden = !detail;
+    confirmOk.textContent = okLabel;
+    confirmAction = action;
     confirmModal.hidden = false;
+  }
+  const sheetName = () => model.title.trim() || 'Untitled';
+  // Removing only deletes the band's copy; the sheet stays on leadsheets.dk.
+  document.getElementById('delete-btn').addEventListener('click', () => {
+    askConfirm(`Remove "${sheetName()}"?`, '', 'Remove', async () => {
+      const resp = await fetch(`/leadsheets/${leadsheetId}/delete`, { method: 'POST' });
+      if (resp.ok) { dirty = false; location.href = '/leadsheets'; }
+      else alert('Failed to remove: ' + await resp.text());
+    });
+  });
+  // Swap the band's edits for the sheet as it is on leadsheets.dk now.
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    askConfirm(`Update "${sheetName()}"?`, 'This updates the chart so it matches the current version on leadsheets.dk.', 'Update', async () => {
+      const resp = await fetch(`/leadsheets/${leadsheetId}/reset`, { method: 'POST' });
+      if (resp.ok) { dirty = false; location.reload(); }
+      else alert('Failed to update: ' + await resp.text());
+    });
   });
   confirmModal.addEventListener('click', e => { if (e.target === confirmModal) confirmModal.hidden = true; });
   document.getElementById('confirm-cancel').addEventListener('click', () => { confirmModal.hidden = true; });
-  document.getElementById('confirm-ok').addEventListener('click', async () => {
+  confirmOk.addEventListener('click', () => {
     confirmModal.hidden = true;
-    const resp = await fetch(`/leadsheets/${leadsheetId}/delete`, { method: 'POST' });
-    if (resp.ok) { dirty = false; location.href = '/leadsheets'; }
-    else alert('Failed to delete: ' + await resp.text());
+    if (confirmAction) confirmAction();
   });
 
   /* ---------- gig lead-sheet PDF ---------- */

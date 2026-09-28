@@ -11,9 +11,16 @@ A sheet can be connected to one repertoire song ("repertoire_id"), and a
 song to at most one sheet. The key's three states: absent -- never decided,
 so auto_link() may connect it by title; None -- explicitly not connected;
 an id -- connected.
+
+Sheets are imported from leadsheets.dk (see leadsheets_remote.py) and then
+edited here as the band's own copies; nothing is written back. "source_id"
+is the leadsheets.dk sheet a copy came from. Sheets from before the import
+have none, but they were the seed of leadsheets.dk under the same ids, so
+their own id stands in for it (source_of).
 """
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -110,21 +117,57 @@ def _clean_url(value) -> str:
     return url
 
 
-def add_leadsheet(title: str, artist: str = "") -> dict:
-    title = str(title or "").strip()
-    if not title:
-        raise ValueError("Sheet title can't be empty.")
-    leadsheet_id = _unique_id(title, _existing_ids())
-    sheet = _clean_doc(leadsheet_id, {"title": title, "artist": artist, "elements": []})
+# Set by the server only: a client save can't change where a sheet came from.
+SOURCE_FIELDS = ("source_id", "imported_at")
+# leadsheets.dk ids are slugs; they also become file names here.
+SOURCE_ID_RE = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
+
+
+def source_of(sheet: dict) -> str:
+    """The leadsheets.dk id this sheet was imported from."""
+    return sheet.get("source_id") or sheet["id"]
+
+
+def imported_source_ids() -> set[str]:
+    return {source_of(s) for s in list_leadsheets()}
+
+
+def import_sheet(doc: dict) -> dict:
+    """A copy of a leadsheets.dk sheet, under the same id when it's free.
+    It has no repertoire_id yet, so auto_link() may connect it by title."""
+    source_id = str(doc.get("id") or "").strip()
+    if not SOURCE_ID_RE.fullmatch(source_id):
+        raise ValueError("Malformed lead sheet from leadsheets.dk.")
+    existing = _existing_ids()
+    leadsheet_id = source_id if source_id not in existing else _unique_id(doc.get("title") or source_id, existing)
+    doc = {k: v for k, v in doc.items() if k != "repertoire_id"}
+    sheet = _clean_doc(leadsheet_id, doc)
+    sheet["source_id"] = source_id
+    sheet["imported_at"] = _now()
     _save(sheet)
-    data_store.commit_and_push(f"Add lead sheet '{sheet['title']}'")
+    return sheet
+
+
+def reset_from_source(leadsheet_id: str, doc: dict) -> dict:
+    """Replace a sheet's content with its current leadsheets.dk version,
+    dropping the band's edits but keeping its repertoire connection."""
+    stored = get_leadsheet(leadsheet_id)
+    doc = {k: v for k, v in doc.items() if k != "repertoire_id"}
+    if "repertoire_id" in stored:
+        doc["repertoire_id"] = stored["repertoire_id"]
+    sheet = _clean_doc(leadsheet_id, doc)
+    sheet["source_id"] = source_of(stored)
+    sheet["imported_at"] = _now()
+    _save(sheet)
     return sheet
 
 
 def update_leadsheet(leadsheet_id: str, doc: dict) -> dict:
-    if not _path(leadsheet_id).exists():
-        raise KeyError(leadsheet_id)
+    stored = get_leadsheet(leadsheet_id)
     cleaned = _clean_doc(leadsheet_id, doc)
+    for field in SOURCE_FIELDS:
+        if field in stored:
+            cleaned[field] = stored[field]
     song_id = cleaned.get("repertoire_id")
     if song_id:
         other = sheet_for_repertoire_id(song_id)

@@ -30,6 +30,10 @@ server setup (firewall, Coolify, backups) is in `hosting.md`.
   - `INTERN_PASSWORD`: the shared band password.
   - `SESSION_SECRET`: any long random string (`python3 -c "import secrets; print(secrets.token_hex(32))"`).
   - `DATA_DIR`: `/data`.
+  - `LEADSHEETS_API_TOKEN`: one of leadsheets.dk's `API_TOKEN` values. The
+    Lead Sheets "+" imports sheets from leadsheets.dk with it.
+    (`LEADSHEETS_API_URL` defaults to `https://leadsheets.dk`; set it only
+    to point at a local copy while developing.)
 - Domains: `https://intern.<your-domain>`. Coolify issues the TLS cert once
   DNS resolves.
 - The public site loads `repertoire.json` and the four section backgrounds
