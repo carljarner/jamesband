@@ -792,7 +792,12 @@ img#preview {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  /* The h1's top margin can't collapse through a flex box, so it would stack
+     on the tabs' margin. Hoist it onto the toolbar, where it collapses like a
+     bare h1 (Gallery) does and every page title sits at the same height. */
+  margin-top: calc(0.67 * clamp(1.8rem, 5vw, 2.4rem));
 }
+.setlists-toolbar > h1 { margin-top: 0; }
 
 .button-link {
   display: inline-block;
@@ -2420,7 +2425,7 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   .page-tabs__tab { flex: 1 0 auto; font-size: 1.05rem; padding: 0.6rem 0.5rem; }
 
   .setlists-toolbar, .repertoire-toolbar, .leadsheets-toolbar-actions { flex-wrap: wrap; }
-  .setlists-toolbar { gap: 0.5rem; }
+  .setlists-toolbar { gap: 0.5rem; margin-top: 0.4rem; }
   /* Smaller button text so labels fit on a narrow screen. */
   button, .button-link { font-size: 0.72rem; letter-spacing: 0.03em; padding: 0.45rem 0.9rem; }
 
