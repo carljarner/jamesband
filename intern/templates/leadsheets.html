@@ -4,6 +4,7 @@
 {% block content %}
 <div class="setlists-toolbar leadsheets-toolbar">
   <h1>Lead Sheets</h1>
+  <span class="muted leadsheets-count">{{ sheets|length }} song{{ "" if sheets|length == 1 else "s" }}</span>
   {% if sheets %}
   <input type="search" id="sheet-search" class="leadsheets-search" placeholder="Search title or artist" aria-label="Search lead sheets" autocomplete="off" />
   {% endif %}
@@ -12,7 +13,7 @@
   </div>
 </div>
 
-<div class="repertoire-toolbar">
+<div class="repertoire-toolbar leadsheets-count-row">
   <span class="muted">{{ sheets|length }} song{{ "" if sheets|length == 1 else "s" }}</span>
 </div>
 

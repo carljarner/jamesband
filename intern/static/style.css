@@ -1537,10 +1537,17 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 
 .setlist-card.leadsheet-card[hidden] { display: none; }
 
+/* The song count sits below the toolbar, except on phones, where it moves
+   up under the title so it isn't crowded against the search. */
+.leadsheets-toolbar .leadsheets-count { display: none; }
+
 @media (max-width: 600px) {
   .leadsheets-toolbar { grid-template-columns: 1fr auto; }
-  .leadsheets-search { grid-column: 1 / -1; grid-row: 2; }
-  .leadsheets-toolbar .leadsheets-toolbar-actions { grid-column: 2; }
+  .leadsheets-toolbar > h1 { margin-bottom: 0; }
+  .leadsheets-toolbar .leadsheets-count { display: block; grid-column: 1 / -1; grid-row: 2; margin-top: -0.3rem; }
+  .leadsheets-search { grid-column: 1 / -1; grid-row: 3; margin-top: 0.4rem; }
+  .leadsheets-toolbar .leadsheets-toolbar-actions { grid-column: 2; grid-row: 1; }
+  .leadsheets-count-row { display: none; }
 }
 
 .leadsheet-card {
