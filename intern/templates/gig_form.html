@@ -51,7 +51,7 @@
             <button type="button" role="menuitem" data-mode="original">Original key</button>
             <button type="button" role="menuitem" data-mode="transposed">Transposed</button>
             <button type="button" role="menuitem" data-mode="setlist">Setlist</button>
-            <button type="button" role="menuitem" class="leadsheets-menu__custom" id="leadsheets-custom">Custom…</button>
+            <button type="button" role="menuitem" class="leadsheets-menu__custom" id="leadsheets-custom">Custom</button>
           </div>
         </div>
       </div>
@@ -118,16 +118,16 @@
 {% if setlist %}
 <div id="custom-modal" class="modal-overlay" hidden>
   <div class="modal-box modal-box--custom" role="dialog" aria-labelledby="custom-heading">
-    <div class="custom-head">
-      <p id="custom-heading" class="custom-heading">Custom lead sheets</p>
-      <label class="custom-all"><input type="checkbox" id="custom-all" checked /> All</label>
-    </div>
+    <p id="custom-heading" class="custom-heading">Custom lead sheets</p>
     <ul class="custom-list" id="custom-list">
       {% for song in setlist.songs %}
       {% if song.type == 'song' %}
-      <li class="custom-row" data-index="{{ loop.index0 }}" data-singer="{{ song.singer or '' }}">
+      <li class="custom-row" data-index="{{ loop.index0 }}" data-singer="{{ song.singer or '' }}"
+          data-label-signe="{{ song.signe | offsetlabel(song.key) }}"
+          data-label-jonas="{{ song.jonas | offsetlabel(song.key) }}"
+          data-label-duet="{{ song.duet | offsetlabel(song.key) }}">
         <label class="custom-row__pick">
-          <input type="checkbox" checked />
+          <input type="checkbox" />
           <span class="custom-row__title">{{ song.title }}</span>
         </label>
         <div class="singer-toggle">
@@ -135,14 +135,14 @@
           <button type="button" class="singer-btn{{ ' is-active' if song.singer == key }}" data-singer="{{ key }}">{{ name }}</button>
           {% endfor %}
         </div>
+        <span class="custom-row__transposed"></span>
       </li>
       {% endif %}
       {% endfor %}
     </ul>
-    <div class="modal-actions">
-      <button type="button" class="btn-small" id="custom-cancel">Cancel</button>
+    <div class="modal-actions custom-actions">
       <button type="button" class="btn-small" data-custom-mode="original">Original keys</button>
-      <button type="button" class="primary btn-small" data-custom-mode="transposed">Transposed keys</button>
+      <button type="button" class="btn-small" data-custom-mode="transposed">Transposed keys</button>
     </div>
   </div>
 </div>
@@ -423,26 +423,30 @@
     customBtn.hidden = true;
   } else {
     const customList = document.getElementById('custom-list');
-    const customAll = document.getElementById('custom-all');
     const rows = [...customList.querySelectorAll('.custom-row')];
     const boxes = rows.map(row => row.querySelector('input[type="checkbox"]'));
     const modeBtns = [...customModal.querySelectorAll('[data-custom-mode]')];
 
-    // Each opening starts from the setlist: every song, its own singer.
+    // The transposition column follows the row's chosen singer.
+    function setSinger(row, singer) {
+      row.querySelectorAll('.singer-btn').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.singer === singer);
+      });
+      row.querySelector('.custom-row__transposed').textContent =
+        singer ? row.getAttribute(`data-label-${singer}`) || '' : '';
+    }
+
+    // Each opening starts from the setlist: nothing picked, its own singers.
     function resetCustom() {
       rows.forEach((row, i) => {
-        boxes[i].checked = true;
-        row.querySelectorAll('.singer-btn').forEach(btn => {
-          btn.classList.toggle('is-active', btn.dataset.singer === row.dataset.singer);
-        });
+        boxes[i].checked = false;
+        setSinger(row, row.dataset.singer);
       });
       syncCustom();
     }
 
     function syncCustom() {
       const picked = boxes.filter(box => box.checked).length;
-      customAll.checked = picked === boxes.length;
-      customAll.indeterminate = picked > 0 && picked < boxes.length;
       rows.forEach((row, i) => row.classList.toggle('is-off', !boxes[i].checked));
       modeBtns.forEach(btn => { btn.disabled = picked === 0; });
     }
@@ -454,17 +458,12 @@
       resetCustom();
       customModal.hidden = false;
     });
-    customAll.addEventListener('change', () => {
-      boxes.forEach(box => { box.checked = customAll.checked; });
-      syncCustom();
-    });
     customList.addEventListener('change', syncCustom);
     customList.addEventListener('click', e => {
       const btn = e.target.closest('.singer-btn');
       if (!btn) return;
-      btn.parentElement.querySelectorAll('.singer-btn').forEach(b => b.classList.toggle('is-active', b === btn));
+      setSinger(btn.closest('.custom-row'), btn.dataset.singer);
     });
-    document.getElementById('custom-cancel').addEventListener('click', closeCustom);
     customModal.addEventListener('click', e => { if (e.target === customModal) closeCustom(); });
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && !customModal.hidden) closeCustom();

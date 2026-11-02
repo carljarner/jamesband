@@ -1551,10 +1551,8 @@ table.setlist-table tr.setlist-break-row:hover .setlist-break-cell__delete { opa
 
 /* Custom lead sheets modal: a scrolling list of songs, each with a pick
    box and a singer toggle. */
-.modal-box--custom { max-width: 460px; display: flex; flex-direction: column; max-height: calc(100vh - 4rem); }
-.custom-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-.modal-box .custom-heading { margin: 0; font-weight: 600; }
-.custom-all { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--text-dim); cursor: pointer; }
+.modal-box--custom { max-width: 920px; display: flex; flex-direction: column; max-height: calc(100vh - 4rem); }
+.modal-box .custom-heading { margin: 0 0 0.75rem; font-weight: 600; }
 .custom-list {
   list-style: none;
   margin: 0 0 1.25rem;
@@ -1583,8 +1581,13 @@ table.setlist-table tr.setlist-break-row:hover .setlist-break-cell__delete { opa
   white-space: nowrap;
 }
 .custom-row .singer-toggle { flex: 0 0 150px; }
+.custom-row__transposed { flex: 0 0 110px; font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; }
 .custom-row.is-off .custom-row__title,
-.custom-row.is-off .singer-toggle { opacity: 0.4; }
+.custom-row.is-off .singer-toggle,
+.custom-row.is-off .custom-row__transposed { opacity: 0.4; }
+/* The two PDF buttons sit in either corner, the same width. */
+.modal-box--custom .custom-actions { justify-content: space-between; }
+.modal-box--custom .custom-actions > button { width: 11rem; }
 
 .gig-songs-view__delete {
   display: block;
