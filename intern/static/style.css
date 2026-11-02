@@ -1551,7 +1551,7 @@ table.setlist-table tr.setlist-break-row:hover .setlist-break-cell__delete { opa
 
 /* Custom lead sheets modal: a scrolling list of songs, each with a pick
    box and a singer toggle. */
-.modal-box--custom { max-width: 920px; display: flex; flex-direction: column; max-height: calc(100vh - 4rem); }
+.modal-box--custom { max-width: 720px; display: flex; flex-direction: column; max-height: calc(100vh - 4rem); }
 .modal-box .custom-heading { margin: 0 0 0.75rem; font-weight: 600; }
 .custom-list {
   list-style: none;
