@@ -314,13 +314,24 @@ async def gigs_delete(gig_id: str):
 
 
 @app.get("/gigs/{gig_id}/leadsheets", response_class=HTMLResponse)
-async def gigs_leadsheets(request: Request, gig_id: str, mode: str = "setlist"):
+async def gigs_leadsheets(
+    request: Request, gig_id: str, mode: str = "setlist", picks: str | None = None
+):
     # Lead sheets are only drawn in the browser, so this page draws each
     # song's sheet (as gig_bundle plans it) and builds the PDF there.
+    # `picks` ("0.signe,3.jonas,…": setlist row and singer) is the gig
+    # page's Custom selection.
+    picked = None
+    if picks is not None:
+        picked = {}
+        for part in picks.split(","):
+            index, _, singer = part.partition(".")
+            if index.isdigit():
+                picked[int(index)] = singer if singer in gig_bundle.SINGER_NAMES else ""
     try:
         gig = setlists.get_setlist(gig_id)
         plan = gig_bundle.build_leadsheet_plan(
-            gig_id, mode if mode in gig_bundle.LEADSHEET_MODES else "setlist"
+            gig_id, mode if mode in gig_bundle.LEADSHEET_MODES else "setlist", picked
         )
     except KeyError:
         raise HTTPException(status_code=404)

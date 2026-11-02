@@ -1538,6 +1538,55 @@ table.setlist-table tr.setlist-break-row:hover .setlist-break-cell__delete { opa
   text-align: left;
 }
 
+/* Custom sits below the fixed options, set apart by a rule. */
+.leadsheets-menu > .leadsheets-menu__custom { margin-top: 0.15rem; position: relative; }
+.leadsheets-menu > .leadsheets-menu__custom::before {
+  content: '';
+  position: absolute;
+  top: calc(-0.2rem - 1px);
+  left: 0.2rem;
+  right: 0.2rem;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+.leadsheets-menu > button[hidden] { display: none; }
+
+/* Custom lead sheets modal: a scrolling list of songs, each with a pick
+   box and a singer toggle. */
+.modal-box--custom { max-width: 460px; display: flex; flex-direction: column; max-height: calc(100vh - 4rem); }
+.custom-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.modal-box .custom-heading { margin: 0; font-weight: 600; }
+.custom-all { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--text-dim); cursor: pointer; }
+.custom-list {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0 0.25rem 0 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.custom-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+}
+.custom-row__pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+.custom-row__title {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.03em;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.custom-row .singer-toggle { flex: 0 0 150px; }
+.custom-row.is-off .custom-row__title,
+.custom-row.is-off .singer-toggle { opacity: 0.4; }
+
 .gig-songs-view__delete {
   display: block;
   margin: 1.5rem auto 0;
@@ -2788,3 +2837,4 @@ body.lead-viewer .tr-acc .eb-btn { width: 40px; padding: 0; font-size: 1.1rem; }
   .topbar { view-transition-name: topbar; }
   .main-nav { view-transition-name: main-nav; }
 }
+.modal-box--custom .modal-actions button:disabled { opacity: 0.4; pointer-events: none; }

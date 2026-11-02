@@ -78,12 +78,17 @@ def _sheet_semitones(sheet_key: str, song_key: str, offset: int) -> int:
 LEADSHEET_MODES = ("original", "transposed", "setlist")
 
 
-def build_leadsheet_plan(gig_id: str, mode: str = "setlist") -> dict:
+def build_leadsheet_plan(
+    gig_id: str, mode: str = "setlist", picks: dict[int, str] | None = None
+) -> dict:
     """What the gig's lead-sheet PDF holds, in setlist order: each song's
     sheet with the transposition to draw it at, plus the songs that have no
     sheet and anything worth checking, for a note page at the front.
     mode "original" draws every sheet in its own key, "transposed" in the
     key it's played in, and "setlist" also puts the setlist page first.
+    `picks` (the gig page's Custom option) limits the PDF to those setlist
+    rows -- index into gig["songs"] -> singer to transpose for, overriding
+    the setlist's -- and leaves the setlist page out.
     Raises KeyError if gig_id is unknown."""
     original = mode == "original"
     gig = setlists.get_setlist(gig_id)
@@ -98,14 +103,16 @@ def build_leadsheet_plan(gig_id: str, mode: str = "setlist") -> dict:
     # The setlist page: every song (with or without a sheet) and the key
     # it's played in, split into sets at the pauses.
     sets: list[list[dict]] = [[]]
-    for row in gig["songs"]:
+    for index, row in enumerate(gig["songs"]):
         if row.get("type") == "break":
             sets.append([])
             continue
         if row.get("type") != "song":
             continue
+        if picks is not None and index not in picks:
+            continue
         title = row.get("title") or ""
-        singer = row.get("singer") or ""
+        singer = picks[index] if picks is not None else row.get("singer") or ""
         played_offset = (row.get(singer) if singer else 0) or 0
         sets[-1].append({"title": title, "key": chords.transpose_key(row.get("key") or "", played_offset)})
         if row.get("repertoire_id"):
@@ -148,7 +155,7 @@ def build_leadsheet_plan(gig_id: str, mode: str = "setlist") -> dict:
     name = " ".join(part for part in (gig.get("date"), gig.get("venue")) if part) or "Gig"
     return {
         "pages": pages,
-        "sets": [songs for songs in sets if songs] if mode == "setlist" else [],
+        "sets": [songs for songs in sets if songs] if mode == "setlist" and picks is None else [],
         "missing": missing,
         "notes": notes,
         "filename": f"{name} – lead sheets{' (original keys)' if original else ''}.pdf",

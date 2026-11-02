@@ -51,6 +51,7 @@
             <button type="button" role="menuitem" data-mode="original">Original key</button>
             <button type="button" role="menuitem" data-mode="transposed">Transposed</button>
             <button type="button" role="menuitem" data-mode="setlist">Setlist</button>
+            <button type="button" role="menuitem" class="leadsheets-menu__custom" id="leadsheets-custom">Custom…</button>
           </div>
         </div>
       </div>
@@ -113,6 +114,39 @@
     <div class="progress"><div id="bundle-modal-bar" class="progress__bar"></div></div>
   </div>
 </div>
+
+{% if setlist %}
+<div id="custom-modal" class="modal-overlay" hidden>
+  <div class="modal-box modal-box--custom" role="dialog" aria-labelledby="custom-heading">
+    <div class="custom-head">
+      <p id="custom-heading" class="custom-heading">Custom lead sheets</p>
+      <label class="custom-all"><input type="checkbox" id="custom-all" checked /> All</label>
+    </div>
+    <ul class="custom-list" id="custom-list">
+      {% for song in setlist.songs %}
+      {% if song.type == 'song' %}
+      <li class="custom-row" data-index="{{ loop.index0 }}" data-singer="{{ song.singer or '' }}">
+        <label class="custom-row__pick">
+          <input type="checkbox" checked />
+          <span class="custom-row__title">{{ song.title }}</span>
+        </label>
+        <div class="singer-toggle">
+          {% for key, name in [('signe', 'Signe'), ('jonas', 'Jonas'), ('duet', 'Duet')] %}
+          <button type="button" class="singer-btn{{ ' is-active' if song.singer == key }}" data-singer="{{ key }}">{{ name }}</button>
+          {% endfor %}
+        </div>
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ul>
+    <div class="modal-actions">
+      <button type="button" class="btn-small" id="custom-cancel">Cancel</button>
+      <button type="button" class="btn-small" data-custom-mode="original">Original keys</button>
+      <button type="button" class="primary btn-small" data-custom-mode="transposed">Transposed keys</button>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <div id="confirm-modal" class="modal-overlay" hidden>
   <div class="modal-box modal-box--centered modal-box--confirm">
@@ -363,10 +397,7 @@
     if (e.key === 'Escape') setLeadsheetsMenu(false);
   });
 
-  leadsheetsMenu.addEventListener('click', e => {
-    const item = e.target.closest('[data-mode]');
-    if (!item) return;
-    setLeadsheetsMenu(false);
+  function startBundle(query) {
     if (bundleFrame || !currentId) return;
     bundleText.textContent = 'Preparing lead sheets…';
     bundleBar.style.width = '0%';
@@ -374,9 +405,82 @@
     bundleFrame = document.createElement('iframe');
     bundleFrame.className = 'bundle-frame';
     bundleFrame.setAttribute('aria-hidden', 'true');
-    bundleFrame.src = `/gigs/${currentId}/leadsheets?mode=${item.dataset.mode}`;
+    bundleFrame.src = `/gigs/${currentId}/leadsheets?${query}`;
     document.body.appendChild(bundleFrame);
+  }
+
+  leadsheetsMenu.addEventListener('click', e => {
+    const item = e.target.closest('[data-mode]');
+    if (!item) return;
+    setLeadsheetsMenu(false);
+    startBundle(`mode=${item.dataset.mode}`);
   });
+
+  /* Custom: pick songs and who sings each, then original or transposed keys. */
+  const customModal = document.getElementById('custom-modal');
+  const customBtn = document.getElementById('leadsheets-custom');
+  if (!customModal) {
+    customBtn.hidden = true;
+  } else {
+    const customList = document.getElementById('custom-list');
+    const customAll = document.getElementById('custom-all');
+    const rows = [...customList.querySelectorAll('.custom-row')];
+    const boxes = rows.map(row => row.querySelector('input[type="checkbox"]'));
+    const modeBtns = [...customModal.querySelectorAll('[data-custom-mode]')];
+
+    // Each opening starts from the setlist: every song, its own singer.
+    function resetCustom() {
+      rows.forEach((row, i) => {
+        boxes[i].checked = true;
+        row.querySelectorAll('.singer-btn').forEach(btn => {
+          btn.classList.toggle('is-active', btn.dataset.singer === row.dataset.singer);
+        });
+      });
+      syncCustom();
+    }
+
+    function syncCustom() {
+      const picked = boxes.filter(box => box.checked).length;
+      customAll.checked = picked === boxes.length;
+      customAll.indeterminate = picked > 0 && picked < boxes.length;
+      rows.forEach((row, i) => row.classList.toggle('is-off', !boxes[i].checked));
+      modeBtns.forEach(btn => { btn.disabled = picked === 0; });
+    }
+
+    const closeCustom = () => { customModal.hidden = true; };
+
+    customBtn.addEventListener('click', () => {
+      setLeadsheetsMenu(false);
+      resetCustom();
+      customModal.hidden = false;
+    });
+    customAll.addEventListener('change', () => {
+      boxes.forEach(box => { box.checked = customAll.checked; });
+      syncCustom();
+    });
+    customList.addEventListener('change', syncCustom);
+    customList.addEventListener('click', e => {
+      const btn = e.target.closest('.singer-btn');
+      if (!btn) return;
+      btn.parentElement.querySelectorAll('.singer-btn').forEach(b => b.classList.toggle('is-active', b === btn));
+    });
+    document.getElementById('custom-cancel').addEventListener('click', closeCustom);
+    customModal.addEventListener('click', e => { if (e.target === customModal) closeCustom(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !customModal.hidden) closeCustom();
+    });
+    modeBtns.forEach(btn => btn.addEventListener('click', () => {
+      const picks = rows
+        .filter((row, i) => boxes[i].checked)
+        .map(row => {
+          const active = row.querySelector('.singer-btn.is-active');
+          return `${row.dataset.index}.${active ? active.dataset.singer : ''}`;
+        })
+        .join(',');
+      closeCustom();
+      startBundle(`mode=${btn.dataset.customMode}&picks=${encodeURIComponent(picks)}`);
+    }));
+  }
 
   window.addEventListener('message', e => {
     if (!bundleFrame || e.source !== bundleFrame.contentWindow || e.origin !== location.origin) return;
