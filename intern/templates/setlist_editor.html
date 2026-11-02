@@ -7,8 +7,12 @@
 
 <form id="setlist-form">
   <div class="setlist-top-columns">
-    <div class="top-box lyrics-column">
-      <h2>Lyrics</h2>
+    <div class="top-box lyrics-column" data-box="lyrics">
+      <div class="top-box__header">
+        <h2>Lyrics</h2>
+        <button type="button" class="top-box__toggle" aria-expanded="true" title="Collapse" aria-label="Collapse Lyrics"></button>
+      </div>
+      <div class="top-box__body">
       <div class="lyrics-column__link-row">
         <input type="url" id="mastersongbook-input" placeholder="Google Doc link to the master songbook"
                value="{{ master_songbook_url or '' }}" />
@@ -27,20 +31,29 @@
         </div>
       </div>
       <button type="button" id="connect-btn" class="connect-btn" disabled>Connect</button>
+      </div>
     </div>
 
-    <div class="top-box">
+    <div class="top-box" data-box="repertoire">
       <div class="top-box__header">
         <h2>Repertoire</h2>
         <input type="search" id="repertoire-search" class="top-box__search" placeholder="Search…" />
+        <button type="button" class="top-box__toggle" aria-expanded="true" title="Collapse" aria-label="Collapse Repertoire"></button>
       </div>
-      <ul id="repertoire-list" class="pick-list"></ul>
+      <div class="top-box__body">
+        <ul id="repertoire-list" class="pick-list"></ul>
+      </div>
     </div>
 
-    <div class="top-box">
-      <h2>New songs</h2>
-      <ul id="new-song-list" class="pick-list"></ul>
-      <button type="button" id="add-custom-song" class="add-row-btn" title="Add a song" aria-label="Add a song">+</button>
+    <div class="top-box" data-box="new-songs">
+      <div class="top-box__header">
+        <h2>New songs</h2>
+        <button type="button" class="top-box__toggle" aria-expanded="true" title="Collapse" aria-label="Collapse New songs"></button>
+      </div>
+      <div class="top-box__body">
+        <ul id="new-song-list" class="pick-list"></ul>
+        <button type="button" id="add-custom-song" class="add-row-btn" title="Add a song" aria-label="Add a song">+</button>
+      </div>
     </div>
   </div>
 
@@ -89,6 +102,25 @@
   const gigId = "{{ setlist.id }}";
   let songbook = {{ songbook_json|safe }};
   let aliases = {{ aliases_json|safe }};
+
+  /* ---------- Collapsible top boxes (state remembered per browser) ---------- */
+  const COLLAPSED_KEY = 'setlistEditor.collapsedBoxes';
+  const collapsedBoxes = new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY) || '[]'));
+  document.querySelectorAll('.top-box[data-box]').forEach((box) => {
+    const toggle = box.querySelector('.top-box__toggle');
+    const apply = (collapsed) => {
+      box.classList.toggle('is-collapsed', collapsed);
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      toggle.title = collapsed ? 'Expand' : 'Collapse';
+    };
+    apply(collapsedBoxes.has(box.dataset.box));
+    toggle.addEventListener('click', () => {
+      const collapsed = !box.classList.contains('is-collapsed');
+      apply(collapsed);
+      collapsed ? collapsedBoxes.add(box.dataset.box) : collapsedBoxes.delete(box.dataset.box);
+      localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsedBoxes]));
+    });
+  });
 
   /* ---------- Lyrics / master songbook ---------- */
   const mastersongbookInput = document.getElementById('mastersongbook-input');

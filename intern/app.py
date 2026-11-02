@@ -155,15 +155,17 @@ async def setlist_alias(setlist_title: str = Form(...), doc_title: str = Form(..
     return {"setlist_title": setlist_title, "doc_title": doc_title}
 
 
-@app.get("/setlist", response_class=HTMLResponse)
-async def setlist_picker_page(request: Request):
-    upcoming, past = setlists.split_upcoming_past(setlists.list_setlists())
-    return templates.TemplateResponse(
-        request, "setlist_picker.html", {"upcoming_setlists": upcoming, "past_setlists": past}
-    )
+@app.get("/setlist")
+async def setlist_picker_redirect():
+    return RedirectResponse("/gigs", status_code=301)
 
 
-@app.get("/setlist/{gig_id}", response_class=HTMLResponse)
+@app.get("/setlist/{gig_id}")
+async def setlist_editor_redirect(gig_id: str):
+    return RedirectResponse(f"/gigs/{gig_id}/setlist", status_code=301)
+
+
+@app.get("/gigs/{gig_id}/setlist", response_class=HTMLResponse)
 async def setlist_editor_page(request: Request, gig_id: str):
     try:
         gig = setlists.get_setlist(gig_id)

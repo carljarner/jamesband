@@ -32,8 +32,7 @@
   {% set section = request.url.path.split('/')[1] %}
   <nav class="main-nav">
     <div class="main-nav__tabs page-tabs">
-      <a href="/gigs" class="page-tabs__tab {{ 'is-active' if section in ('gigs', 'setlists') }}">Gigs</a>
-      <a href="/setlist" class="page-tabs__tab {{ 'is-active' if section == 'setlist' }}">Setlist</a>
+      <a href="/gigs" class="page-tabs__tab {{ 'is-active' if section in ('gigs', 'setlists', 'setlist') }}">Gigs</a>
       <a href="/leadsheets" class="page-tabs__tab {{ 'is-active' if section == 'leadsheets' }}">Lead Sheets</a>
       <a href="/repertoire" class="page-tabs__tab {{ 'is-active' if section == 'repertoire' }}">Repertoire</a>
       <a href="/gallery" class="page-tabs__tab {{ 'is-active' if section == 'gallery' }}">Gallery</a>

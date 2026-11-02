@@ -61,7 +61,7 @@
       <div class="gig-songs-view">
         <div class="top-box__header">
           <h2>Setlist</h2>
-          <a id="edit-setlist-link" class="button-link btn-small" href="{{ ('/setlist/' + setlist.id) if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Edit</a>
+          <a id="edit-setlist-link" class="button-link btn-small" href="{{ ('/gigs/' + setlist.id + '/setlist') if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Edit</a>
         </div>
         {% if setlist and setlist.songs %}
         <table class="gig-songs-table">
@@ -264,7 +264,7 @@
     leadsheetsWrap.hidden = false;
     leadsheetsLink.href = `/gigs/${id}/leadsheets`;
     editSetlistLink.hidden = false;
-    editSetlistLink.href = `/setlist/${id}`;
+    editSetlistLink.href = `/gigs/${id}/setlist`;
     deleteForm.action = `/gigs/${id}/delete`;
   }
 
