@@ -312,12 +312,14 @@ async def gigs_delete(gig_id: str):
 
 
 @app.get("/gigs/{gig_id}/leadsheets", response_class=HTMLResponse)
-async def gigs_leadsheets(request: Request, gig_id: str):
+async def gigs_leadsheets(request: Request, gig_id: str, mode: str = "setlist"):
     # Lead sheets are only drawn in the browser, so this page draws each
     # song's sheet (as gig_bundle plans it) and builds the PDF there.
     try:
         gig = setlists.get_setlist(gig_id)
-        plan = gig_bundle.build_leadsheet_plan(gig_id)
+        plan = gig_bundle.build_leadsheet_plan(
+            gig_id, mode if mode in gig_bundle.LEADSHEET_MODES else "setlist"
+        )
     except KeyError:
         raise HTTPException(status_code=404)
     plan["subtitle"] = " · ".join(

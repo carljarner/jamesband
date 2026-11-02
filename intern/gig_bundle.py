@@ -75,11 +75,17 @@ def _sheet_semitones(sheet_key: str, song_key: str, offset: int) -> int:
     return diff - 12 if diff > 6 else diff
 
 
-def build_leadsheet_plan(gig_id: str) -> dict:
+LEADSHEET_MODES = ("original", "transposed", "setlist")
+
+
+def build_leadsheet_plan(gig_id: str, mode: str = "setlist") -> dict:
     """What the gig's lead-sheet PDF holds, in setlist order: each song's
     sheet with the transposition to draw it at, plus the songs that have no
     sheet and anything worth checking, for a note page at the front.
+    mode "original" draws every sheet in its own key, "transposed" in the
+    key it's played in, and "setlist" also puts the setlist page first.
     Raises KeyError if gig_id is unknown."""
+    original = mode == "original"
     gig = setlists.get_setlist(gig_id)
     leadsheets.auto_link()
     by_song = leadsheets.links()
@@ -107,6 +113,9 @@ def build_leadsheet_plan(gig_id: str) -> dict:
             sheet = by_title.get(title.strip().casefold())
         if sheet is None:
             missing.append(title)
+            continue
+        if original:
+            pages.append({"sheet": sheet, "semitones": 0, "flats": False, "label": title, "singer": ""})
             continue
 
         offset = row.get(singer) if singer else 0
@@ -137,8 +146,8 @@ def build_leadsheet_plan(gig_id: str) -> dict:
     name = " ".join(part for part in (gig.get("date"), gig.get("venue")) if part) or "Gig"
     return {
         "pages": pages,
-        "sets": [songs for songs in sets if songs],
+        "sets": [songs for songs in sets if songs] if mode == "setlist" else [],
         "missing": missing,
         "notes": notes,
-        "filename": f"{name} – lead sheets.pdf",
+        "filename": f"{name} – lead sheets{' (original keys)' if original else ''}.pdf",
     }

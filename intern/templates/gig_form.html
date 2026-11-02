@@ -45,9 +45,16 @@
 
       <div class="gig-actions-row">
         <a id="lyrics-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/lyrics') if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Lyrics</a>
-        <a id="leadsheets-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/leadsheets') if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Lead sheets</a>
-        <span id="save-status" class="save-status">{{ '' if setlist else 'Pick a date to save' }}</span>
+        <div class="leadsheets-menu-wrap" id="leadsheets-wrap" {% if not setlist %}hidden{% endif %}>
+          <a id="leadsheets-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/leadsheets') if setlist else '' }}" aria-haspopup="menu" aria-expanded="false">Lead sheets</a>
+          <div id="leadsheets-menu" class="leadsheets-menu" role="menu" hidden>
+            <button type="button" role="menuitem" data-mode="original">Original key</button>
+            <button type="button" role="menuitem" data-mode="transposed">Transposed</button>
+            <button type="button" role="menuitem" data-mode="setlist">Setlist</button>
+          </div>
+        </div>
       </div>
+      <span id="save-status" class="save-status">{{ '' if setlist else 'Pick a date to save' }}</span>
     </div>
 
     <div class="gig-right">
@@ -243,6 +250,8 @@
   const deleteForm = document.getElementById('delete-form');
   const lyricsLink = document.getElementById('lyrics-link');
   const leadsheetsLink = document.getElementById('leadsheets-link');
+  const leadsheetsWrap = document.getElementById('leadsheets-wrap');
+  const leadsheetsMenu = document.getElementById('leadsheets-menu');
   const editSetlistLink = document.getElementById('edit-setlist-link');
   let currentId = {{ (('"' + setlist.id + '"') if setlist else 'null') | safe }};
 
@@ -252,7 +261,7 @@
     deleteBtn.hidden = false;
     lyricsLink.hidden = false;
     lyricsLink.href = `/gigs/${id}/lyrics`;
-    leadsheetsLink.hidden = false;
+    leadsheetsWrap.hidden = false;
     leadsheetsLink.href = `/gigs/${id}/leadsheets`;
     editSetlistLink.hidden = false;
     editSetlistLink.href = `/setlist/${id}`;
@@ -338,8 +347,26 @@
     if (bundleFrame) { bundleFrame.remove(); bundleFrame = null; }
   }
 
+  function setLeadsheetsMenu(open) {
+    leadsheetsMenu.hidden = !open;
+    leadsheetsLink.setAttribute('aria-expanded', String(open));
+  }
+
   leadsheetsLink.addEventListener('click', e => {
     e.preventDefault();
+    setLeadsheetsMenu(leadsheetsMenu.hidden);
+  });
+  document.addEventListener('click', e => {
+    if (!leadsheetsWrap.contains(e.target)) setLeadsheetsMenu(false);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') setLeadsheetsMenu(false);
+  });
+
+  leadsheetsMenu.addEventListener('click', e => {
+    const item = e.target.closest('[data-mode]');
+    if (!item) return;
+    setLeadsheetsMenu(false);
     if (bundleFrame || !currentId) return;
     bundleText.textContent = 'Preparing lead sheets…';
     bundleBar.style.width = '0%';
@@ -347,7 +374,7 @@
     bundleFrame = document.createElement('iframe');
     bundleFrame.className = 'bundle-frame';
     bundleFrame.setAttribute('aria-hidden', 'true');
-    bundleFrame.src = `/gigs/${currentId}/leadsheets`;
+    bundleFrame.src = `/gigs/${currentId}/leadsheets?mode=${item.dataset.mode}`;
     document.body.appendChild(bundleFrame);
   });
 

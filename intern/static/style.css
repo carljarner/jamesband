@@ -1440,11 +1440,10 @@ table.setlist-table tr.setlist-break-row:hover .setlist-break-cell__delete { opa
   gap: 0.6rem;
 }
 
-/* Lyrics / Lead sheets / Save: one link-button and one real button mixed,
-   so pin the box model for all three to come out the same size. */
-.gig-actions-row > *,
+/* Lyrics / Lead sheets: pin the box model so both come out the same size
+   and split the row between them. */
 .gig-actions-row > .button-link,
-.gig-actions-row > button.primary {
+.leadsheets-menu-wrap > .button-link {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -1456,6 +1455,37 @@ table.setlist-table tr.setlist-break-row:hover .setlist-break-cell__delete { opa
   font-size: 0.7rem;
   line-height: 1;
   white-space: nowrap;
+}
+
+.gig-actions-row > .button-link,
+.leadsheets-menu-wrap { flex: 1; min-width: 0; }
+
+.leadsheets-menu-wrap { position: relative; display: flex; }
+.leadsheets-menu-wrap[hidden] { display: none; }
+.leadsheets-menu-wrap > .button-link { width: 100%; }
+
+.leadsheets-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.3rem;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.leadsheets-menu[hidden] { display: none; }
+
+.leadsheets-menu > button {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.75rem;
+  text-align: left;
 }
 
 .gig-songs-view__delete {
