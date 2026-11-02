@@ -2,10 +2,8 @@
 {% block title %}Lead Sheets{% endblock %}
 {% block container_class %}container--full{% endblock %}
 {% block content %}
-{% set count = sheets|length %}
 <div class="setlists-toolbar leadsheets-toolbar">
   <h1>Lead Sheets</h1>
-  <span class="muted leadsheets-count">{{ count }} sheet{{ "" if count == 1 else "s" }}</span>
   <input type="search" id="sheet-search" class="leadsheets-search" placeholder="Search title or artist" aria-label="Search lead sheets" autocomplete="off" />
   <div class="leadsheets-toolbar-actions">
     <button type="button" id="refresh-btn" class="add-row-btn add-row-btn--inline refresh-btn" title="Get the latest versions from leadsheets.dk" aria-label="Get the latest versions from leadsheets.dk">
@@ -15,10 +13,8 @@
   </div>
 </div>
 
-<div class="repertoire-toolbar leadsheets-count-row">
-  <span class="muted">{{ count }} sheet{{ "" if count == 1 else "s" }}</span>
-</div>
 <p id="refresh-status" class="muted refresh-status" role="status"></p>
+<div id="toast" class="toast" role="status" hidden></div>
 
 {# A card for a song: links to its sheet when it has one; otherwise it opens
    the import picker searching for the song's title. #}
@@ -242,26 +238,43 @@
   });
 
   // The circle-arrow brings every imported sheet up to date with
-  // leadsheets.dk; the result is shown after the page reloads.
+  // leadsheets.dk. Success shows a "Sheets updated" toast (after the reload
+  // when anything changed); sheets that are gone or failed are listed below.
   const refreshBtn = document.getElementById('refresh-btn');
   const refreshStatus = document.getElementById('refresh-status');
+  const toast = document.getElementById('toast');
+  let toastTimer = null;
+  function showToast(message) {
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.hidden = false;
+    requestAnimationFrame(() => toast.classList.add('toast--visible'));
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('toast--visible');
+      setTimeout(() => { toast.hidden = true; }, 200);
+    }, 2500);
+  }
   const REFRESH_KEY = 'leadsheets-refresh-result';
   const lastResult = sessionStorage.getItem(REFRESH_KEY);
-  if (lastResult) { refreshStatus.textContent = lastResult; sessionStorage.removeItem(REFRESH_KEY); }
+  if (lastResult !== null) {
+    sessionStorage.removeItem(REFRESH_KEY);
+    showToast('Sheets updated');
+    refreshStatus.textContent = lastResult;
+  }
   refreshBtn.addEventListener('click', async () => {
     if (refreshBtn.classList.contains('is-busy')) return;
     refreshBtn.classList.add('is-busy');
-    refreshStatus.textContent = 'Checking leadsheets.dk…';
+    refreshStatus.textContent = '';
     try {
       const resp = await fetch('/leadsheets/refresh', { method: 'POST' });
       if (!resp.ok) throw new Error(await resp.text());
       const result = await resp.json();
-      const n = result.updated.length;
-      const parts = [n ? `${n} sheet${n === 1 ? '' : 's'} updated` : 'Everything is up to date'];
+      const parts = [];
       if (result.gone.length) parts.push(`no longer on leadsheets.dk: ${result.gone.join(', ')}`);
       if (result.errors.length) parts.push(`couldn’t update: ${result.errors.map(e => e.title).join(', ')}`);
       const message = parts.join(' · ');
-      if (n) { sessionStorage.setItem(REFRESH_KEY, message); location.reload(); return; }
+      if (result.updated.length) { sessionStorage.setItem(REFRESH_KEY, message); location.reload(); return; }
+      showToast('Sheets updated');
       refreshStatus.textContent = message;
     } catch (err) {
       refreshStatus.textContent = err.message || 'Couldn’t reach leadsheets.dk.';
