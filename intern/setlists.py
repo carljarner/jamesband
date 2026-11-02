@@ -113,10 +113,27 @@ def add_to_repertoire(setlist_id: str) -> dict:
 
     created = repertoire.merge_from_setlist(target["songs"])
     if created:
+        new_ids = {}
         for row_index, new_id in created:
-            target["songs"][row_index]["repertoire_id"] = new_id
+            row = target["songs"][row_index]
+            row["repertoire_id"] = new_id
+            new_ids.setdefault(_fold(row.get("title")), new_id)
+        # The same new song on other upcoming gigs is now this repertoire
+        # song too, so it stops counting as new there and a later "Add to
+        # repertoire" on that gig updates it instead of adding it again.
+        upcoming, _ = split_upcoming_past(setlists_all)
+        for gig in upcoming:
+            if gig is target:
+                continue
+            for row in gig.get("songs", []):
+                if row.get("type") == "song" and not row.get("repertoire_id"):
+                    row["repertoire_id"] = new_ids.get(_fold(row.get("title"))) or None
         _save(setlists_all)
         data_store.commit_and_push(
             f"Link new repertoire songs to setlist '{target['venue'] or target['date']}'"
         )
     return {"song_count": len(target["songs"]), "created_count": len(created)}
+
+
+def _fold(title) -> str:
+    return str(title or "").strip().casefold()

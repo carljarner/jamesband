@@ -178,6 +178,7 @@ async def setlist_editor_page(request: Request, gig_id: str):
             "setlist": gig,
             "repertoire_songs_json": json.dumps(repertoire.list_songs()),
             "setlist_songs_json": json.dumps(gig["songs"]),
+            "new_songs_json": json.dumps(leadsheets.upcoming_new_songs()),
             "master_songbook_url": setlist.get_master_songbook_url(),
             "songbook_json": json.dumps(setlist.get_songbook()),
             "aliases_json": json.dumps(setlist.get_aliases()),
@@ -376,6 +377,7 @@ async def leadsheets_page(request: Request):
         {
             "sheets": sheets,
             "new_songs": new_songs,
+            "upcoming_gigs": setlists.split_upcoming_past(setlists.list_setlists())[0],
             "with_sheet": [dict(song, sheet=by_song[song["id"]]) for song in songs if song["id"] in by_song],
             "missing": [song for song in songs if song["id"] not in by_song],
             "unlinked": [sheet for sheet in sheets if sheet["id"] not in shown],

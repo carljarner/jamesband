@@ -1152,15 +1152,14 @@ input.top-box__search {
 .lyrics-column__link-row input { flex: 1; min-width: 0; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.8rem; }
 #mastersongbook-status { font-size: 0.8rem; margin: 0.75rem 0; }
 
-#repertoire-list li { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
-#repertoire-list li:hover { border-color: var(--accent-2); }
-#repertoire-list li.is-selected {
+#repertoire-list li, #new-song-list li.pick-list__choice { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+#repertoire-list li:hover, #new-song-list li.pick-list__choice:hover { border-color: var(--accent-2); }
+#repertoire-list li.is-selected, #new-song-list li.is-selected {
   border-color: var(--accent-2);
   background: rgba(79,215,209,0.12);
 }
-#repertoire-list li.is-selected::before { content: '✓ '; color: var(--accent-2); }
+#repertoire-list li.is-selected::before, #new-song-list li.is-selected::before { content: '✓ '; color: var(--accent-2); }
 #repertoire-list li.is-active { border-color: var(--accent); background: rgba(255,90,78,0.1); }
-#new-song-list li { color: var(--text-dim); }
 
 @media (max-width: 900px) {
   .setlist-top-columns { flex-direction: column; }
@@ -1729,6 +1728,8 @@ button.leadsheet-card__link:hover { background: none; color: inherit; }
 .leadsheet-section__hint { margin: 0; font-size: 0.85rem; }
 .leadsheet-section .setlist-cards { margin-top: 0.75rem; }
 .leadsheet-section__empty { margin-top: 0.6rem; }
+.leadsheet-subsection[hidden] { display: none; }
+.leadsheet-subsection h3 { margin: 1.2rem 0 0; font-size: 1rem; color: var(--text-dim); font-weight: 600; }
 
 /* The circle-arrow refresh: the "+" button's ring, without its bars. */
 .refresh-btn::before, .refresh-btn::after { display: none; }

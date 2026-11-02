@@ -198,20 +198,27 @@ def _fold(title) -> str:
 
 def upcoming_new_songs() -> list[dict]:
     """Songs on upcoming setlists that aren't in the repertoire, once per
-    title (ignoring case), soonest gig first:
-    [{title, artist, gigs: [{id, date, venue}]}]."""
+    title (ignoring case), soonest gig first. A row whose title matches a
+    repertoire song counts as that song, even if it was never linked to it.
+    Each carries the song fields of its soonest row, so it can be copied
+    onto another setlist: [{title, artist, year, key, signe, jonas, duet,
+    indstilling, gigs: [{id, date, venue}]}]."""
     upcoming, _ = setlists.split_upcoming_past(setlists.list_setlists())
+    known = {_fold(song.get("title")) for song in repertoire.list_songs()}
     by_title: dict[str, dict] = {}
     for gig in upcoming:
         for row in gig.get("songs", []):
             if row.get("type") != "song" or row.get("repertoire_id"):
                 continue
             folded = _fold(row.get("title"))
-            if not folded:
+            if not folded or folded in known:
                 continue
-            entry = by_title.setdefault(
-                folded, {"title": row["title"].strip(), "artist": row.get("artist") or "", "gigs": []}
-            )
+            entry = by_title.get(folded)
+            if entry is None:
+                entry = by_title[folded] = {field: row.get(field) for field in repertoire.FIELDS}
+                entry["title"] = row["title"].strip()
+                entry["artist"] = row.get("artist") or ""
+                entry["gigs"] = []
             if not entry["artist"] and row.get("artist"):
                 entry["artist"] = row["artist"]
             if not any(g["id"] == gig["id"] for g in entry["gigs"]):

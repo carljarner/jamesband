@@ -99,31 +99,39 @@
 <script>
   const repertoireSongs = {{ repertoire_songs_json|safe }};
   const initialSongs = {{ setlist_songs_json|safe }};
+  const upcomingNewSongs = {{ new_songs_json|safe }};
   const gigId = "{{ setlist.id }}";
   let songbook = {{ songbook_json|safe }};
   let aliases = {{ aliases_json|safe }};
 
   /* ---------- Collapsible top boxes ----------
-     Clicking the title row toggles a box. They start collapsed, except on a
-     brand new gig (empty setlist) where you need them to build the list. */
+     Clicking any box's title row opens or closes all three together. They
+     start collapsed, except on a brand new gig (empty setlist) where you
+     need them to build the list. */
   const startCollapsed = initialSongs.length > 0;
-  document.querySelectorAll('.top-box[data-box]').forEach((box) => {
-    const header = box.querySelector('.top-box__header--toggle');
-    const apply = (collapsed) => {
+  const topBoxes = [...document.querySelectorAll('.top-box[data-box]')];
+  let boxesCollapsed = startCollapsed;
+  function applyCollapsed(collapsed) {
+    boxesCollapsed = collapsed;
+    topBoxes.forEach((box) => {
+      const header = box.querySelector('.top-box__header--toggle');
       box.classList.toggle('is-collapsed', collapsed);
       header.setAttribute('aria-expanded', String(!collapsed));
       header.title = collapsed ? 'Expand' : 'Collapse';
-    };
-    const toggle = () => apply(!box.classList.contains('is-collapsed'));
-    apply(startCollapsed);
+    });
+  }
+  const toggleBoxes = () => applyCollapsed(!boxesCollapsed);
+  applyCollapsed(startCollapsed);
+  topBoxes.forEach((box) => {
+    const header = box.querySelector('.top-box__header--toggle');
     header.addEventListener('click', (e) => {
       if (e.target.closest('input')) return; // the Repertoire search lives in the row
-      toggle();
+      toggleBoxes();
     });
     header.addEventListener('keydown', (e) => {
       if (e.target !== header || (e.key !== 'Enter' && e.key !== ' ')) return;
       e.preventDefault();
-      toggle();
+      toggleBoxes();
     });
   });
 
@@ -437,11 +445,44 @@
     repertoireSearchInput.focus();
   }
 
+  // New songs (not in the repertoire) on any upcoming setlist, plus the ones
+  // typed into this one. Those already here are ticked; clicking another
+  // copies it onto this setlist.
+  const foldTitle = t => String(t || '').trim().toLowerCase();
+
+  function addNewSong(song) {
+    const entry = blankSong({
+      uid: nextUid(),
+      title: song.title, artist: song.artist || '', year: song.year || '', key: song.key || '',
+      signe: song.signe ?? null, jonas: song.jonas ?? null, duet: song.duet ?? null,
+      indstilling: song.indstilling || '',
+    });
+    entry.singer = pickDefaultSinger(entry);
+    songs.push(entry);
+    renderAll();
+  }
+
   function renderNewSongList() {
     newSongListEl.innerHTML = '';
-    songs.filter(s => !s.repertoire_id && s.type !== 'break').forEach(s => {
+    const here = songs.filter(s => !s.repertoire_id && s.type !== 'break' && s.title.trim());
+    const hereTitles = new Set(songs.filter(s => s.type !== 'break').map(s => foldTitle(s.title)));
+    const listed = new Set();
+    const entries = [];
+    [...here, ...upcomingNewSongs].forEach(song => {
+      const folded = foldTitle(song.title);
+      if (!folded || listed.has(folded)) return;
+      listed.add(folded);
+      entries.push(song);
+    });
+    entries.forEach(song => {
       const li = document.createElement('li');
-      li.textContent = s.title || '(untitled)';
+      li.textContent = song.title;
+      if (hereTitles.has(foldTitle(song.title))) {
+        li.classList.add('is-selected');
+      } else {
+        li.classList.add('pick-list__choice');
+        li.addEventListener('click', () => addNewSong(song));
+      }
       newSongListEl.appendChild(li);
     });
   }
