@@ -46,7 +46,7 @@
       <div class="gig-actions-row">
         <a id="lyrics-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/lyrics') if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Lyrics</a>
         <a id="leadsheets-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/leadsheets') if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Lead sheets</a>
-        <button class="primary" type="submit">Save</button>
+        <span id="save-status" class="save-status">{{ '' if setlist else 'Pick a date to save' }}</span>
       </div>
     </div>
 
@@ -190,6 +190,7 @@
           panel.hidden = true;
           picker.classList.remove('open');
           render();
+          input.dispatchEvent(new Event('change', { bubbles: true }));
         });
         grid.appendChild(btn);
       }
@@ -236,7 +237,7 @@
     }, 2200);
   }
 
-  /* ---------- Save (stays on the page; never navigates) ---------- */
+  /* ---------- Autosave (stays on the page; never navigates) ---------- */
   const gigForm = document.getElementById('gig-form');
   const deleteBtn = document.getElementById('delete-gig');
   const deleteForm = document.getElementById('delete-form');
@@ -258,33 +259,69 @@
     deleteForm.action = `/gigs/${id}/delete`;
   }
 
-  gigForm.addEventListener('submit', async e => {
-    e.preventDefault();
+  const saveStatus = document.getElementById('save-status');
+  const dateInput = document.getElementById('date-input');
 
-    const dateInput = document.getElementById('date-input');
-    if (!dateInput.value) {
-      document.getElementById('date-trigger').classList.add('date-picker__trigger--error');
-      document.getElementById('date-picker').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
+  function setStatus(text, isError) {
+    saveStatus.textContent = text;
+    saveStatus.classList.toggle('save-status--error', !!isError);
+  }
 
+  // Saves run one at a time: a change made while a save is in flight
+  // queues exactly one more save, so a new gig is only ever created once
+  // and later edits go to its id.
+  let saveTimer = null;
+  let saving = null;
+  let saveAgain = false;
+  let lastSaved = currentId ? new URLSearchParams(new FormData(gigForm)).toString() : null;
+
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if (saving) { saveAgain = true; return saving; }
+    if (!dateInput.value) { setStatus('Pick a date to save'); return Promise.resolve(); }
     const body = new URLSearchParams(new FormData(gigForm));
+    if (body.toString() === lastSaved) return Promise.resolve();
     const url = currentId ? `/gigs/${currentId}` : '/gigs';
+    setStatus('Saving…');
+    saving = (async () => {
+      try {
+        const resp = await fetch(url, { method: 'POST', body });
+        if (!resp.ok) { setStatus((await resp.text()) || 'Failed to save.', true); return; }
+        if (!currentId) activateEditMode((await resp.json()).id);
+        lastSaved = body.toString();
+        setStatus('Saved');
+      } catch (err) {
+        setStatus('Failed to save.', true);
+      }
+    })().finally(() => {
+      saving = null;
+      if (saveAgain) { saveAgain = false; save(); }
+    });
+    return saving;
+  }
 
-    try {
-      const resp = await fetch(url, { method: 'POST', body });
-      if (!resp.ok) {
-        showToast((await resp.text()) || 'Failed to save.', true);
-        return;
-      }
-      if (!currentId) {
-        const created = await resp.json();
-        activateEditMode(created.id);
-      }
-      showToast('Saved');
-    } catch (err) {
-      showToast('Failed to save.', true);
-    }
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(save, 600);
+  }
+
+  gigForm.addEventListener('input', scheduleSave);
+  gigForm.addEventListener('change', save);
+  gigForm.addEventListener('submit', e => { e.preventDefault(); save(); });
+
+  // Send a still-pending edit before the page goes away.
+  function flushOnLeave() {
+    if (!saveTimer || !currentId || !dateInput.value) return;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    const body = new URLSearchParams(new FormData(gigForm));
+    if (body.toString() === lastSaved) return;
+    fetch(`/gigs/${currentId}`, { method: 'POST', body, keepalive: true });
+  }
+  window.addEventListener('pagehide', flushOnLeave);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushOnLeave();
   });
 
   /* ---------- Lead sheets PDF (stays on the page) ---------- */

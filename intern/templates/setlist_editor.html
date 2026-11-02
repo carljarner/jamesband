@@ -76,7 +76,6 @@
     <button type="button" id="add-to-repertoire" class="btn-small">Add to repertoire</button>
     <div class="form-actions__save">
       <span id="save-status" class="save-status"></span>
-      <button class="primary btn-small" type="submit">Save setlist</button>
     </div>
   </div>
 </form>
@@ -266,6 +265,8 @@
   const dropTail = document.getElementById('setlist-drop-tail');
   const titleHeader = document.getElementById('title-header');
 
+  let lastSavedSnapshot = null; // set once the initial render is done
+
   let uidCounter = 0;
   function nextUid() { return 'row-' + (uidCounter++); }
 
@@ -377,6 +378,7 @@
     input.addEventListener('input', () => {
       song[field] = input.value;
       if (field === 'title') renderNewSongList();
+      scheduleSave();
     });
     td.appendChild(input);
     return td;
@@ -419,7 +421,10 @@
   function makeTransposedCell(song) {
     const td = document.createElement('td');
     const select = Keys.makeOffsetSelect(song[song.singer], song.key);
-    select.addEventListener('change', () => { song[song.singer] = Keys.parseOffset(select.value); });
+    select.addEventListener('change', () => {
+      song[song.singer] = Keys.parseOffset(select.value);
+      save();
+    });
     td.appendChild(select);
     return td;
   }
@@ -495,6 +500,7 @@
     });
     updateMastersongbookStatus();
     renderConnectLists();
+    if (lastSavedSnapshot !== null) save();
   }
 
   function renderAll() {
@@ -576,63 +582,96 @@
 
   document.getElementById('add-custom-song').addEventListener('click', addBlankCustomSong);
 
-  /* ---------- Save (stays on the page; never navigates) ---------- */
+  /* ---------- Autosave (stays on the page; never navigates) ---------- */
   const setlistForm = document.getElementById('setlist-form');
   const saveStatus = document.getElementById('save-status');
   const addToRepertoireBtn = document.getElementById('add-to-repertoire');
 
+  // Untitled songs (a just-added row nobody has named yet) aren't saved.
   function buildSnapshot() {
-    return JSON.stringify(songs.map(({ uid, ...rest }) => rest));
+    return JSON.stringify(songs
+      .filter(s => s.type === 'break' || s.title.trim())
+      .map(({ uid, ...rest }) => rest));
   }
 
-  let lastSavedSnapshot = buildSnapshot();
+  function setStatus(text, isError) {
+    saveStatus.textContent = text;
+    saveStatus.classList.toggle('save-status--error', !!isError);
+  }
 
-  setlistForm.addEventListener('submit', async e => {
-    e.preventDefault();
+  lastSavedSnapshot = buildSnapshot();
 
-    const body = new URLSearchParams({ songs: buildSnapshot() });
+  // Saves run one at a time; a change made while one is in flight queues
+  // exactly one more, so the server always ends up with the latest list.
+  let saveTimer = null;
+  let saving = null;
+  let saveAgain = false;
 
-    saveStatus.textContent = 'Saving…';
-    saveStatus.classList.remove('save-status--error');
-
-    try {
-      const resp = await fetch(`/setlist/${gigId}`, { method: 'POST', body });
-      if (!resp.ok) {
-        saveStatus.textContent = (await resp.text()) || 'Failed to save.';
-        saveStatus.classList.add('save-status--error');
-        return;
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if (saving) { saveAgain = true; return saving; }
+    const snapshot = buildSnapshot();
+    if (snapshot === lastSavedSnapshot) return Promise.resolve();
+    setStatus('Saving…');
+    saving = (async () => {
+      try {
+        const resp = await fetch(`/setlist/${gigId}`, { method: 'POST', body: new URLSearchParams({ songs: snapshot }) });
+        if (!resp.ok) { setStatus((await resp.text()) || 'Failed to save.', true); return; }
+        lastSavedSnapshot = snapshot;
+        setStatus('Saved');
+      } catch (err) {
+        setStatus('Failed to save.', true);
       }
-      saveStatus.textContent = 'Saved';
-      lastSavedSnapshot = buildSnapshot();
-    } catch (err) {
-      saveStatus.textContent = 'Failed to save.';
-      saveStatus.classList.add('save-status--error');
-    }
+    })().finally(() => {
+      saving = null;
+      if (saveAgain) { saveAgain = false; save(); }
+    });
+    return saving;
+  }
+
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(save, 600);
+  }
+
+  // Wait until every queued change has reached the server.
+  async function saveNow() {
+    await save();
+    while (saving) await saving;
+  }
+
+  setlistForm.addEventListener('submit', e => { e.preventDefault(); save(); });
+
+  function flushOnLeave() {
+    if (!saveTimer) return;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    const snapshot = buildSnapshot();
+    if (snapshot === lastSavedSnapshot) return;
+    fetch(`/setlist/${gigId}`, { method: 'POST', body: new URLSearchParams({ songs: snapshot }), keepalive: true });
+  }
+  window.addEventListener('pagehide', flushOnLeave);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushOnLeave();
   });
 
   addToRepertoireBtn.addEventListener('click', async () => {
-    if (buildSnapshot() !== lastSavedSnapshot) {
-      const proceed = confirm(
-        "You have unsaved changes that won't be included. Add to repertoire using the last-saved version instead?"
-      );
-      if (!proceed) return;
-    }
+    await saveNow();
+    if (buildSnapshot() !== lastSavedSnapshot) return; // save failed; status shows why
 
-    saveStatus.textContent = 'Adding to repertoire…';
-    saveStatus.classList.remove('save-status--error');
+    setStatus('Adding to repertoire…');
 
     try {
       const resp = await fetch(`/setlist/${gigId}/add-to-repertoire`, { method: 'POST' });
       if (!resp.ok) {
-        saveStatus.textContent = (await resp.text()) || 'Failed to add to repertoire.';
-        saveStatus.classList.add('save-status--error');
+        setStatus((await resp.text()) || 'Failed to add to repertoire.', true);
         return;
       }
-      saveStatus.textContent = 'Added to repertoire';
+      setStatus('Added to repertoire');
       location.reload();
     } catch (err) {
-      saveStatus.textContent = 'Failed to add to repertoire.';
-      saveStatus.classList.add('save-status--error');
+      setStatus('Failed to add to repertoire.', true);
     }
   });
 </script>

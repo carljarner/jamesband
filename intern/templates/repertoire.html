@@ -9,8 +9,7 @@
 <div class="repertoire-toolbar">
   <span id="song-count" class="muted">{{ songs|length }} song{{ "" if songs|length == 1 else "s" }}</span>
   <div class="toolbar-right">
-    <span id="save-status" class="save-status">Saved</span>
-    <button type="button" id="save-all" class="primary btn-small">Save</button>
+    <span id="save-status" class="save-status"></span>
   </div>
 </div>
 <div class="repertoire-wrap">
@@ -73,7 +72,7 @@
     <p>Cover image URL</p>
     <input type="url" id="cover-modal-input" placeholder="https://..." />
     <div class="modal-actions">
-      <button type="button" id="cover-modal-save" class="primary">Save</button>
+      <button type="button" id="cover-modal-save" class="primary">Done</button>
     </div>
   </div>
 </div>
@@ -91,10 +90,9 @@
     songCount.textContent = `${n} song${n === 1 ? '' : 's'}`;
   }
 
-  function updateStatus() {
-    const unsaved = !!body.querySelector('tr.row-dirty');
-    saveStatus.textContent = unsaved ? 'Unsaved' : 'Saved';
-    saveStatus.classList.toggle('unsaved', unsaved);
+  function setStatus(text, isError) {
+    saveStatus.textContent = text;
+    saveStatus.classList.toggle('save-status--error', !!isError);
   }
 
   const ROW_FIELDS = ['cover', 'title', 'artist', 'year', 'key', 'signe', 'jonas', 'duet', 'indstilling'];
@@ -159,8 +157,10 @@
     if (e.target.dataset.field) {
       if (e.target.dataset.field === 'cover') updateCoverPreview(e.target);
       if (e.target.dataset.field === 'key') refreshOffsetLabels(e.target.closest('tr'));
-      refreshDirty(e.target.closest('tr'));
-      updateStatus();
+      const row = e.target.closest('tr');
+      refreshDirty(row);
+      if (e.target.tagName === 'SELECT') saveRow(row);
+      else scheduleRowSave(row);
     }
   });
 
@@ -280,7 +280,6 @@
       tr.dataset.id = song.id;
       setBaseline(tr);
       refreshDirty(tr);
-      updateStatus();
       applySort();
       updateCount();
     }
@@ -319,6 +318,9 @@
     closeModal();
     const resp = await fetch(`/repertoire/${row.dataset.id}/delete`, { method: 'POST' });
     if (resp.ok) {
+      clearTimeout(rowTimers.get(row));
+      rowTimers.delete(row);
+      rowFailed.delete(row);
       row.remove();
       updateCount();
     } else {
@@ -341,7 +343,7 @@
     hidden.value = coverModalInput.value.trim();
     updateCoverPreview(hidden);
     refreshDirty(coverModalRow);
-    updateStatus();
+    saveRow(coverModalRow);
     closeCoverModal();
   }
 
@@ -364,32 +366,76 @@
     if (e.key === 'Enter') { e.preventDefault(); saveCoverModal(); }
   });
 
-  document.getElementById('save-all').addEventListener('click', async () => {
-    const rows = [...body.querySelectorAll('tr.row-dirty')];
-    if (!rows.length) return;
+  /* ---------- Autosave ---------- */
+  // Each row saves on its own: typing waits a moment, dropdowns and the
+  // cover save straight away. A row saves one request at a time, and a
+  // change made while its save is in flight queues one more.
+  const rowTimers = new Map();
+  const rowSaving = new Map();
+  const rowAgain = new Set();
+  const rowFailed = new Set();
 
-    const results = await Promise.all(rows.map(row => {
-      const fields = {};
-      row.querySelectorAll('[data-field]').forEach(input => {
-        fields[input.dataset.field] = input.value;
-      });
-      return fetch(`/repertoire/${row.dataset.id}`, {
+  function rowBody(row) {
+    return JSON.stringify(currentFields(row));
+  }
+
+  function busy() {
+    return rowTimers.size > 0 || rowSaving.size > 0;
+  }
+
+  function scheduleRowSave(row) {
+    clearTimeout(rowTimers.get(row));
+    rowTimers.set(row, setTimeout(() => saveRow(row), 600));
+  }
+
+  function saveRow(row) {
+    clearTimeout(rowTimers.get(row));
+    rowTimers.delete(row);
+    if (!row.dataset.id) return;            // not created yet; commit() handles it
+    if (rowSaving.has(row)) { rowAgain.add(row); return; }
+    if (!row.classList.contains('row-dirty')) return;
+    const sent = rowBody(row);
+    setStatus('Saving…');
+    const p = fetch(`/repertoire/${row.dataset.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: sent,
+    }).then(async resp => {
+      if (!resp.ok) throw new Error((await resp.text()) || 'Failed to save.');
+      row.dataset.baseline = sent;
+      refreshDirty(row);
+      rowFailed.delete(row);
+    }).catch(err => {
+      rowFailed.add(row);
+      setStatus(err.message || 'Failed to save.', true);
+    }).finally(() => {
+      rowSaving.delete(row);
+      if (rowAgain.delete(row)) saveRow(row);
+      if (!busy() && !rowFailed.size) setStatus('Saved');
+    });
+    rowSaving.set(row, p);
+  }
+
+  // Send any still-pending edits before the page goes away.
+  function flushOnLeave() {
+    rowTimers.forEach((timer, row) => {
+      clearTimeout(timer);
+      if (!row.dataset.id || !row.classList.contains('row-dirty')) return;
+      fetch(`/repertoire/${row.dataset.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fields),
-      }).then(resp => ({ row, ok: resp.ok }));
-    }));
-
-    results.forEach(({ row, ok }) => { if (ok) { setBaseline(row); refreshDirty(row); } });
-    updateStatus();
-    if (results.some(r => !r.ok)) alert('Some rows failed to save.');
-  });
-
+        body: rowBody(row),
+        keepalive: true,
+      });
+    });
+    rowTimers.clear();
+  }
+  window.addEventListener('pagehide', flushOnLeave);
   window.addEventListener('beforeunload', e => {
-    if (document.querySelector('tr.row-dirty')) {
-      e.preventDefault();
-      e.returnValue = '';
-    }
+    if (rowSaving.size) { e.preventDefault(); e.returnValue = ''; }
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushOnLeave();
   });
 </script>
 {% endblock %}
