@@ -330,7 +330,12 @@
     renderAll();
   }
 
+  const repertoireSearchInput = document.getElementById('repertoire-search');
   let repertoireSearchTerm = '';
+  // The song the search field's Tab / arrow keys have moved to, as its
+  // place among the songs that can still be chosen; Enter adds it.
+  // Typing a search moves it to the first match.
+  let activeIndex = -1;
 
   function renderRepertoireList() {
     const chosenIds = chosenRepertoireIds();
@@ -347,16 +352,53 @@
         li.textContent = song.title;
         li.classList.toggle('is-selected', isChosen);
         if (!isChosen) {
-          li.addEventListener('click', () => addRepertoireSong(song));
+          li.classList.add('pick-list__choice');
+          li.addEventListener('click', () => chooseRepertoireSong(song));
+          li.choose = () => chooseRepertoireSong(song);
         }
         repertoireListEl.appendChild(li);
       });
+    showActive();
   }
 
-  document.getElementById('repertoire-search').addEventListener('input', e => {
-    repertoireSearchTerm = e.target.value.trim().toLowerCase();
+  const choices = () => [...repertoireListEl.querySelectorAll('.pick-list__choice')];
+  function showActive() {
+    const items = choices();
+    if (activeIndex >= items.length) activeIndex = items.length - 1;
+    items.forEach((li, i) => li.classList.toggle('is-active', i === activeIndex));
+    if (items[activeIndex]) items[activeIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  repertoireSearchInput.addEventListener('input', () => {
+    repertoireSearchTerm = repertoireSearchInput.value.trim().toLowerCase();
+    activeIndex = repertoireSearchTerm ? 0 : -1;
     renderRepertoireList();
   });
+  repertoireSearchInput.addEventListener('keydown', e => {
+    const items = choices();
+    const back = e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey);
+    const forward = e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey);
+    if ((back || forward) && items.length) {
+      e.preventDefault();
+      if (activeIndex < 0) activeIndex = forward ? 0 : items.length - 1;
+      else activeIndex = (activeIndex + (forward ? 1 : -1) + items.length) % items.length;
+      showActive();
+    } else if (e.key === 'Enter') {
+      // Never let Enter submit the setlist form from the search field.
+      e.preventDefault();
+      if (items[activeIndex]) items[activeIndex].choose();
+    }
+  });
+
+  // Choosing a song clears the search and leaves the cursor in it, ready
+  // for the next one.
+  function chooseRepertoireSong(song) {
+    repertoireSearchInput.value = '';
+    repertoireSearchTerm = '';
+    activeIndex = -1;
+    addRepertoireSong(song);
+    repertoireSearchInput.focus();
+  }
 
   function renderNewSongList() {
     newSongListEl.innerHTML = '';

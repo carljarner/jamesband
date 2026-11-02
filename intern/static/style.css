@@ -1110,6 +1110,7 @@ input.top-box__search {
   background: rgba(79,215,209,0.12);
 }
 #repertoire-list li.is-selected::before { content: '✓ '; color: var(--accent-2); }
+#repertoire-list li.is-active { border-color: var(--accent); background: rgba(255,90,78,0.1); }
 #new-song-list li { color: var(--text-dim); }
 
 @media (max-width: 900px) {
