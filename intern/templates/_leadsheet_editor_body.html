@@ -12,15 +12,6 @@
 
 <div class="editor-layout">
   <div id="left-column" class="editor-palette editor-palette--left no-print">
-    <div class="edit-box link-box">
-      <div class="eb-head"><span class="eb-head-title">Song</span></div>
-      <label class="eb-field eb-field--wide">
-        <select id="sheet-repertoire" aria-label="Song" title="The song this sheet is for -- the gig lead-sheet PDF uses it"></select>
-      </label>
-      <div id="sheet-link-status" class="eb-hint link-status"></div>
-      <div id="sheet-repertoire-hint" class="eb-hint" hidden></div>
-      <button type="button" id="delete-btn" class="danger btn-small link-box__remove" title="Remove this sheet from jamesband (it stays on leadsheets.dk)">Remove</button>
-    </div>
     <div class="edit-box transpose-box">
       <div class="eb-head eb-head--toggle">
         <span class="eb-head-title">Transpose</span>
@@ -78,6 +69,13 @@
   </div>
 
   <div id="glyph-palette" class="editor-palette editor-palette--side no-print">
+    <div class="edit-box link-box">
+      <div class="eb-head"><span class="eb-head-title">Song</span></div>
+      <button type="button" id="sheet-repertoire" class="song-pick__button" aria-haspopup="listbox" aria-expanded="false" aria-controls="sheet-song-list" title="The song this sheet is for -- the gig lead-sheet PDF uses it"></button>
+      <div id="sheet-song-list" class="song-pick__list" role="listbox" aria-label="Song" hidden></div>
+      <div id="sheet-link-status" class="eb-hint link-status is-unlinked" hidden>Not connected to a song, so gig PDFs won’t find it.</div>
+      <div id="sheet-repertoire-hint" class="eb-hint" hidden></div>
+    </div>
     <div class="edit-box practice-box practice-only">
       <div class="eb-head"><span class="eb-head-title">Links</span></div>
       <div id="practice-links" class="practice-links"></div>
@@ -139,17 +137,6 @@
 
 <div id="viewer-share" class="viewer-share only-viewer no-print" hidden>
   <button type="button" id="viewer-share-btn" class="primary">Share</button>
-</div>
-
-<div id="confirm-modal" class="modal-overlay no-print" hidden>
-  <div class="modal-box modal-box--centered modal-box--confirm">
-    <p id="confirm-text">Remove this lead sheet?</p>
-    <p id="confirm-detail" class="muted confirm-detail" hidden></p>
-    <div class="modal-actions">
-      <button type="button" id="confirm-cancel" class="btn-small">Cancel</button>
-      <button type="button" id="confirm-ok" class="danger btn-small">Remove</button>
-    </div>
-  </div>
 </div>
 
 <div id="staff-editor" class="modal-overlay staff-editor no-print" hidden>

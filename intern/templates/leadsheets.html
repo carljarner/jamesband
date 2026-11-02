@@ -31,7 +31,6 @@
   {% endif %}
     <div class="setlist-card__header"><span>{{ title }}</span></div>
     {% if artist %}<div class="leadsheet-card__artist">{{ artist }}</div>{% endif %}
-    {% if sheet and sheet.title.strip()|lower != title.strip()|lower %}<div class="leadsheet-card__note">Sheet: {{ sheet.title }}</div>{% endif %}
     {% if detail %}<div class="leadsheet-card__note">{{ detail }}</div>{% endif %}
     {% if not sheet %}<div class="leadsheet-card__note">No sheet yet</div>{% endif %}
   {% if sheet %}</a>{% else %}</button>{% endif %}

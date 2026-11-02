@@ -1728,11 +1728,61 @@ button.leadsheet-card__link {
 .editor-title-input { width: 260px; min-width: 0; flex: 0 1 auto; }
 .editor-artist-input { width: 200px; min-width: 0; flex: 0 1 auto; }
 .tr-sheet-key { margin: 0.3rem 0 0.2rem; }
-.link-box .eb-field { display: flex; width: 100%; }
-.link-box .eb-field select { flex: 1; width: 100%; min-width: 0; max-width: none; }
+/* The Song box's picker: a button showing the connected song, opening a
+   list inside the box (the column scrolls, so a popover would be clipped).
+   Songs another sheet has are greyed out and struck through. */
+.song-pick__button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  text-align: left;
+}
+.song-pick__button, .song-pick__item { text-transform: none; letter-spacing: normal; color: var(--text); }
+.song-pick__button { border: 1px solid rgba(255,255,255,0.2); background: var(--bg); }
+.song-pick__button:hover, .song-pick__button[aria-expanded="true"] { border-color: var(--accent-2); background: var(--bg); color: var(--text); }
+.song-pick__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.song-pick__label.is-empty { color: var(--text-dim); }
+.song-pick__caret { flex: 0 0 auto; color: var(--text-dim); pointer-events: none; }
+.song-pick__list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.3rem;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.2rem;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  background: var(--bg);
+}
+.song-pick__list[hidden] { display: none; }
+.song-pick__heading {
+  padding: 0.35rem 0.4rem 0.15rem;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.song-pick__item {
+  display: block;
+  width: 100%;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+.song-pick__item:hover:not(:disabled) { border-color: var(--accent-2); background: rgba(79,215,209,0.12); color: var(--text); }
+.song-pick__item.is-on { border-color: var(--accent); background: rgba(255,90,78,0.16); }
+.song-pick__item.is-on::after { content: ' ✓'; }
+.song-pick__item.is-taken { color: var(--text-dim); text-decoration: line-through; opacity: 0.55; cursor: default; }
 .link-status { margin-top: 0.35rem; }
 .link-status.is-unlinked { color: #ff9b92; }
-.link-box__remove { display: block; margin: 0.6rem 0 0 auto; }
+.link-status[hidden] { display: none; }
 .bundle-render .link-box { display: none; }
 
 
@@ -2302,7 +2352,7 @@ button.leadsheet-card__link {
   .editor-palette--left { position: static; max-height: none; overflow: visible; width: 100%; max-width: 420px; }
   .palette-tiles { justify-content: center; }
   .bars-builder, .rhythm-builder, .staff-builder,
-  .practice-box, .links-box { width: 100%; max-width: 300px; }
+  .practice-box, .links-box, .link-box { width: 100%; max-width: 300px; }
   .page-column { flex: 0 0 auto; width: 100%; max-width: 100%; order: -1; }
 }
 
@@ -2612,7 +2662,7 @@ body.lead-practice #sheet-svg { pointer-events: none; }
 body.lead-narrow #glyph-palette { display: none; }
 body.lead-narrow .editor-layout { flex-direction: row; flex-wrap: nowrap; align-items: flex-start; }
 body.lead-narrow .editor-palette--left { position: sticky; max-height: calc(100vh - 2rem); overflow-y: auto; width: 250px; max-width: none; }
-body.lead-narrow .practice-box { width: 100%; max-width: none; }
+body.lead-narrow .practice-box, body.lead-narrow .link-box { width: 100%; max-width: none; }
 body.lead-narrow .page-column { flex: 1 1 auto; width: auto; order: 0; }
 
 body.lead-viewer .editor-layout { padding-bottom: 1rem; gap: 0.75rem; margin-top: 0; }
@@ -2621,7 +2671,7 @@ body.lead-viewer .page-column { order: 0; }
 body.lead-viewer .transpose-box { width: 100%; }
 /* The links box sits under the sheet, above the Share button. */
 body.lead-viewer #glyph-palette { order: 1; width: 100%; max-width: none; }
-body.lead-viewer .practice-box { width: 100%; max-width: none; }
+body.lead-viewer .practice-box, body.lead-viewer .link-box { width: 100%; max-width: none; }
 body.lead-viewer .practice-link { padding: 0.65rem 0.8rem; font-size: 0.95rem; }
 body.lead-viewer .tr-key { font-size: 0.95rem; }
 body.lead-viewer .tr-keys { grid-template-columns: repeat(6, 1fr); gap: 0.35rem; }
