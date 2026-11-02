@@ -348,13 +348,30 @@ async def gigs_lyrics(gig_id: str):
 @app.get("/leadsheets", response_class=HTMLResponse)
 async def leadsheets_page(request: Request):
     leadsheets.auto_link()
+    sheets = leadsheets.list_leadsheets()
+    by_song = leadsheets.links()
+    by_new = leadsheets.new_song_links()
+    songs = repertoire.list_songs()
+    new_songs = [
+        dict(song, sheet=by_new.get(song["title"].strip().casefold()))
+        for song in leadsheets.upcoming_new_songs()
+    ]
+    shown = {s["id"] for s in by_song.values()} | {s["sheet"]["id"] for s in new_songs if s["sheet"]}
     return templates.TemplateResponse(
-        request, "leadsheets.html", {"sheets": leadsheets.list_leadsheets()}
+        request,
+        "leadsheets.html",
+        {
+            "sheets": sheets,
+            "new_songs": new_songs,
+            "with_sheet": [dict(song, sheet=by_song[song["id"]]) for song in songs if song["id"] in by_song],
+            "missing": [song for song in songs if song["id"] not in by_song],
+            "unlinked": [sheet for sheet in sheets if sheet["id"] not in shown],
+        },
     )
 
 
-# New sheets are made on leadsheets.dk; here the band imports copies of them
-# and edits those as its own versions (nothing is written back).
+# Sheets are made on leadsheets.dk; here the band imports read-only copies
+# of them and refreshes those when they change there.
 @app.get("/leadsheets/available")
 async def leadsheets_available():
     """The leadsheets.dk sheets not imported yet, for the "+" picker."""
@@ -391,8 +408,30 @@ async def leadsheets_import(request: Request):
     return {"imported": imported, "errors": errors}
 
 
+@app.post("/leadsheets/refresh")
+async def leadsheets_refresh():
+    """Bring every copy whose leadsheets.dk version changed up to date."""
+    try:
+        remote = await run_in_threadpool(leadsheets_remote.list_sheets)
+    except leadsheets_remote.RemoteError as exc:
+        return Response(content=str(exc), status_code=502)
+    stale, gone = leadsheets.stale_sheets(remote)
+    updated, errors = [], []
+    for sheet in stale:
+        try:
+            doc = await run_in_threadpool(leadsheets_remote.get_sheet, leadsheets.source_of(sheet))
+            leadsheets.reset_from_source(sheet["id"], doc)
+            updated.append(sheet["title"])
+        except leadsheets_remote.NotFound:
+            gone.append(sheet)
+        except (leadsheets_remote.RemoteError, ValueError) as exc:
+            errors.append({"title": sheet["title"], "error": str(exc)})
+    leadsheets.auto_link()
+    return {"updated": updated, "gone": [s["title"] for s in gone], "errors": errors}
+
+
 @app.get("/leadsheets/{leadsheet_id}", response_class=HTMLResponse)
-async def leadsheet_editor_page(request: Request, leadsheet_id: str):
+async def leadsheet_page(request: Request, leadsheet_id: str):
     leadsheets.auto_link()
     try:
         sheet = leadsheets.get_leadsheet(leadsheet_id)
@@ -404,52 +443,50 @@ async def leadsheet_editor_page(request: Request, leadsheet_id: str):
         {
             "sheet": sheet,
             "sheet_json": json.dumps(sheet),
-            "repertoire_songs_json": json.dumps(_repertoire_choices()),
+            "song_choices_json": json.dumps(_song_choices()),
         },
     )
 
 
-def _repertoire_choices() -> list[dict]:
-    """Repertoire songs for a sheet's "Repertoire song" dropdown, each with
-    the sheet it's already connected to (if any)."""
+def _song_choices() -> dict:
+    """The songs a sheet's "Song" dropdown offers -- upcoming new songs and
+    the repertoire -- each with the sheet it's already connected to (if any)."""
     linked = leadsheets.links()
-    return [
-        {
-            "id": song["id"],
-            "title": song["title"],
-            "artist": song.get("artist", ""),
-            "key": song.get("key", ""),
-            "sheet_id": linked[song["id"]]["id"] if song["id"] in linked else None,
-            "sheet_title": linked[song["id"]]["title"] if song["id"] in linked else None,
-        }
-        for song in repertoire.list_songs()
-    ]
+    linked_new = leadsheets.new_song_links()
+
+    def sheet_of(sheet):
+        return {"sheet_id": sheet["id"], "sheet_title": sheet["title"]} if sheet else {"sheet_id": None, "sheet_title": None}
+
+    return {
+        "new_songs": [
+            {"title": song["title"], "artist": song["artist"], **sheet_of(linked_new.get(song["title"].strip().casefold()))}
+            for song in leadsheets.upcoming_new_songs()
+        ],
+        "repertoire": [
+            {
+                "id": song["id"],
+                "title": song["title"],
+                "artist": song.get("artist", ""),
+                "key": song.get("key", ""),
+                **sheet_of(linked.get(song["id"])),
+            }
+            for song in repertoire.list_songs()
+        ],
+    }
 
 
-@app.post("/leadsheets/{leadsheet_id}")
-async def leadsheet_save(leadsheet_id: str, request: Request):
+@app.post("/leadsheets/{leadsheet_id}/link")
+async def leadsheet_link(leadsheet_id: str, request: Request):
+    """Connect a sheet by hand: {repertoire_id}, {new_song} or {} for none."""
     try:
         body = await request.json()
-        leadsheets.update_leadsheet(leadsheet_id, body)
+        if not isinstance(body, dict):
+            raise ValueError("Malformed request.")
+        leadsheets.set_link(leadsheet_id, body.get("repertoire_id"), body.get("new_song"))
     except KeyError:
         raise HTTPException(status_code=404)
     except (ValueError, TypeError) as exc:
         return Response(content=str(exc), status_code=400)
-    return Response(status_code=204)
-
-
-@app.post("/leadsheets/{leadsheet_id}/reset")
-async def leadsheet_reset(leadsheet_id: str):
-    """Replace the band's copy with the current leadsheets.dk version."""
-    try:
-        sheet = leadsheets.get_leadsheet(leadsheet_id)
-    except KeyError:
-        raise HTTPException(status_code=404)
-    try:
-        doc = await run_in_threadpool(leadsheets_remote.get_sheet, leadsheets.source_of(sheet))
-        leadsheets.reset_from_source(leadsheet_id, doc)
-    except (leadsheets_remote.RemoteError, ValueError) as exc:
-        return Response(content=str(exc), status_code=502)
     return Response(status_code=204)
 
 

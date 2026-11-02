@@ -57,8 +57,9 @@ All other intern data is behind the login.
     logs everyone out.
   - `DATA_DIR`: `/data`.
   - `LEADSHEETS_API_TOKEN`: one of leadsheets.dk's `API_TOKEN` values. The
-    **+** button on the Lead Sheets page uses it to import sheets from
-    leadsheets.dk. `LEADSHEETS_API_URL` defaults to `https://leadsheets.dk`.
+    **+** (import) and circle-arrow (refresh) buttons on the Lead Sheets page
+    use it to copy sheets from leadsheets.dk. Sheets are only edited on
+    leadsheets.dk; the copies here are read-only. `LEADSHEETS_API_URL` defaults to `https://leadsheets.dk`.
     Set it only to point at a local copy while developing.
 
 ### Data on the server
@@ -90,8 +91,8 @@ INTERN_PASSWORD=dev SESSION_SECRET=dev uvicorn app:app --reload --port 10000
 ```
 
 `INTERN_PASSWORD` and `SESSION_SECRET` are required. `DATA_DIR` defaults to
-`intern/data`, which is gitignored. Lead sheet import also needs
-`LEADSHEETS_API_TOKEN`.
+`intern/data`, which is gitignored. Lead sheet import and refresh
+also need `LEADSHEETS_API_TOKEN`.
 
 The public page fetches its data from the live intern app, so you can open
 `public/index.html` directly.

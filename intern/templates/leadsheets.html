@@ -2,38 +2,97 @@
 {% block title %}Lead Sheets{% endblock %}
 {% block container_class %}container--full{% endblock %}
 {% block content %}
+{% set count = sheets|length %}
 <div class="setlists-toolbar leadsheets-toolbar">
   <h1>Lead Sheets</h1>
-  <span class="muted leadsheets-count">{{ sheets|length }} song{{ "" if sheets|length == 1 else "s" }}</span>
-  {% if sheets %}
+  <span class="muted leadsheets-count">{{ count }} sheet{{ "" if count == 1 else "s" }}</span>
   <input type="search" id="sheet-search" class="leadsheets-search" placeholder="Search title or artist" aria-label="Search lead sheets" autocomplete="off" />
-  {% endif %}
   <div class="leadsheets-toolbar-actions">
+    <button type="button" id="refresh-btn" class="add-row-btn add-row-btn--inline refresh-btn" title="Get the latest versions from leadsheets.dk" aria-label="Get the latest versions from leadsheets.dk">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v4.5h-4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
     <button type="button" id="import-btn" class="add-row-btn add-row-btn--inline" title="Import from leadsheets.dk" aria-label="Import from leadsheets.dk">+</button>
   </div>
 </div>
 
 <div class="repertoire-toolbar leadsheets-count-row">
-  <span class="muted">{{ sheets|length }} song{{ "" if sheets|length == 1 else "s" }}</span>
+  <span class="muted">{{ count }} sheet{{ "" if count == 1 else "s" }}</span>
 </div>
+<p id="refresh-status" class="muted refresh-status" role="status"></p>
 
-{% if sheets %}
-<ul class="setlist-cards">
-  {% for sheet in sheets %}
-  <li class="setlist-card leadsheet-card" data-search="{{ (sheet.title ~ ' ' ~ (sheet.artist or '')) | lower }}">
-    <a href="/leadsheets/{{ sheet.id }}" class="leadsheet-card__link">
-      <div class="setlist-card__header">
-        <span>{{ sheet.title }}</span>
-      </div>
-      {% if sheet.artist %}<div class="leadsheet-card__artist">{{ sheet.artist }}</div>{% endif %}
-    </a>
-  </li>
-  {% endfor %}
-</ul>
-<p id="sheet-search-empty" class="muted" hidden>No lead sheets match your search.</p>
-{% else %}
-<p class="muted">No lead sheets yet &mdash; import some from leadsheets.dk with +.</p>
+{# A card for a song: links to its sheet when it has one; otherwise it opens
+   the import picker searching for the song's title. #}
+{% macro song_card(title, artist, sheet, detail='') %}
+<li class="setlist-card leadsheet-card{{ '' if sheet else ' leadsheet-card--empty' }}" data-search="{{ (title ~ ' ' ~ (artist or '') ~ ' ' ~ (sheet.title if sheet else '')) | lower }}">
+  {% if sheet %}
+  <a href="/leadsheets/{{ sheet.id }}" class="leadsheet-card__link">
+  {% else %}
+  <button type="button" class="leadsheet-card__link leadsheet-card__find" data-title="{{ title }}" title="Find a sheet for it on leadsheets.dk">
+  {% endif %}
+    <div class="setlist-card__header"><span>{{ title }}</span></div>
+    {% if artist %}<div class="leadsheet-card__artist">{{ artist }}</div>{% endif %}
+    {% if sheet and sheet.title.strip()|lower != title.strip()|lower %}<div class="leadsheet-card__note">Sheet: {{ sheet.title }}</div>{% endif %}
+    {% if detail %}<div class="leadsheet-card__note">{{ detail }}</div>{% endif %}
+    {% if not sheet %}<div class="leadsheet-card__note">No sheet yet</div>{% endif %}
+  {% if sheet %}</a>{% else %}</button>{% endif %}
+</li>
+{% endmacro %}
+
+<section class="setlist-section leadsheet-section">
+  <h2>New songs <span class="muted leadsheet-section__count">{{ new_songs|length }}</span></h2>
+  <p class="muted leadsheet-section__hint">On upcoming setlists, not in the repertoire yet.</p>
+  {% if new_songs %}
+  <ul class="setlist-cards">
+    {% for song in new_songs %}
+    {{ song_card(song.title, song.artist, song.sheet, (song.gigs[0].date|dadate) ~ ((' · ' ~ song.gigs[0].venue) if song.gigs[0].venue else '')) }}
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted leadsheet-section__empty">No new songs on the upcoming setlists.</p>
+  {% endif %}
+</section>
+
+<section class="setlist-section leadsheet-section">
+  <h2>Repertoire <span class="muted leadsheet-section__count">{{ with_sheet|length }}</span></h2>
+  {% if with_sheet %}
+  <ul class="setlist-cards">
+    {% for song in with_sheet %}{{ song_card(song.title, song.artist, song.sheet) }}{% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted leadsheet-section__empty">No repertoire song has a sheet yet.</p>
+  {% endif %}
+</section>
+
+<section class="setlist-section leadsheet-section">
+  <h2>Missing <span class="muted leadsheet-section__count">{{ missing|length }}</span></h2>
+  <p class="muted leadsheet-section__hint">Repertoire songs without a sheet.</p>
+  {% if missing %}
+  <ul class="setlist-cards">
+    {% for song in missing %}{{ song_card(song.title, song.artist, None) }}{% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted leadsheet-section__empty">Every repertoire song has a sheet.</p>
+  {% endif %}
+</section>
+
+{% if unlinked %}
+<section class="setlist-section leadsheet-section">
+  <h2>Not connected <span class="muted leadsheet-section__count">{{ unlinked|length }}</span></h2>
+  <p class="muted leadsheet-section__hint">Imported sheets not connected to a song. Open one to pick its song.</p>
+  <ul class="setlist-cards">
+    {% for sheet in unlinked %}
+    <li class="setlist-card leadsheet-card" data-search="{{ (sheet.title ~ ' ' ~ (sheet.artist or '')) | lower }}">
+      <a href="/leadsheets/{{ sheet.id }}" class="leadsheet-card__link">
+        <div class="setlist-card__header"><span>{{ sheet.title }}</span></div>
+        {% if sheet.artist %}<div class="leadsheet-card__artist">{{ sheet.artist }}</div>{% endif %}
+        {% if sheet.new_song %}<div class="leadsheet-card__note">“{{ sheet.new_song }}” is no longer on an upcoming setlist</div>{% endif %}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
 {% endif %}
+<p id="sheet-search-empty" class="muted" hidden>Nothing matches your search.</p>
 
 <div id="import-modal" class="modal-overlay" hidden>
   <div class="modal-box modal-box--import" role="dialog" aria-modal="true" aria-labelledby="import-heading">
@@ -52,7 +111,7 @@
 
 {% block scripts %}
 <script>
-  // "+" imports copies of leadsheets.dk sheets; new sheets are made there.
+  // "+" imports read-only copies of leadsheets.dk sheets, where sheets are made and edited.
   const importModal = document.getElementById('import-modal');
   const importList = document.getElementById('import-list');
   const importStatus = document.getElementById('import-status');
@@ -68,7 +127,7 @@
     importOk.textContent = n ? `Import (${n})` : 'Import';
   }
 
-  async function openImport() {
+  async function openImport(prefill = '') {
     importList.textContent = '';
     importSearch.value = '';
     importSearch.hidden = true;
@@ -118,15 +177,22 @@
       li.appendChild(card);
       importList.appendChild(li);
     }
+    importSearch.value = prefill;
+    filterImport();
     importSearch.focus();
   }
 
-  importSearch.addEventListener('input', () => {
+  function filterImport() {
     const terms = importSearch.value.toLowerCase().split(/\s+/).filter(Boolean);
     for (const li of importList.children) li.hidden = !terms.every(t => li.dataset.search.includes(t));
-  });
+  }
+  importSearch.addEventListener('input', filterImport);
 
-  document.getElementById('import-btn').addEventListener('click', openImport);
+  document.getElementById('import-btn').addEventListener('click', () => openImport());
+  // A song without a sheet opens the picker already searching for it.
+  document.querySelectorAll('.leadsheet-card__find').forEach(btn => {
+    btn.addEventListener('click', () => openImport(btn.dataset.title));
+  });
   document.getElementById('import-cancel').addEventListener('click', () => { importModal.hidden = true; });
   importModal.addEventListener('click', e => { if (e.target === importModal) importModal.hidden = true; });
 
@@ -149,20 +215,53 @@
   });
 
   const sheetSearch = document.getElementById('sheet-search');
-  if (sheetSearch) {
-    const cards = [...document.querySelectorAll('.leadsheet-card')];
-    const empty = document.getElementById('sheet-search-empty');
-    sheetSearch.addEventListener('input', () => {
-      const terms = sheetSearch.value.toLowerCase().split(/\s+/).filter(Boolean);
+  const sections = [...document.querySelectorAll('.leadsheet-section')];
+  const searchEmpty = document.getElementById('sheet-search-empty');
+  sheetSearch.addEventListener('input', () => {
+    const terms = sheetSearch.value.toLowerCase().split(/\s+/).filter(Boolean);
+    let shownTotal = 0;
+    for (const section of sections) {
+      const cards = [...section.querySelectorAll('.leadsheet-card')];
       let shown = 0;
       for (const card of cards) {
         const match = terms.every(t => card.dataset.search.includes(t));
         card.hidden = !match;
         if (match) shown++;
       }
-      empty.hidden = shown > 0;
-    });
-  }
+      shownTotal += shown;
+      // While searching, a section with nothing matching is hidden.
+      section.hidden = terms.length > 0 && shown === 0;
+    }
+    searchEmpty.hidden = !terms.length || shownTotal > 0;
+  });
+
+  // The circle-arrow brings every imported sheet up to date with
+  // leadsheets.dk; the result is shown after the page reloads.
+  const refreshBtn = document.getElementById('refresh-btn');
+  const refreshStatus = document.getElementById('refresh-status');
+  const REFRESH_KEY = 'leadsheets-refresh-result';
+  const lastResult = sessionStorage.getItem(REFRESH_KEY);
+  if (lastResult) { refreshStatus.textContent = lastResult; sessionStorage.removeItem(REFRESH_KEY); }
+  refreshBtn.addEventListener('click', async () => {
+    if (refreshBtn.classList.contains('is-busy')) return;
+    refreshBtn.classList.add('is-busy');
+    refreshStatus.textContent = 'Checking leadsheets.dk…';
+    try {
+      const resp = await fetch('/leadsheets/refresh', { method: 'POST' });
+      if (!resp.ok) throw new Error(await resp.text());
+      const result = await resp.json();
+      const n = result.updated.length;
+      const parts = [n ? `${n} sheet${n === 1 ? '' : 's'} updated` : 'Everything is up to date'];
+      if (result.gone.length) parts.push(`no longer on leadsheets.dk: ${result.gone.join(', ')}`);
+      if (result.errors.length) parts.push(`couldn’t update: ${result.errors.map(e => e.title).join(', ')}`);
+      const message = parts.join(' · ');
+      if (n) { sessionStorage.setItem(REFRESH_KEY, message); location.reload(); return; }
+      refreshStatus.textContent = message;
+    } catch (err) {
+      refreshStatus.textContent = err.message || 'Couldn’t reach leadsheets.dk.';
+    }
+    refreshBtn.classList.remove('is-busy');
+  });
 
 </script>
 {% endblock %}

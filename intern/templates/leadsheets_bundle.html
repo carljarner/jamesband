@@ -12,7 +12,7 @@
 
 {% if plan.missing %}
 <h2>No lead sheet</h2>
-<p class="muted">Not connected to a lead sheet, so left out of the PDF. Connect them from the sheet's editor under <a href="/leadsheets">Lead Sheets</a>.</p>
+<p class="muted">Not connected to a lead sheet, so left out of the PDF. Connect them from the sheet's page under <a href="/leadsheets">Lead Sheets</a>.</p>
 <ul class="bundle-list">
   {% for title in plan.missing %}<li>{{ title }}</li>{% endfor %}
 </ul>

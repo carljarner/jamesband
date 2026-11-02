@@ -1601,6 +1601,38 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   color: var(--text-dim);
 }
 
+button.leadsheet-card__link {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.leadsheet-card__note {
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+/* A song with no sheet yet. */
+.leadsheet-card--empty { background: transparent; border-style: dashed; }
+.leadsheet-card--empty .setlist-card__header { color: var(--text-dim); }
+
+.leadsheet-section { margin-top: 2rem; }
+.leadsheet-section[hidden] { display: none; }
+.leadsheet-section h2 { margin-bottom: 0.2rem; }
+.leadsheet-section__count { font-size: 0.85em; margin-left: 0.3rem; }
+.leadsheet-section__hint { margin: 0; font-size: 0.85rem; }
+.leadsheet-section .setlist-cards { margin-top: 0.75rem; }
+.leadsheet-section__empty { margin-top: 0.6rem; }
+
+/* The circle-arrow refresh: the "+" button's ring, without its bars. */
+.refresh-btn::before, .refresh-btn::after { display: none; }
+.refresh-btn.is-busy svg { animation: refresh-spin 0.9s linear infinite; }
+@keyframes refresh-spin { to { transform: rotate(360deg); } }
+.refresh-status { margin: 0.4rem 0 0; }
+.refresh-status:empty { display: none; }
+
 /* ---------- Lead sheet editor ---------- */
 @font-face {
   font-family: 'MuseJazzText';
@@ -1635,15 +1667,6 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   left: 0;
   transform: translateY(-50%);
 }
-.sheet-save {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
 
 /* Sized to match the compact (.btn-small) buttons beside them. */
 .sheet-fields input[type="text"] {
@@ -1656,6 +1679,10 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 .tr-sheet-key { margin: 0.3rem 0 0.2rem; }
 .link-box .eb-field { display: flex; width: 100%; }
 .link-box .eb-field select { flex: 1; width: 100%; min-width: 0; max-width: none; }
+.link-status { margin-top: 0.35rem; }
+.link-status.is-unlinked { color: #ff9b92; }
+.link-box__remove { display: block; margin: 0.6rem 0 0 auto; }
+.bundle-render .link-box { display: none; }
 
 
 .editor-layout {
@@ -1927,7 +1954,6 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 }
 
 /* Under the sheet, out of the way of the everyday toolbar buttons. */
-.sheet-actions { display: flex; justify-content: center; gap: 0.75rem; margin: 1.5rem auto 0; }
 
 .page-wrap.drag-over { box-shadow: 0 0 0 3px var(--accent), 0 10px 40px rgba(0,0,0,0.5); }
 
@@ -2225,7 +2251,7 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   .editor-palette--left { position: static; max-height: none; overflow: visible; width: 100%; max-width: 420px; }
   .palette-tiles { justify-content: center; }
   .bars-builder, .rhythm-builder, .staff-builder,
-  .mode-box, .practice-box, .links-box { width: 100%; max-width: 300px; }
+  .practice-box, .links-box { width: 100%; max-width: 300px; }
   .page-column { flex: 0 0 auto; width: 100%; max-width: 100%; order: -1; }
 }
 
@@ -2510,8 +2536,8 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
 }
 
 /* ---------- Lead sheet viewer (phones) ---------- */
-/* body.lead-practice is set by leadsheet-editor.js in Practice mode, and
-   always below 1200px: the sheet can be seen, transposed and printed, but not
+/* body.lead-practice is always set by leadsheet-editor.js (sheets are edited
+   on leadsheets.dk): the sheet can be seen, transposed and printed, but not
    edited. body.lead-viewer (below 700px only) adds the phone layout. */
 .only-viewer { display: none; }
 .practice-only { display: none; }
@@ -2530,9 +2556,9 @@ body.lead-practice #sheet-svg { pointer-events: none; }
 .viewer-share button { width: 100%; max-width: 420px; min-height: 44px; }
 
 /* body.lead-narrow (701-1199px): too narrow for the right column, so there's
-   no Edit mode -- just the left column beside the sheet, with the links box
-   moved to its top (see applyViewerMode). */
-body.lead-narrow .mode-box, body.lead-narrow #glyph-palette { display: none; }
+   just the left column beside the sheet, with the links box moved to its
+   top (see applyViewerMode). */
+body.lead-narrow #glyph-palette { display: none; }
 body.lead-narrow .editor-layout { flex-direction: row; flex-wrap: nowrap; align-items: flex-start; }
 body.lead-narrow .editor-palette--left { position: sticky; max-height: calc(100vh - 2rem); overflow-y: auto; width: 250px; max-width: none; }
 body.lead-narrow .practice-box { width: 100%; max-width: none; }

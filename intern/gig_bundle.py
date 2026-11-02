@@ -89,6 +89,7 @@ def build_leadsheet_plan(gig_id: str, mode: str = "setlist") -> dict:
     gig = setlists.get_setlist(gig_id)
     leadsheets.auto_link()
     by_song = leadsheets.links()
+    by_new = leadsheets.new_song_links()
     by_title = {sheet["title"].strip().casefold(): sheet for sheet in leadsheets.list_leadsheets()}
 
     pages: list[dict] = []
@@ -110,7 +111,8 @@ def build_leadsheet_plan(gig_id: str, mode: str = "setlist") -> dict:
         if row.get("repertoire_id"):
             sheet = by_song.get(row["repertoire_id"])
         else:
-            sheet = by_title.get(title.strip().casefold())
+            folded = title.strip().casefold()
+            sheet = by_new.get(folded) or by_title.get(folded)
         if sheet is None:
             missing.append(title)
             continue

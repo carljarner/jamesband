@@ -626,15 +626,16 @@
   // being drawn (SVG units).
   const selectedIds = new Set();
 
-  // In Practice mode (the default on opening a sheet; ?mode=edit opens it in
-  // Edit) the page is a viewer: see the sheet, transpose it, follow its
-  // practice links and print it, but nothing edits it (the CSS hides the
-  // editing tools). A screen too narrow for the three columns side by side
-  // is always a viewer too, and a phone-sized one gets the phone layout.
+  // Sheets are made and edited on leadsheets.dk, so this page is always a
+  // viewer (Practice mode): see the sheet, transpose it, follow its practice
+  // links and print it, but nothing edits it (the CSS hides the editing
+  // tools, which are left over from when sheets were edited here). A
+  // screen too narrow for the three columns side by side gets the narrow
+  // layout, and a phone-sized one the phone layout.
   const viewerMQ = matchMedia('(max-width: 700px)');
   const narrowMQ = matchMedia('(max-width: 1199px)');
-  let mode = new URLSearchParams(location.search).get('mode') === 'edit' ? 'edit' : 'practice';
-  function isViewer() { return narrowMQ.matches || mode === 'practice'; }
+  const mode = 'practice';
+  function isViewer() { return true; }
   // The PDF of the current render (see "sheet as PDF"); any re-render makes
   // it stale.
   let sheetPdf = null;
@@ -3051,13 +3052,8 @@
     renderSvg();
   }
 
-  /* ---------- save status ---------- */
-  function markDirty() { dirty = true; updateSaveStatus(); }
-  function updateSaveStatus() {
-    const el = document.getElementById('save-status');
-    el.textContent = dirty ? 'Unsaved' : 'Saved';
-    el.classList.toggle('unsaved', dirty);
-  }
+  // Nothing is saved from here any more; the editing code still calls this.
+  function markDirty() { dirty = true; }
 
   /* ---------- edit-box setters ---------- */
   // The logic behind the edit box's fields, kept apart from the DOM code.
@@ -5033,63 +5029,104 @@
   });
   document.getElementById('sheet-key').appendChild(sheetKeyButton.btn);
 
-  /* ---------- repertoire song ---------- */
-  // Which repertoire song this sheet is for (the gig lead-sheet PDF finds
-  // sheets through it). A song can only have one sheet, so songs another
-  // sheet already has are shown but can't be picked. Saved with the sheet.
+  /* ---------- song ---------- */
+  // Which song this sheet is for: a repertoire song, or a new song from an
+  // upcoming setlist (the gig lead-sheet PDF finds sheets through it).
+  // Connected by title automatically; picking one here connects it by hand
+  // and saves straight away. A song can only have one sheet, so picking a
+  // song another sheet has moves it over after asking.
+  const songChoices = typeof songChoicesData === 'undefined' ? { new_songs: [], repertoire: [] } : songChoicesData;
   const repertoireSelect = document.getElementById('sheet-repertoire');
   const repertoireHint = document.getElementById('sheet-repertoire-hint');
+  const linkStatus = document.getElementById('sheet-link-status');
+  const NEW_PREFIX = 'new:';
+  function linkValue() {
+    if (model.repertoire_id) return model.repertoire_id;
+    if (model.new_song) return NEW_PREFIX + model.new_song;
+    return '';
+  }
+  function choiceFor(value) {
+    if (!value) return null;
+    if (value.startsWith(NEW_PREFIX)) {
+      const title = value.slice(NEW_PREFIX.length).trim().toLowerCase();
+      return songChoices.new_songs.find(s => s.title.trim().toLowerCase() === title) || null;
+    }
+    return songChoices.repertoire.find(s => s.id === value) || null;
+  }
   function renderRepertoireLink() {
-    const songs = typeof repertoireSongs === 'undefined' ? [] : repertoireSongs;
     repertoireSelect.textContent = '';
     repertoireSelect.appendChild(new Option('— not connected —', ''));
-    songs.forEach(song => {
-      const takenBy = song.sheet_id && song.sheet_id !== leadsheetId ? song.sheet_title : null;
-      const label = song.title + (takenBy ? ` (→ ${takenBy})` : '');
-      const opt = new Option(label, song.id);
-      opt.disabled = !!takenBy;
-      repertoireSelect.appendChild(opt);
-    });
-    repertoireSelect.value = model.repertoire_id || '';
-    const song = songs.find(s => s.id === model.repertoire_id);
+    const addGroup = (label, songs, valueOf) => {
+      if (!songs.length) return;
+      const group = document.createElement('optgroup');
+      group.label = label;
+      songs.forEach(song => {
+        const takenBy = song.sheet_id && song.sheet_id !== leadsheetId ? song.sheet_title : null;
+        group.appendChild(new Option(song.title + (takenBy ? ' (has a sheet)' : ''), valueOf(song)));
+      });
+      repertoireSelect.appendChild(group);
+    };
+    addGroup('New songs', songChoices.new_songs, song => NEW_PREFIX + song.title);
+    addGroup('Repertoire', songChoices.repertoire, song => song.id);
+    const value = linkValue();
+    if (value && ![...repertoireSelect.options].some(o => o.value === value)) {
+      // A new song that's no longer on an upcoming setlist.
+      repertoireSelect.appendChild(new Option(model.new_song || value, value));
+    }
+    repertoireSelect.value = value;
+
+    const song = choiceFor(value);
+    const name = song ? song.title : (model.new_song || '');
+    const kind = model.new_song ? ' (new song)' : '';
+    linkStatus.classList.toggle('is-unlinked', !value);
+    linkStatus.textContent = !value
+      ? 'Not connected to a song, so gig PDFs won’t find it.'
+      : `${model.link_auto ? 'Matched by title to' : 'Connected to'} “${name}”${kind}.`;
+
     const sheetKey = String(model.key || '').trim();
-    const differs = song && song.key && sheetKey && song.key !== sheetKey;
+    const differs = !model.new_song && song && song.key && sheetKey && song.key !== sheetKey;
     repertoireHint.hidden = !differs;
     repertoireHint.textContent = differs
       ? `The repertoire key is ${song.key}. Gig PDFs transpose from this sheet’s key (${sheetKey}) to the singer’s key.`
       : '';
   }
-  repertoireSelect.addEventListener('change', () => {
-    model.repertoire_id = repertoireSelect.value || null;
-    markDirty();
-    renderRepertoireLink();
-  });
-
-  document.getElementById('save-btn').addEventListener('click', async () => {
-    const status = document.getElementById('save-status');
-    status.textContent = 'Saving…';
-    status.classList.remove('save-status--error');
-    try {
-      const resp = await fetch(`/leadsheets/${leadsheetId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(model),
-      });
-      if (!resp.ok) {
-        status.textContent = (await resp.text()) || 'Failed to save.';
-        status.classList.add('save-status--error');
-        return;
+  async function saveLink(value) {
+    const body = !value ? {} : value.startsWith(NEW_PREFIX)
+      ? { new_song: value.slice(NEW_PREFIX.length) }
+      : { repertoire_id: value };
+    const resp = await fetch(`/leadsheets/${leadsheetId}/link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+  }
+  repertoireSelect.addEventListener('change', async () => {
+    const value = repertoireSelect.value;
+    const song = choiceFor(value);
+    const takenBy = song && song.sheet_id && song.sheet_id !== leadsheetId ? song : null;
+    const apply = async () => {
+      try {
+        if (takenBy) {
+          // Free the song from its other sheet first.
+          const other = await fetch(`/leadsheets/${takenBy.sheet_id}/link`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+          });
+          if (!other.ok) throw new Error(await other.text());
+        }
+        await saveLink(value);
+        location.reload();
+      } catch (err) {
+        alert('Failed to connect: ' + (err.message || err));
+        renderRepertoireLink();
       }
-      dirty = false;
-      updateSaveStatus();
-    } catch (err) {
-      status.textContent = 'Failed to save.';
-      status.classList.add('save-status--error');
+    };
+    if (takenBy) {
+      askConfirm(`“${song.title}” already has a sheet`, `It’s connected to “${takenBy.sheet_title}”. Connect it to this sheet instead?`, 'Connect', apply);
+      confirmCancelHook = renderRepertoireLink;
+    } else {
+      apply();
     }
-  });
-
-  window.addEventListener('beforeunload', e => {
-    if (dirty) { e.preventDefault(); e.returnValue = ''; }
   });
 
   document.getElementById('print-btn').addEventListener('click', () => window.print());
@@ -5398,10 +5435,7 @@
     // box moves to the top of the left one.
     const practiceBox = document.querySelector('.practice-box');
     if (narrow) document.getElementById('left-column').prepend(practiceBox);
-    else document.querySelector('.mode-box').after(practiceBox);
-    document.querySelectorAll('.mode-seg [data-mode]').forEach(b => {
-      b.classList.toggle('eb-btn--on', b.dataset.mode === mode);
-    });
+    else document.getElementById('glyph-palette').prepend(practiceBox);
     transposeState.pickerOpen = on;
     if (!on) return;
     // Practice mode has no chevron on the Transpose box, so it's always open.
@@ -5418,25 +5452,17 @@
   function refreshForMode() { applyViewerMode(); renderPracticeLinks(); renderTransposeBox(); renderSvg(); }
   viewerMQ.addEventListener('change', refreshForMode);
   narrowMQ.addEventListener('change', refreshForMode);
-  document.querySelectorAll('.mode-seg [data-mode]').forEach(b => {
-    b.addEventListener('click', () => {
-      if (mode === b.dataset.mode) return;
-      mode = b.dataset.mode;
-      const url = new URL(location.href);
-      if (mode === 'edit') url.searchParams.set('mode', 'edit');
-      else url.searchParams.delete('mode');
-      history.replaceState(null, '', url);
-      refreshForMode();
-    });
-  });
   applyViewerMode();
 
-  // Delete and Reset share one confirm dialog; `confirmAction` is what its
-  // OK button does this time.
+  // Remove and moving a song between sheets share one confirm dialog;
+  // `confirmAction` is what its OK button does this time, and
+  // `confirmCancelHook` what Cancel does besides closing it.
   const confirmModal = document.getElementById('confirm-modal');
   const confirmOk = document.getElementById('confirm-ok');
   let confirmAction = null;
+  let confirmCancelHook = null;
   function askConfirm(text, detail, okLabel, action) {
+    confirmCancelHook = null;
     document.getElementById('confirm-text').textContent = text;
     const detailEl = document.getElementById('confirm-detail');
     detailEl.textContent = detail;
@@ -5450,20 +5476,17 @@
   document.getElementById('delete-btn').addEventListener('click', () => {
     askConfirm(`Remove "${sheetName()}"?`, '', 'Remove', async () => {
       const resp = await fetch(`/leadsheets/${leadsheetId}/delete`, { method: 'POST' });
-      if (resp.ok) { dirty = false; location.href = '/leadsheets'; }
+      if (resp.ok) location.href = '/leadsheets';
       else alert('Failed to remove: ' + await resp.text());
     });
   });
-  // Swap the band's edits for the sheet as it is on leadsheets.dk now.
-  document.getElementById('reset-btn').addEventListener('click', () => {
-    askConfirm(`Update "${sheetName()}"?`, 'This updates the chart so it matches the current version on leadsheets.dk.', 'Update', async () => {
-      const resp = await fetch(`/leadsheets/${leadsheetId}/reset`, { method: 'POST' });
-      if (resp.ok) { dirty = false; location.reload(); }
-      else alert('Failed to update: ' + await resp.text());
-    });
-  });
-  confirmModal.addEventListener('click', e => { if (e.target === confirmModal) confirmModal.hidden = true; });
-  document.getElementById('confirm-cancel').addEventListener('click', () => { confirmModal.hidden = true; });
+  function cancelConfirm() {
+    confirmModal.hidden = true;
+    if (confirmCancelHook) confirmCancelHook();
+    confirmCancelHook = null;
+  }
+  confirmModal.addEventListener('click', e => { if (e.target === confirmModal) cancelConfirm(); });
+  document.getElementById('confirm-cancel').addEventListener('click', cancelConfirm);
   confirmOk.addEventListener('click', () => {
     confirmModal.hidden = true;
     if (confirmAction) confirmAction();

@@ -1,5 +1,5 @@
-"""Reads lead sheets from leadsheets.dk, where new sheets are made. Its API
-is read-only and token-protected; see the leadsheets repo's README.
+"""Reads lead sheets from leadsheets.dk, where sheets are made and edited
+(jamesband only keeps read-only copies). Its API is read-only and token-protected; see the leadsheets repo's README.
 
 LEADSHEETS_API_TOKEN must be one of leadsheets.dk's API_TOKEN values.
 LEADSHEETS_API_URL is only set to point at a local copy while developing.

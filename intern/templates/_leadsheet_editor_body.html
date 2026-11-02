@@ -12,12 +12,14 @@
 
 <div class="editor-layout">
   <div id="left-column" class="editor-palette editor-palette--left no-print">
-    <div class="edit-box link-box edit-only">
-      <div class="eb-head"><span class="eb-head-title">Repertoire song</span></div>
+    <div class="edit-box link-box">
+      <div class="eb-head"><span class="eb-head-title">Song</span></div>
       <label class="eb-field eb-field--wide">
-        <select id="sheet-repertoire" title="The repertoire song this sheet is for -- the gig lead-sheet PDF uses it"></select>
+        <select id="sheet-repertoire" aria-label="Song" title="The song this sheet is for -- the gig lead-sheet PDF uses it"></select>
       </label>
+      <div id="sheet-link-status" class="eb-hint link-status"></div>
       <div id="sheet-repertoire-hint" class="eb-hint" hidden></div>
+      <button type="button" id="delete-btn" class="danger btn-small link-box__remove" title="Remove this sheet from jamesband (it stays on leadsheets.dk)">Remove</button>
     </div>
     <div class="edit-box transpose-box">
       <div class="eb-head eb-head--toggle">
@@ -69,29 +71,13 @@
       <button type="button" id="print-btn" class="btn-small sheet-print">Print</button>
       <input type="text" id="sheet-title" class="editor-title-input" placeholder="Song title" />
       <input type="text" id="sheet-artist" class="editor-artist-input" placeholder="Artist" />
-      <div class="sheet-save">
-        <span id="save-status" class="save-status">Saved</span>
-        <button type="button" id="save-btn" class="primary btn-small">Save</button>
-      </div>
     </div>
     <div id="page-wrap" class="page-wrap">
       <svg id="sheet-svg" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
-    <div class="sheet-actions edit-only no-print">
-      <button type="button" id="reset-btn" class="btn-small" title="Update this chart to match the current version on leadsheets.dk">Update</button>
-      <button type="button" id="delete-btn" class="danger btn-small" title="Remove this chart from the intern site (it stays on leadsheets.dk)">Remove</button>
-    </div>
   </div>
 
   <div id="glyph-palette" class="editor-palette editor-palette--side no-print">
-    <div class="edit-box mode-box desktop-only">
-      <div class="eb-head"><span class="eb-head-title">Mode</span></div>
-      <span class="eb-seg mode-seg">
-        <button type="button" class="eb-btn" data-mode="practice">Practice</button>
-        <button type="button" class="eb-btn" data-mode="edit">Edit</button>
-      </span>
-    </div>
-
     <div class="edit-box practice-box practice-only">
       <div class="eb-head"><span class="eb-head-title">Links</span></div>
       <div id="practice-links" class="practice-links"></div>
