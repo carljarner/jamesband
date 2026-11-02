@@ -8,9 +8,9 @@
 <form id="setlist-form">
   <div class="setlist-top-columns">
     <div class="top-box lyrics-column" data-box="lyrics">
-      <div class="top-box__header">
+      <div class="top-box__header top-box__header--toggle" role="button" tabindex="0" aria-expanded="true">
         <h2>Lyrics</h2>
-        <button type="button" class="top-box__toggle" aria-expanded="true" title="Collapse" aria-label="Collapse Lyrics"></button>
+        <span class="top-box__toggle" aria-hidden="true"></span>
       </div>
       <div class="top-box__body">
       <div class="lyrics-column__link-row">
@@ -35,10 +35,10 @@
     </div>
 
     <div class="top-box" data-box="repertoire">
-      <div class="top-box__header">
+      <div class="top-box__header top-box__header--toggle" role="button" tabindex="0" aria-expanded="true">
         <h2>Repertoire</h2>
         <input type="search" id="repertoire-search" class="top-box__search" placeholder="Search…" />
-        <button type="button" class="top-box__toggle" aria-expanded="true" title="Collapse" aria-label="Collapse Repertoire"></button>
+        <span class="top-box__toggle" aria-hidden="true"></span>
       </div>
       <div class="top-box__body">
         <ul id="repertoire-list" class="pick-list"></ul>
@@ -46,9 +46,9 @@
     </div>
 
     <div class="top-box" data-box="new-songs">
-      <div class="top-box__header">
+      <div class="top-box__header top-box__header--toggle" role="button" tabindex="0" aria-expanded="true">
         <h2>New songs</h2>
-        <button type="button" class="top-box__toggle" aria-expanded="true" title="Collapse" aria-label="Collapse New songs"></button>
+        <span class="top-box__toggle" aria-hidden="true"></span>
       </div>
       <div class="top-box__body">
         <ul id="new-song-list" class="pick-list"></ul>
@@ -103,22 +103,27 @@
   let songbook = {{ songbook_json|safe }};
   let aliases = {{ aliases_json|safe }};
 
-  /* ---------- Collapsible top boxes (state remembered per browser) ---------- */
-  const COLLAPSED_KEY = 'setlistEditor.collapsedBoxes';
-  const collapsedBoxes = new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY) || '[]'));
+  /* ---------- Collapsible top boxes ----------
+     Clicking the title row toggles a box. They start collapsed, except on a
+     brand new gig (empty setlist) where you need them to build the list. */
+  const startCollapsed = initialSongs.length > 0;
   document.querySelectorAll('.top-box[data-box]').forEach((box) => {
-    const toggle = box.querySelector('.top-box__toggle');
+    const header = box.querySelector('.top-box__header--toggle');
     const apply = (collapsed) => {
       box.classList.toggle('is-collapsed', collapsed);
-      toggle.setAttribute('aria-expanded', String(!collapsed));
-      toggle.title = collapsed ? 'Expand' : 'Collapse';
+      header.setAttribute('aria-expanded', String(!collapsed));
+      header.title = collapsed ? 'Expand' : 'Collapse';
     };
-    apply(collapsedBoxes.has(box.dataset.box));
-    toggle.addEventListener('click', () => {
-      const collapsed = !box.classList.contains('is-collapsed');
-      apply(collapsed);
-      collapsed ? collapsedBoxes.add(box.dataset.box) : collapsedBoxes.delete(box.dataset.box);
-      localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsedBoxes]));
+    const toggle = () => apply(!box.classList.contains('is-collapsed'));
+    apply(startCollapsed);
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('input')) return; // the Repertoire search lives in the row
+      toggle();
+    });
+    header.addEventListener('keydown', (e) => {
+      if (e.target !== header || (e.key !== 'Enter' && e.key !== ' ')) return;
+      e.preventDefault();
+      toggle();
     });
   });
 

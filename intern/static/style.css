@@ -1058,7 +1058,7 @@ textarea:focus {
   grid-template-columns: 1fr auto 1fr;
 }
 .setlist-top-columns .top-box__header h2 { grid-column: 1; }
-.setlist-top-columns .top-box__search { grid-column: 2; }
+.setlist-top-columns .top-box__search { grid-column: 2; cursor: text; user-select: auto; }
 .setlist-top-columns .top-box__toggle { grid-column: 3; justify-self: end; }
 
 .top-box__body {
@@ -1068,20 +1068,25 @@ textarea:focus {
   flex-direction: column;
 }
 
+.top-box__header--toggle {
+  cursor: pointer;
+  user-select: none;
+  border-radius: 6px;
+}
+.top-box__header--toggle:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 4px; }
+
 .top-box__toggle {
   width: 1.6rem;
   height: 1.6rem;
-  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 6px;
   color: var(--text-dim);
-  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
 }
-.top-box__toggle:hover { background: transparent; color: var(--text); border-color: rgba(255,255,255,0.3); }
+.top-box__header--toggle:hover .top-box__toggle { color: var(--text); border-color: rgba(255,255,255,0.3); }
 .top-box__toggle::before {
   content: '';
   width: 0.45rem;
