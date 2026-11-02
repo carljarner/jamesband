@@ -32,14 +32,12 @@
     <div class="setlist-card__header"><span>{{ title }}</span></div>
     {% if artist %}<div class="leadsheet-card__artist">{{ artist }}</div>{% endif %}
     {% if detail %}<div class="leadsheet-card__note">{{ detail }}</div>{% endif %}
-    {% if not sheet %}<div class="leadsheet-card__note">No sheet yet</div>{% endif %}
   {% if sheet %}</a>{% else %}</button>{% endif %}
 </li>
 {% endmacro %}
 
 <section class="setlist-section leadsheet-section">
   <h2>New songs <span class="muted leadsheet-section__count">{{ new_songs|length }}</span></h2>
-  <p class="muted leadsheet-section__hint">On upcoming setlists, not in the repertoire yet.</p>
   {% if new_songs %}
   <ul class="setlist-cards">
     {% for song in new_songs %}
@@ -64,7 +62,6 @@
 
 <section class="setlist-section leadsheet-section">
   <h2>Missing <span class="muted leadsheet-section__count">{{ missing|length }}</span></h2>
-  <p class="muted leadsheet-section__hint">Repertoire songs without a sheet.</p>
   {% if missing %}
   <ul class="setlist-cards">
     {% for song in missing %}{{ song_card(song.title, song.artist, None) }}{% endfor %}

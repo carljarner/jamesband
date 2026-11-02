@@ -1081,12 +1081,10 @@ textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 6px;
   color: var(--text-dim);
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s;
 }
-.top-box__header--toggle:hover .top-box__toggle { color: var(--text); border-color: rgba(255,255,255,0.3); }
+.top-box__header--toggle:hover .top-box__toggle { color: var(--text); }
 .top-box__toggle::before {
   content: '';
   width: 0.45rem;
@@ -1652,14 +1650,20 @@ table.gig-songs-table .singer-btn { cursor: default; pointer-events: none; }
   color: var(--text-dim);
 }
 
+/* Written like the sheet cards' links, not like a button. */
 button.leadsheet-card__link {
   width: 100%;
   border: 0;
+  border-radius: 0;
   background: none;
   font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
   text-align: left;
   cursor: pointer;
+  transition: none;
 }
+button.leadsheet-card__link:hover { background: none; color: inherit; }
 .leadsheet-card__note {
   margin-top: 0.3rem;
   font-size: 0.8rem;
