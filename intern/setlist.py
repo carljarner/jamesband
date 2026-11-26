@@ -1,6 +1,7 @@
-"""Master songbook: sync a view-only Google Doc (one song per page) down as
-a PDF and map song title -> page number, plus manual title connections for
-when a song is titled differently between the setlist tool and the doc.
+"""Master songbook: sync a view-only Google Doc down as a PDF and map each
+song title (found by its larger font) -> its page numbers, plus manual title
+connections for when a song is titled differently between the setlist tool
+and the doc.
 
 Uses the doc's public export endpoint (docs.google.com/.../export?format=...)
 rather than the Drive API, so no OAuth/service-account credentials are
@@ -102,45 +103,102 @@ def _fetch_doc_pdf(doc_id: str) -> bytes:
     return resp.content
 
 
-# A page's first line is treated as a continuation of the previous song
-# (rather than a new song title) if it looks like a section marker, e.g.
-# "[Vers 1]" or "[Omkvæd: Søs Fenger]" -- songs that run long wrap onto a
-# second page starting mid-section, with no title line of their own.
-SECTION_MARKER_RE = re.compile(r"^\[.*\]?\s*$|^\[")
+# A song title is any line set noticeably larger than the doc's lyrics
+# (the doc's most common font size, by characters). Titles can sit anywhere
+# -- partway down a page or at the top of the right-hand column -- so every
+# page is scanned in reading order (left column top to bottom, then the
+# right column), and a song runs from its title's page to the page the next
+# title is on.
+TITLE_SIZE_RATIO = 1.2
 
 
-def _page_first_line(page) -> str:
-    # extract_text()'s default mode drops line breaks on this doc's layout
-    # (title + lyrics all come back as one run); layout mode preserves them,
-    # using runs of spaces to represent gaps between side-by-side columns --
-    # so a two-column page's first line has a second column's text tacked on
-    # after the title, separated by a wide gap. Only the first column matters.
-    text = page.extract_text(extraction_mode="layout") or ""
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    if not lines:
-        return ""
-    return re.split(r"\s{2,}", lines[0])[0].strip()
+def _page_lines(page) -> list[dict]:
+    """The page's text as lines in reading order, each {"y", "right",
+    "size", "text"}: "right" is whether it's in the right-hand column, and
+    "size" is its largest font size, in points as printed."""
+    runs: list[tuple[float, float, float, str]] = []
+
+    def visit(text, cm, tm, font_dict, font_size):
+        # Google Docs' PDFs draw each word as its own piece; the spaces come
+        # as separate pieces with unusable positions, so they're skipped and
+        # a line's words are joined with spaces instead.
+        if not text.strip():
+            return
+        # Text-space -> page-space: the text matrix, then the current
+        # transformation matrix. The point size printed is the font size
+        # scaled by that combined matrix.
+        a, b, c, d, e, f = tm
+        A, B, C, D, E, F = cm
+        x = e * A + f * C + E
+        y = e * B + f * D + F
+        scale = abs((a * A + b * C) * (c * B + d * D) - (a * B + b * D) * (c * A + d * C)) ** 0.5
+        runs.append((x, y, round(font_size * scale, 1), text))
+
+    page.extract_text(visitor_text=visit)
+
+    mid_x = float(page.mediabox.width) / 2
+    lines: dict[tuple[bool, float], list[tuple[float, float, str]]] = {}
+    for x, y, size, text in runs:
+        lines.setdefault((x >= mid_x, round(y)), []).append((x, size, text))
+
+    ordered = []
+    for (right, y), parts in sorted(lines.items(), key=lambda kv: (kv[0][0], -kv[0][1])):
+        parts.sort(key=lambda part: part[0])
+        text = " ".join(" ".join(t for _, _, t in parts).split())
+        ordered.append({"y": y, "right": right, "size": max(s for _, s, _ in parts), "text": text})
+    return ordered
+
+
+def _body_size(pages_lines: list[list[dict]]) -> float:
+    chars: dict[float, int] = {}
+    for lines in pages_lines:
+        for line in lines:
+            chars[line["size"]] = chars.get(line["size"], 0) + len(line["text"])
+    return max(chars, key=chars.get) if chars else 0.0
+
+
+def _page_titles(lines: list[dict], min_size: float) -> list[str]:
+    """Title lines on one page, in reading order. A title that wraps onto a
+    second line (the next line in the same column, also title-sized) is
+    joined back into one."""
+    titles: list[str] = []
+    prev = None
+    for line in lines:
+        is_title = line["size"] >= min_size
+        if (
+            is_title and prev is not None and prev["size"] >= min_size
+            and prev["right"] == line["right"]
+            and prev["y"] - line["y"] <= 1.8 * line["size"]
+        ):
+            titles[-1] = f"{titles[-1]} {line['text']}"
+        elif is_title:
+            titles.append(line["text"])
+        prev = line
+    return titles
 
 
 def _group_pages_into_songs(reader: PdfReader) -> list[dict]:
+    pages_lines = [_page_lines(page) for page in reader.pages]
+    min_size = _body_size(pages_lines) * TITLE_SIZE_RATIO
+
     songs: list[dict] = []
     seen: dict[str, int] = {}
-    for i, page in enumerate(reader.pages):
-        first_line = _page_first_line(page)
-        is_continuation = bool(songs) and (
-            not first_line or SECTION_MARKER_RE.match(first_line)
-        )
-        if is_continuation:
+    for i, lines in enumerate(pages_lines):
+        if not lines:
+            continue  # blank page
+        titles = _page_titles(lines, min_size)
+        # The page's text before its first title belongs to the song
+        # already running, if any.
+        starts_with_title = lines[0]["size"] >= min_size
+        if songs and not starts_with_title:
             songs[-1]["pages"].append(i)
-            continue
-
-        title = first_line or f"Page {i + 1}"
-        if title in seen:
-            seen[title] += 1
-            title = f"{title} ({seen[title]})"
-        else:
-            seen[title] = 1
-        songs.append({"title": title, "pages": [i]})
+        for title in titles:
+            if title in seen:
+                seen[title] += 1
+                title = f"{title} ({seen[title]})"
+            else:
+                seen[title] = 1
+            songs.append({"title": title, "pages": [i]})
     return songs
 
 
