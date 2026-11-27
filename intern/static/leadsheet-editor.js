@@ -5752,7 +5752,7 @@
   }
 
   // The front page of a gig's lead-sheet PDF with its setlist: white, with
-  // the band's logo in the middle, half the page wide.
+  // the band's logo across the full width of the page, in the middle.
   async function coverPageJpeg() {
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(PAGE_W * SHARE_SCALE);
@@ -5764,7 +5764,7 @@
     logo.src = '/static/logo.png';
     try {
       await logo.decode();
-      const size = canvas.width / 2;
+      const size = canvas.width;
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(logo, (canvas.width - size) / 2, (canvas.height - size) / 2, size, size);
     } catch (err) { /* no logo: the page stays white */ }
