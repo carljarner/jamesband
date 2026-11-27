@@ -88,7 +88,7 @@ def build_leadsheet_plan(
     key it's played in, and "setlist" also puts the setlist page first.
     Each page says which set its song is in ("set": 1, 2, ..., numbered
     like the setlist page, which skips empty sets), so the setlist PDF can
-    put a "Set 2" page between the sets.
+    put a "Set 1", "Set 2", ... page before each set's sheets.
     `picks` (the gig page's Custom option) limits the PDF to those setlist
     rows -- index into gig["songs"] -> singer to transpose for, overriding
     the setlist's -- and leaves the setlist page out.

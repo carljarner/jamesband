@@ -5737,8 +5737,9 @@
     });
   }
 
-  // The page between two sets in a gig's lead-sheet PDF with its setlist:
-  // "Set 2" in the middle of a blank page, in the setlist page's title font.
+  // The page before each set's sheets in a gig's lead-sheet PDF with its
+  // setlist: "Set 2" in the middle of a blank page, in the setlist page's
+  // title font.
   function renderSetDividerSvg(setNumber) {
     const svg = document.getElementById('sheet-svg');
     svg.setAttribute('viewBox', `0 ${-PAGE_TOP_PAD} ${PAGE_W} ${PAGE_H}`);
@@ -5751,14 +5752,15 @@
     svg.appendChild(svgText(`Set ${setNumber}`, PAGE_W / 2, y, { cls: 'page-title-text', anchor: 'middle', size }));
   }
 
-  // The front page of a gig's lead-sheet PDF with its setlist: white, with
-  // the band's logo across the full width of the page, in the middle.
+  // The front page of a gig's lead-sheet PDF with its setlist: black, like
+  // the logo's own background, with the logo across the full width of the
+  // page, in the middle.
   async function coverPageJpeg() {
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(PAGE_W * SHARE_SCALE);
     canvas.height = Math.round(PAGE_H * SHARE_SCALE);
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const logo = new Image();
     logo.src = '/static/logo.png';
@@ -5767,7 +5769,7 @@
       const size = canvas.width;
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(logo, (canvas.width - size) / 2, (canvas.height - size) / 2, size, size);
-    } catch (err) { /* no logo: the page stays white */ }
+    } catch (err) { /* no logo: the page stays black */ }
     const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
     return { bytes: new Uint8Array(await blob.arrayBuffer()), w: canvas.width, h: canvas.height };
   }
@@ -5786,7 +5788,7 @@
     for (let i = 0; i < plan.pages.length; i++) {
       const page = plan.pages[i];
       onProgress(i + 1, plan.pages.length);
-      if (withSetlist && i > 0 && page.set !== plan.pages[i - 1].set) {
+      if (withSetlist && (i === 0 || page.set !== plan.pages[i - 1].set)) {
         renderSetDividerSvg(page.set);
         jpegs.push(await sheetJpegBytes());
       }
