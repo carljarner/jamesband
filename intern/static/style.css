@@ -2088,6 +2088,14 @@ button.leadsheet-card__link:hover { background: none; color: inherit; }
   transform: scale(1.15, 0.8); /* matches GLYPH_SCALE_X/Y in leadsheet-editor.js */
 }
 
+/* The loose time / key signature tiles: the staff's own digits and accidentals. */
+.palette-tile--sig {
+  font-family: 'MuseJazz', serif;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+#tile-timesig { display: inline-flex; }
+
 /* The sheet with its title/artist fields above it. Shrinks (down to
    ~560px) so the two side columns still fit beside it on a laptop; the SVG
    inside scales with it. */
@@ -2458,6 +2466,8 @@ button.leadsheet-card__link:hover { background: none; color: inherit; }
 
 .el-volta-line { stroke: #1a1815; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .el-volta-text { fill: #1a1815; font-family: 'MuseJazzText', cursive; }
+
+.el-hairpin-line { stroke: #1a1815; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 
 .el-arrow-path { stroke: #1a1815; stroke-width: 1.5; fill: none; }
 .el-arrow-hit { stroke: transparent; stroke-width: 14; fill: none; cursor: grab; }

@@ -8,6 +8,9 @@
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const PAGE_W = 794, PAGE_H = 1123; // A4 portrait @ 96dpi
   const PAGE_MARGIN = 28;
+  // Extra space above everything on a sheet (~0.5 cm): the page is drawn
+  // from y = -PAGE_TOP_PAD, so the sheets' own coordinates stay as they are.
+  const PAGE_TOP_PAD = 19;
   const BAR_UNIT = (PAGE_W - 2 * PAGE_MARGIN) / 9; // 9 bars exactly fill the page width (=82)
   // A row can hold up to 12 bars; past 9 the bars get narrower so the row
   // still fits within the page margins.
@@ -20,6 +23,7 @@
   const SLOT_CHORD_PAD = 5; // gap between a slot's left edge and the chord in it, in bars with several slots
   const SLOT_CHORD_OVERHANG = 4; // how far the last chord of a crowded bar may run past its barline
   const VOLTA_W = 50, VOLTA_H = 14, VOLTA_FONT_SIZE = 8;
+  const HAIRPIN_W = 90, HAIRPIN_H = 12; // a crescendo / diminuendo's default length and opening
   // Starting font sizes for new text boxes: the averages from the test sheet.
   const TITLE_FONT_SIZE = 17, CHORD_FONT_SIZE = 14, TEXT_FONT_SIZE = 12;
 
@@ -93,6 +97,14 @@
       type: 'tuplet', unit, count, duration: unit * TUPLET_NORMAL[count],
       cells: Array.from({ length: count }, () => ({ type: 'rest', duration: unit })),
     };
+  }
+  // A slot can be longer than the group's own note: a quarter in an 8th
+  // triplet takes two of its three places. Where each slot starts and how
+  // many places it covers, plus the group's number (the places in all).
+  function tupletSlots(cell) {
+    let at = 0;
+    const slots = cell.cells.map(sub => { const s = { start: at, span: sub.duration / cell.unit }; at += s.span; return s; });
+    return { slots, places: at };
   }
   // A note staff holds up to STAFF_MAX_BARS bars sharing one time signature;
   // its flat `cells` list runs bar after bar and no cell crosses a barline.
@@ -548,12 +560,14 @@
   const TIMESIG_DIGIT_EM = [0.317, 0.255, 0.313, 0.322, 0.370, 0.312, 0.318, 0.311, 0.339, 0.324];
   const TIMESIG_SYMBOL_EM = 0.724, TIMESIG_SIZE = 0.86, TIMESIG_SYMBOL_SIZE = 0.42;
   function timeSigNumberEm(n) { return String(n).split('').reduce((w, d) => w + TIMESIG_DIGIT_EM[Number(d)], 0); }
-  function notestaffTimeSigWidth(el) {
-    if (!el.showTime) return 0;
-    const inkW = el.timeSymbol
+  function timeSigInkWidth(el) {
+    return el.timeSymbol
       ? TIMESIG_SYMBOL_EM * TIMESIG_SYMBOL_SIZE * el.h
       : Math.max(timeSigNumberEm(el.numerator || 4), timeSigNumberEm(el.denominator || 4)) * TIMESIG_SIZE * el.h;
-    return inkW + el.h * 0.25;
+  }
+  function notestaffTimeSigWidth(el) {
+    if (!el.showTime) return 0;
+    return timeSigInkWidth(el) + el.h * 0.25;
   }
   function notestaffLeadWidth(el) {
     return notestaffClefWidth(el) + notestaffKeySigWidth(el) + notestaffTimeSigWidth(el) + el.h * 0.13;
@@ -652,9 +666,11 @@
     row: { w: [30, PAGE_W], h: [16, 300] },
     repeat: { w: [10, 60], h: [16, 200] },
     volta: { w: [16, PAGE_W], h: [10, 60], fontSize: [6, 32] },
+    hairpin: { w: [16, PAGE_W], h: [4, 40] },
     glyphFont: [12, 100],
     rhythmbar: { h: [12, 100] },
     notestaff: { h: [24, 160] },
+    looseSig: { h: [12, 100] }, // a loose time / key signature's imaginary staff
   };
   function clampR(v, range) { return clamp(v, range[0], range[1]); }
   // Width/height ranges of an element (absent = that dimension isn't a free
@@ -664,8 +680,10 @@
       case 'row': return LIMITS.row;
       case 'repeat': return LIMITS.repeat;
       case 'volta': return LIMITS.volta;
+      case 'hairpin': return LIMITS.hairpin;
       case 'rhythmbar': return { w: [rhythmBarMinWidth(el), PAGE_W], h: LIMITS.rhythmbar.h };
       case 'notestaff': return { w: [staffMinWidth(el), PAGE_W - notestaffLeadWidth(el)], h: LIMITS.notestaff.h };
+      case 'timesig': case 'keysig': return { h: LIMITS.looseSig.h };
       default: return {};
     }
   }
@@ -817,7 +835,17 @@
   }
   function storeChord(text) {
     const t = transposeState;
+    text = chordTriangle(text);
     return respelled() ? transposeChordText(text, -t.semitones, keyPrefersFlats(model.key)) : text;
+  }
+  // MuseScore's shorthand for the major-7 triangle: "t" or "^" right after
+  // the root (or its minor "m" / "-"), so Ft7 is stored as F△7, Fmt7 as Fm△7
+  // and F^ as F△. Stored as a plain △ (the read API shows it too); drawn
+  // with the chord font's own triangle (see parseChordSegments).
+  function chordTriangle(text) {
+    const root = readChordRoot(text);
+    if (!root) return text;
+    return text.slice(0, root.length) + text.slice(root.length).replace(/^(m|-)?[t^](?=\d|\(|\/|$)/, '$1△');
   }
   // The key as it should read now: the sheet's own text until transposed.
   function transposedKeyName() {
@@ -919,6 +947,30 @@
     const t = transposeState;
     return respelled() && !el.staged ? transposeKeySignature(shown, -t.semitones, keyPrefersFlats(model.key)) : shown;
   }
+  // A loose key signature to C cancels the key before it (`cancel`, a signed
+  // count stored like `keySignature`) with naturals. The cancelled key moves
+  // with the sheet too, but the naturals only show while the key as shown is C.
+  function displayedCancel(el) {
+    const t = transposeState;
+    const c = el.cancel || 0;
+    return c && respelled() ? transposeKeySignature(c, t.semitones, t.flats) : c;
+  }
+  // What a loose key signature draws: `{ positions, code }`, or null for C with nothing to cancel.
+  function looseKeySigGlyphs(el) {
+    const k = displayedKeySignature(el);
+    const c = k ? 0 : displayedCancel(el);
+    if (!k && !c) return null;
+    const kind = (k || c) > 0 ? 'sharp' : 'flat';
+    return {
+      positions: KEYSIG_GLYPH_POSITIONS[el.clef || 'treble'][kind].slice(0, Math.abs(k || c)),
+      code: ACCIDENTAL_CODES[k ? kind : 'natural'],
+      advance: k ? KEYSIG_ADVANCE_EM[kind] * KEYSIG_SIZE * el.h : measureTextWidth(ACCIDENTAL_CODES.natural, KEYSIG_SIZE * el.h, 'MuseJazz'),
+    };
+  }
+  function looseKeySigWidth(el) {
+    const g = looseKeySigGlyphs(el);
+    return g ? (g.positions.length - 1) * KEYSIG_STEP * el.h + g.advance : 0;
+  }
 
   // Splits a chord symbol into runs, the way it's engraved on a real chart.
   // Each run has a `kind` (see CHORD_RUN_STYLE): `base` -- the root letter,
@@ -929,6 +981,7 @@
   // note, smaller and dropped a little (Bb7/D -> B + ^b + ^7 + /D); `bassSup`
   // -- that bass note's own accidental, raised within the small run.
   // The stored text stays plain; this only affects how it's drawn.
+  const CHORD_TRIANGLE_GLYPH = '\uE18A'; // MuseJazz Text's csymMajorSeventh
   function parseChordSegments(text) {
     const s = String(text || '');
     const segs = [];
@@ -966,6 +1019,9 @@
         push(s.slice(i), 'bass');
         break;
       }
+      // The major-7 triangle is raised with the number after it, in the
+      // chord font's own glyph (it has no plain △ or Δ).
+      if (/^[△Δ]/.test(rest)) { push(CHORD_TRIANGLE_GLYPH, 'sup'); i += 1; continue; }
       // "o" is the diminished sign (Ao7); not the o of a word like "Coda".
       let m = /^\([^)]*\)/.exec(rest) || /^o(?![A-Za-z])/.exec(rest) || /^[#b♯♭]?\d+(?:\/\d+)?/.exec(rest);
       // "+"/"-" only count as an alteration after a number ("7-9"); before one
@@ -1109,7 +1165,8 @@
   function svgMetrics() { return svgMetricsFor(document.getElementById('sheet-svg')); }
   function clientToSvg(clientX, clientY) {
     const { rect, scale } = svgMetrics();
-    return { x: (clientX - rect.left) / scale, y: (clientY - rect.top) / scale };
+    const vb = document.getElementById('sheet-svg').viewBox.baseVal;
+    return { x: (clientX - rect.left) / scale + (vb ? vb.x : 0), y: (clientY - rect.top) / scale + (vb ? vb.y : 0) };
   }
 
   /* ---------- marquee selection ---------- */
@@ -1123,7 +1180,7 @@
         const { w, h } = textBoxSize(chord ? displayChord(el.text) : el.text, el.fontSize, chord);
         return { x: el.x, y: el.y, w, h };
       }
-      case 'row': case 'repeat': case 'volta':
+      case 'row': case 'repeat': case 'volta': case 'hairpin':
         return { x: el.x, y: el.y, w: el.w, h: el.h };
       case 'glyph': {
         const { w, h } = glyphSize(el);
@@ -1138,6 +1195,14 @@
       case 'rhythmbar': {
         const pad = el.h * 0.9;
         return { x: el.x, y: el.y - pad, w: el.w, h: el.h + pad };
+      }
+      case 'timesig':
+        return { x: el.x, y: el.y, w: timeSigInkWidth(el), h: el.h };
+      case 'keysig': {
+        // The accidentals reach a staff space above the top line (a sharp on
+        // the top-space G) and hang below their own position.
+        const pad = el.h * 0.3;
+        return { x: el.x, y: el.y - pad, w: Math.max(looseKeySigWidth(el), el.h * 0.3), h: el.h + 2 * pad };
       }
       case 'notestaff': {
         const pad = el.h * 0.4;
@@ -1535,13 +1600,18 @@
   // `get()` the signature as shown, `getClef()` the staff's clef (where the
   // sharps and flats sit). C first, then the sharp keys, then the flat ones.
   function keySigButton(get, getClef, onPick) {
-    const tile = sig => ({ value: sig, title: keySignatureLabel(sig), text: keySigName(sig), icon: () => miniStaffIcon(getClef(), sig, false), on: sig === get() });
     return menuButton(() => ({ icon: miniStaffIcon(getClef(), get(), false, 22), label: keySignatureLabel(get()), title: `Key: ${keySignatureLabel(get())} (click to change)` }),
-      btn => openTileMenu(btn, [
-        tile(0),
-        { heading: 'Sharps' }, ...[1, 2, 3, 4, 5, 6, 7].map(tile),
-        { heading: 'Flats' }, ...[-1, -2, -3, -4, -5, -6, -7].map(tile),
-      ], onPick, { cls: 'keysig-menu' }));
+      btn => openKeySigMenu(btn, get(), getClef(), onPick));
+  }
+  // `opts.heading` titles the menu; `opts.noC` leaves out C (none).
+  function openKeySigMenu(anchor, current, clef, onPick, opts = {}) {
+    const tile = sig => ({ value: sig, title: keySignatureLabel(sig), text: keySigName(sig), icon: () => miniStaffIcon(clef, sig, false), on: sig === current });
+    openTileMenu(anchor, [
+      ...(opts.heading ? [{ heading: opts.heading }] : []),
+      ...(opts.noC ? [] : [tile(0)]),
+      { heading: 'Sharps' }, ...[1, 2, 3, 4, 5, 6, 7].map(tile),
+      { heading: 'Flats' }, ...[-1, -2, -3, -4, -5, -6, -7].map(tile),
+    ], onPick, { cls: 'keysig-menu' });
   }
   // The song's own key: one of the 24 the repertoire uses (chords.KEYS on the
   // server, static/keys.js), or none. A key typed before the menu existed
@@ -1751,10 +1821,16 @@
       return { id: uid('el'), type: 'repeat', x, y, w: REPEAT_MARK_W, h: BAR_H, kind: 'end' };
     } else if (type === 'volta') {
       return { id: uid('el'), type: 'volta', x, y, w: VOLTA_W, h: VOLTA_H, text: '1.', fontSize: VOLTA_FONT_SIZE };
+    } else if (type === 'hairpin-cresc' || type === 'hairpin-dim') {
+      return { id: uid('el'), type: 'hairpin', kind: type === 'hairpin-cresc' ? 'cresc' : 'dim', x, y, w: HAIRPIN_W, h: HAIRPIN_H };
     } else if (type === 'arrow') {
       return { id: uid('el'), type: 'arrow', x1: x, y1: y, x2: x + 70, y2: y - 40, bow: { dx: 0, dy: 0 } };
     } else if (type === 'glyph') {
       return { id: uid('el'), type: 'glyph', x, y, code: opts.code || SIMILE_MARK, fontSize: 20 };
+    } else if (type === 'timesig') {
+      return { id: uid('el'), type: 'timesig', x, y, h: NOTESTAFF_DEFAULT_H, numerator: 4, denominator: 4 };
+    } else if (type === 'keysig') {
+      return { id: uid('el'), type: 'keysig', x, y, h: NOTESTAFF_DEFAULT_H, clef: 'treble', keySignature: 1 };
     } else if (type === 'rhythmbar') {
       const totalUnits = opts.cells.reduce((s, c) => s + c.duration, 0);
       return {
@@ -1801,6 +1877,28 @@
     if (type === 'title' || type === 'chordText' || type === 'text') focusEditField('text');
     else if (el.type === 'row' && rowSlotCount(el) > 0) focusSlot(el.id, 0);
     else if (el.type === 'notestaff' || el.type === 'rhythmbar') openStaffEditor(el, { idx: 0 }); // straight to writing its notes
+    else if (el.type === 'timesig' || el.type === 'keysig') openLooseSigMenu(el);
+  }
+  // A freshly placed time or key signature asks which one it is, in a menu
+  // beside it; from then on it's changed in the edit box. A key signature
+  // picked as C then asks which key its naturals cancel.
+  function openLooseSigMenu(el) {
+    const anchor = () => document.querySelector(`#sheet-svg [data-el-id="${el.id}"]`);
+    const done = () => { markDirty(); renderSvg(); renderEditBox(); };
+    if (!anchor()) return;
+    if (el.type === 'timesig') {
+      openTimeSigMenu(anchor(), timeSigOf(el), ts => { setTimeSig(el, ts); done(); });
+      return;
+    }
+    openKeySigMenu(anchor(), displayedKeySignature(el), el.clef || 'treble', sig => {
+      el.keySignature = storedKeySignature(el, sig);
+      done();
+      if (sig || !anchor()) return;
+      openKeySigMenu(anchor(), displayedCancel(el), el.clef || 'treble', c => {
+        el.cancel = storedKeySignature(el, c);
+        done();
+      }, { heading: 'Naturals cancelling', noC: true });
+    });
   }
 
   // Copies everything currently marked, a little down and to the right of the
@@ -2010,6 +2108,22 @@
   // at the left, open at the right, and an editable number tucked under the
   // line. Only the bracket line and the number are grabbable, so the empty
   // space inside stays clear for whatever sits beneath it.
+  // A crescendo (<) or diminuendo (>) hairpin: two lines meeting at one end
+  // and opening to the box's full height at the other. Like the volta, only
+  // the lines are grabbable; the corner stretches it.
+  function renderHairpinEl(svg, el) {
+    const { w, h } = el;
+    const g = svgGroup({ cls: 'el-group' });
+    const [tipX, openX] = el.kind === 'dim' ? [el.x + w, el.x] : [el.x, el.x + w];
+    const d = `M ${openX} ${el.y} L ${tipX} ${el.y + h / 2} L ${openX} ${el.y + h}`;
+    g.appendChild(svgPath(d, { cls: 'el-hairpin-line' }));
+    const startX = el.x, startY = el.y;
+    wireDragAndClick(g.appendChild(svgPath(d, { cls: 'el-arrow-hit' })),
+      (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); }, null, el);
+    addResizeHandle(g, el.x + w, el.y + h, sizeDrag(el), el);
+    svg.appendChild(g);
+  }
+
   function renderVoltaEl(svg, el) {
     const { w, h } = el;
     const g = svgGroup({ cls: 'el-group' });
@@ -2093,6 +2207,25 @@
     const h = el.fontSize * GLYPH_SCALE_Y;
     return { w, h };
   }
+  // A loose time or key signature: the staff's own drawing of it, on an
+  // imaginary staff from (el.x, el.y) of height el.h with no lines.
+  function renderLooseSigEl(svg, el) {
+    const b = elementBounds(el);
+    const g = svgGroup({ cls: 'el-group' });
+    const hit = svgRect(b.x, b.y, b.w, b.h, { cls: 'el-glyph-hit' });
+    hit.dataset.elId = el.id; // where its first menu opens (openLooseSigMenu)
+    g.appendChild(hit);
+    if (el.type === 'timesig') drawTimeSigAt(g, el, el.x + b.w / 2);
+    else {
+      const glyphs = looseKeySigGlyphs(el);
+      if (glyphs) drawKeySigGlyphs(g, el, el.x, glyphs.positions, glyphs.code);
+    }
+    const startX = el.x, startY = el.y;
+    wireDragAndClick(hit, (ddx, ddy) => { el.x = startX + ddx; el.y = startY + ddy; markDirty(); renderSvg(); }, null, el);
+    addResizeHandle(g, b.x + b.w, b.y + b.h, sizeDrag(el), el);
+    svg.appendChild(g);
+  }
+
   function renderGlyphEl(svg, el) {
     const size = el.fontSize;
     const { w, h } = glyphSize(el);
@@ -2196,8 +2329,9 @@
     return { runs, runOf };
   }
 
-  // Draws one tuplet group inside a rhythm bar: `cell.cells.length` (3, in
-  // v1) equal-width slots spanning `[x, x+w)`, each with its own hit-rect
+  // Draws one tuplet group inside a rhythm bar: its places (3 for a
+  // triplet) as equal widths spanning `[x, x+w)`, a slot as wide as the
+  // places it covers (see tupletSlots), each with its own hit-rect
   // wired the same way a plain cell's is -- a drag still moves the whole
   // bar, a click opens that slot's own restricted menu via
   // `onSlotClick(subIdx, clientX, clientY)`. Beamed together (with a plain
@@ -2205,24 +2339,25 @@
   // bracketed (with a "3" in its gap) otherwise -- a quarter-note triplet
   // is never beam-eligible, and a beam is never drawn over a rest.
   function renderTupletGroupRhythm(container, cell, x, w, y, h, onSlotClick, onCellDrag, moveEl) {
-    const n = cell.cells.length;
-    const slotW = w / n;
+    const { slots, places: n } = tupletSlots(cell);
+    const placeW = w / n;
     const headW = h * 0.33;
     const stemLen = h * 0.68;
     const beamThick = h * 0.16;
     const beamY = y - stemLen;
-    const slotX = k => x + k * slotW;
+    const slotX = k => x + slots[k].start * placeW;
+    const slotW = k => slots[k].span * placeW;
 
     if (onSlotClick) {
       cell.cells.forEach((sub, k) => {
-        const hit = svgRect(slotX(k), beamY - beamThick - 4, slotW, (y - beamY) + beamThick + h * 0.9, { cls: 'el-rhythm-cell-hit' });
+        const hit = svgRect(slotX(k), beamY - beamThick - 4, slotW(k), (y - beamY) + beamThick + h * 0.9, { cls: 'el-rhythm-cell-hit' });
         container.appendChild(hit);
         if (onCellDrag) wireDragAndClick(hit, onCellDrag, () => onSlotClick(k), moveEl);
         else hit.addEventListener('click', () => onSlotClick(k));
       });
     }
 
-    const beamed = cell.cells.every(sub => sub.type === 'note') && BEAM_ELIGIBLE_DURATIONS.has(cell.unit);
+    const beamed = cell.cells.every(sub => sub.type === 'note' && sub.duration === cell.unit) && BEAM_ELIGIBLE_DURATIONS.has(cell.unit);
     if (beamed) {
       const stemXs = [];
       cell.cells.forEach((sub, k) => {
@@ -2244,12 +2379,13 @@
       cell.cells.forEach((sub, k) => {
         const nx = slotX(k);
         if (sub.type === 'rest') {
-          container.appendChild(svgText(rhythmCellGlyph(sub), nx + slotW / 2, y - h * 0.05, { cls: 'el-glyph-text', anchor: 'middle', size: h }));
+          container.appendChild(svgText(rhythmCellGlyph(sub), nx + slotW(k) / 2, y - h * 0.05, { cls: 'el-glyph-text', anchor: 'middle', size: h }));
         } else {
           drawSingleNote(container, nx, y, sub, h, headW, stemLen);
         }
       });
-      drawTupletBracket(container, x + w * 0.04, x + w * 0.96, beamY, -1, h * 0.12, h * 0.55, n);
+      // Clear of the stem tips (and its ticks with it), not on them.
+      drawTupletBracket(container, x + w * 0.04, x + w * 0.96, beamY - h * 0.3, -1, h * 0.12, h * 0.55, n);
     }
   }
 
@@ -2271,7 +2407,6 @@
   function renderRhythmCells(container, cells, x, y, w, h, onCellClick, onCellDrag, beatUnits, moveEl, barUnits) {
     const cellBoxes = [];
     const totalUnits = cells.reduce((s, c) => s + c.duration, 0);
-    const avgUnitW = w / totalUnits;
     // Several bars (`barUnits` each) get an equal share of `w` apiece.
     const bars = barUnits && totalUnits > barUnits ? splitStaffBars(cells, barUnits) : [cells];
     const barW = w / bars.length;
@@ -2307,8 +2442,9 @@
       cellBoxes[i] = { x: cellX, w: cellW };
 
       if (cell.type === 'tuplet') {
-        const sw = cellW / cell.cells.length;
-        cellBoxes[i].subs = cell.cells.map((_, k) => ({ x: cellX + k * sw, w: sw }));
+        const { slots, places } = tupletSlots(cell);
+        const pw = cellW / places;
+        cellBoxes[i].subs = slots.map(sl => ({ x: cellX + sl.start * pw, w: sl.span * pw }));
         renderTupletGroupRhythm(container, cell, cellX, cellW, y, h,
           onCellClick ? subIdx => onCellClick(i, subIdx) : null, onCellDrag, moveEl);
         return;
@@ -2359,7 +2495,6 @@
           // with no 16th neighbor gets a short broken-beam stub instead,
           // pointing toward whichever side still has notes left in the run.
           const beam2Y = beamY + beamGap;
-          const stubLen = avgUnitW * 0.8;
           const sixteenthStretches = [];
           let sStart = null;
           for (let k = 0; k <= runCells.length; k++) {
@@ -2378,6 +2513,8 @@
               container.appendChild(seg);
             } else {
               const dir = sr.start < runCells.length - 1 ? 1 : -1;
+              // About a third of the way to the neighboring stem.
+              const stubLen = Math.abs(stemXs[sr.start + dir] - stemXs[sr.start]) * 0.3;
               const stub = svgLine(stemXs[sr.start], beam2Y, stemXs[sr.start] + dir * stubLen, beam2Y, { cls: 'el-notegroup-beam' });
               stub.setAttribute('stroke-width', beamThick);
               container.appendChild(stub);
@@ -2473,7 +2610,11 @@
   // the staff, or the common/cut symbol across the middle line.
   function drawTimeSignature(container, el) {
     if (!el.showTime) return;
-    const cx = el.x + notestaffClefWidth(el) + notestaffKeySigWidth(el) + (notestaffTimeSigWidth(el) - el.h * 0.25) / 2;
+    drawTimeSigAt(container, el, el.x + notestaffClefWidth(el) + notestaffKeySigWidth(el) + timeSigInkWidth(el) / 2);
+  }
+  // The numbers (or symbol) centred on `cx`, on `el`'s staff (or the
+  // imaginary staff of a loose time signature).
+  function drawTimeSigAt(container, el, cx) {
     if (el.timeSymbol) {
       container.appendChild(svgText(TIMESIG_SYMBOL_CODES[el.timeSymbol], cx, pitchToY(4, el), {
         cls: 'el-notestaff-timesig', anchor: 'middle', size: el.h * TIMESIG_SYMBOL_SIZE,
@@ -2487,14 +2628,17 @@
     });
   }
 
-  function drawKeySignature(container, el) {
+  // `startX`: where the first accidental goes -- after the clef on a staff,
+  // at the element's own left edge for a loose key signature.
+  function drawKeySignature(container, el, startX = el.x + notestaffClefWidth(el)) {
     const k = displayedKeySignature(el);
     if (!k || el.hideKey) return;
     const kind = k > 0 ? 'sharp' : 'flat';
-    const positions = KEYSIG_GLYPH_POSITIONS[el.clef][kind].slice(0, Math.abs(k));
-    const startX = el.x + notestaffClefWidth(el);
+    drawKeySigGlyphs(container, el, startX, KEYSIG_GLYPH_POSITIONS[el.clef || 'treble'][kind].slice(0, Math.abs(k)), ACCIDENTAL_CODES[kind]);
+  }
+  function drawKeySigGlyphs(container, el, startX, positions, code) {
     positions.forEach((pos, i) => {
-      container.appendChild(svgText(ACCIDENTAL_CODES[kind], startX + i * KEYSIG_STEP * el.h, pitchToY(pos, el), {
+      container.appendChild(svgText(code, startX + i * KEYSIG_STEP * el.h, pitchToY(pos, el), {
         cls: 'el-notestaff-keysig', anchor: 'start', size: el.h * KEYSIG_SIZE,
       }));
     });
@@ -2553,8 +2697,8 @@
   }
 
   // Sibling of renderTupletGroupRhythm: draws one tuplet group on the note
-  // staff -- `cell.cells.length` (3, in v1) equal-width slots spanning
-  // `[x, x+w)`, with real pitched noteheads (ledger lines, accidentals, a
+  // staff -- its places as equal widths spanning `[x, x+w)`, a slot as
+  // wide as the places it covers (see tupletSlots), with real pitched noteheads (ledger lines, accidentals, a
   // stem direction from each note's own pitch) instead of the rhythm
   // tool's slashes. Handles its own hit-testing too, each slot exactly like
   // a plain cell (see wireStaffCellHit), routing back through
@@ -2562,23 +2706,26 @@
   // tuplet's own index in the outer `cells`.
   function renderTupletGroupStaff(container, cell, x, w, el, callbacks, i, showsAccidental = () => true) {
     const subCells = cell.cells;
-    const n = subCells.length;
-    const slotW = w / n;
+    const { slots, places: n } = tupletSlots(cell);
+    const placeW = w / n;
     const noteSize = el.h * 0.65;
     const stemLen = el.h * 0.68;
     const beamThick = el.h * 0.12;
     const stemHalf = NOTESTAFF_STEM_W / 2;
     const midlineY = pitchToY(4, el);
 
-    const slotX = k => x + k * slotW;
-    const cx = k => slotX(k) + slotW / 2;
+    const slotX = k => x + slots[k].start * placeW;
+    const slotW = k => slots[k].span * placeW;
+    // A note sits in its first place (as a plain note sits at its cell's
+    // start); a rest is centred in all of them.
+    const cx = k => slotX(k) + (subCells[k].type === 'rest' ? slotW(k) : placeW) / 2;
     const pitchOf = k => (subCells[k].pitch != null ? subCells[k].pitch : STAFF_DEFAULT_PITCH);
     const halfWOf = k => noteheadHalfW(subCells[k].duration, noteSize);
     const stemXOf = (k, up) => cx(k) + (up ? 1 : -1) * (halfWOf(k) - stemHalf);
     const sel = k => (callbacks.selected && callbacks.selected(i, k) ? ' is-cell-selected' : '');
 
     subCells.forEach((sub, k) => {
-      wireStaffCellHit(container, el, callbacks, sub, i, k, slotX(k), slotW, cx(k), pitchOf(k), halfWOf(k));
+      wireStaffCellHit(container, el, callbacks, sub, i, k, slotX(k), slotW(k), cx(k), pitchOf(k), halfWOf(k));
     });
 
     subCells.forEach((sub, k) => {
@@ -2604,7 +2751,7 @@
     // beam-eligible, and any group containing a rest falls back to individual
     // stems/flags plus a bracket (with the number in its gap) -- same choice
     // as the rhythm tool.
-    const beamed = subCells.every(sub => sub.type === 'note') && BEAM_ELIGIBLE_DURATIONS.has(cell.unit);
+    const beamed = subCells.every(sub => sub.type === 'note' && sub.duration === cell.unit) && BEAM_ELIGIBLE_DURATIONS.has(cell.unit);
     // Per slot, which way its stem points (a tie bows the other way) and
     // where it ends (what a slur over it has to clear).
     const stems = [];
@@ -2715,8 +2862,12 @@
     const cellBoxes = cells.map((cell, i) => {
       const bx = x + positionsPx[i], bw = cellWidths[i];
       if (cell.type !== 'tuplet') return { x: bx, w: bw, cx: cell.type === 'rest' ? restCx(i) : noteCx(i) };
-      const sw = bw / cell.cells.length;
-      return { x: bx, w: bw, cx: bx + bw / 2, subs: cell.cells.map((_, k) => ({ x: bx + k * sw, w: sw, cx: bx + (k + 0.5) * sw })) };
+      const { slots, places } = tupletSlots(cell);
+      const pw = bw / places;
+      return { x: bx, w: bw, cx: bx + bw / 2, subs: slots.map((sl, k) => ({
+        x: bx + sl.start * pw, w: sl.span * pw,
+        cx: bx + sl.start * pw + (cell.cells[k].type === 'rest' ? sl.span * pw : pw) / 2,
+      })) };
     });
 
     if (callbacks.onMove) {
@@ -2817,7 +2968,6 @@
         container.appendChild(primary);
 
         const beam2Y = beamY + (stemUp ? beamGap : -beamGap);
-        const stubLen = (cellWidths[run.start] || 8) * 0.6;
         let sStart = null;
         const stretches = [];
         for (let k = 0; k <= runCells.length; k++) {
@@ -2832,6 +2982,9 @@
             container.appendChild(seg);
           } else {
             const dir = sr.start < runCells.length - 1 ? 1 : -1;
+            // A broken-beam stub reaches about a third of the way to the
+            // neighboring stem it points at.
+            const stubLen = Math.abs(stemXs[sr.start + dir] - stemXs[sr.start]) * 0.3;
             const stub = svgLine(stemXs[sr.start] - dir * stemHalf, beam2Y, stemXs[sr.start] + dir * stubLen, beam2Y, { cls: 'el-notegroup-beam' });
             stub.setAttribute('stroke-width', beamThick);
             container.appendChild(stub);
@@ -3000,8 +3153,10 @@
     else if (el.type === 'row') renderRowEl(svg, el);
     else if (el.type === 'repeat') renderRepeatEl(svg, el);
     else if (el.type === 'volta') renderVoltaEl(svg, el);
+    else if (el.type === 'hairpin') renderHairpinEl(svg, el);
     else if (el.type === 'arrow') renderArrowEl(svg, el);
     else if (el.type === 'glyph') renderGlyphEl(svg, el);
+    else if (el.type === 'timesig' || el.type === 'keysig') renderLooseSigEl(svg, el);
     else if (el.type === 'rhythmbar') renderRhythmBarEl(svg, el);
     else if (el.type === 'notestaff') renderNoteStaffEl(svg, el);
   }
@@ -3010,11 +3165,11 @@
     sheetPdfGen++;
     if (sheetPdf) dropSheetPdf();
     const svg = document.getElementById('sheet-svg');
-    svg.setAttribute('viewBox', `0 0 ${PAGE_W} ${PAGE_H}`);
+    svg.setAttribute('viewBox', `0 ${-PAGE_TOP_PAD} ${PAGE_W} ${PAGE_H}`);
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     ensureDefs(svg);
 
-    svg.appendChild(svgRect(0, 0, PAGE_W, PAGE_H, { cls: 'page-bg' }));
+    svg.appendChild(svgRect(0, -PAGE_TOP_PAD, PAGE_W, PAGE_H, { cls: 'page-bg' }));
 
     const titleStr = model.title || 'Untitled';
     svg.appendChild(svgText(titleStr, PAGE_W / 2, PAGE_MARGIN, { cls: 'page-title-text', anchor: 'middle', size: 22 }));
@@ -3169,7 +3324,9 @@
   }
   // A pick from the time signature menu (see openTimeSigMenu).
   function setTimeSig(el, ts) {
-    setBarTimeSig(el, ts.numerator, ts.denominator);
+    // A loose time signature has no cells to re-bar.
+    if (el.type === 'timesig') { el.numerator = ts.numerator; el.denominator = ts.denominator; }
+    else setBarTimeSig(el, ts.numerator, ts.denominator);
     if (ts.symbol) el.timeSymbol = ts.symbol; else delete el.timeSymbol;
   }
   // A staff's flat cell list cut into bars of `barUnits` (no cell crosses a boundary).
@@ -3331,14 +3488,41 @@
   }
 
   // A plain cell's new length, if it fits before the barline. A tuplet
-  // slot's length is fixed (it's what keeps the group adding up).
+  // slot's goes through setTupletSlotDuration.
   function setCellDuration(el, addr, duration) {
-    if (addr.subIdx != null) return false;
+    if (addr.subIdx != null) return setTupletSlotDuration(el, addr, duration);
     const cell = el.cells[addr.idx];
     if (!cell || cell.type === 'tuplet') return false;
     if (!(cell.type === 'rest' ? REST_DURATIONS : NOTE_DURATIONS).includes(duration)) return false;
     if (duration > roomInBar(el, addr.idx)) return false;
     if (duration !== cell.duration) el.cells = replaceCellKeeping(el.cells, addr.idx, { type: cell.type, duration }, el.type === 'notestaff' ? el : null);
+    return true;
+  }
+  // A tuplet slot's new length, in the group's own note values: a quarter in
+  // an 8th triplet covers two places, taking over whatever was in the next
+  // one, and going back to an 8th leaves a rest there. The group's total
+  // stays the same, so the length has to be a whole number of places (not
+  // dotted) that fits before the group's end.
+  function setTupletSlotDuration(el, addr, duration) {
+    const tuplet = el.cells[addr.idx];
+    const sub = tuplet && tuplet.type === 'tuplet' && tuplet.cells[addr.subIdx];
+    if (!sub || duration % tuplet.unit || UNDOTTED[duration]) return false; // a dot isn't drawn inside a tuplet
+    if (!(sub.type === 'rest' ? REST_DURATIONS : NOTE_DURATIONS).includes(duration)) return false;
+    const unit = tuplet.unit;
+    const restsFor = (from, to) => Array.from({ length: Math.max(0, (to - from) / unit) }, () => ({ type: 'rest', duration: unit }));
+    const start = cellStart(tuplet.cells, addr.subIdx);
+    const end = start + duration;
+    if (end > cellStart(tuplet.cells, tuplet.cells.length)) return false;
+    if (duration === sub.duration) return true;
+    const after = restsFor(end, start + sub.duration); // what a shorter slot leaves behind
+    let pos = start + sub.duration;
+    tuplet.cells.slice(addr.subIdx + 1).forEach(c => {
+      if (pos >= end) after.push(c);
+      else after.push(...restsFor(end, pos + c.duration)); // the part of a swallowed slot that sticks out
+      pos += c.duration;
+    });
+    tuplet.cells = [...tuplet.cells.slice(0, addr.subIdx), { ...sub, duration }, ...after];
+    dropDanglingTies(el.cells);
     return true;
   }
   function dotToggled(duration) { return DOTTED[duration] || UNDOTTED[duration] || null; }
@@ -3357,7 +3541,7 @@
     };
     if (addr.subIdx != null) {
       if (cell.cells[addr.subIdx].type === 'rest') wholeCellToRests();
-      else cell.cells[addr.subIdx] = carryChord(cell.cells[addr.subIdx], { type: 'rest', duration: cell.unit });
+      else cell.cells[addr.subIdx] = carryChord(cell.cells[addr.subIdx], { type: 'rest', duration: cell.cells[addr.subIdx].duration });
       dropDanglingTies(el.cells);
       return true;
     }
@@ -3519,7 +3703,8 @@
 
   const ELEMENT_NAMES = {
     title: 'Title box', chordText: 'Chord text', text: 'Text', row: 'Bars', repeat: 'Repeat sign',
-    volta: 'Volta ending', arrow: 'Arrow', glyph: 'Symbol', rhythmbar: 'Rhythm bar', notestaff: 'Note staff',
+    volta: 'Volta ending', hairpin: 'Hairpin', arrow: 'Arrow', glyph: 'Symbol', rhythmbar: 'Rhythm bar', notestaff: 'Note staff',
+    timesig: 'Time signature', keysig: 'Key signature',
   };
   const TEXT_TYPE_OPTIONS = [
     { value: 'title', label: 'Title box' }, { value: 'chordText', label: 'Chord text' }, { value: 'text', label: 'Text' },
@@ -3647,12 +3832,41 @@
       geometrySection(el),
       actionsSection(),
     ],
+    hairpin: el => [
+      { fields: [
+        { kind: 'segmented', id: 'kind', label: 'Kind', options: [{ value: 'cresc', label: 'Crescendo' }, { value: 'dim', label: 'Diminuendo' }],
+          get: e => e.kind, set: (e, v) => { e.kind = v; } },
+      ] },
+      geometrySection(el),
+      actionsSection(),
+    ],
     glyph: el => [
       { fields: [
         { kind: 'select', id: 'code', label: 'Symbol',
           options: GLYPH_OPTIONS.some(o => o.value === el.code) ? GLYPH_OPTIONS : [...GLYPH_OPTIONS, { value: el.code, label: 'Custom' }],
           get: e => e.code, set: (e, v) => { e.code = v; } },
         numField('Size', 'fontSize', { stepper: true, integer: true, min: LIMITS.glyphFont[0], max: LIMITS.glyphFont[1] }),
+      ] },
+      geometrySection(el),
+      actionsSection(),
+    ],
+    timesig: el => [
+      { fields: [{ kind: 'timeSig' }] },
+      geometrySection(el),
+      actionsSection(),
+    ],
+    keysig: el => [
+      { fields: [
+        { kind: 'menu', id: 'clef', label: 'Clef', make: (e, apply) => clefButton(() => e.clef || 'treble', apply),
+          set: (e, v) => { e.clef = v; } },
+        // As shown, like a note staff's Key (see storedKeySignature).
+        { kind: 'menu', id: 'keySignature', label: 'Key', newRow: true, structural: true,
+          make: (e, apply) => keySigButton(() => displayedKeySignature(e), () => e.clef || 'treble', apply),
+          set: (e, v) => { e.keySignature = storedKeySignature(e, v); } },
+        // A change to C: which key's sharps or flats its naturals cancel.
+        ...(displayedKeySignature(el) ? [] : [{ kind: 'menu', id: 'cancel', label: 'Cancels', newRow: true,
+          make: (e, apply) => keySigButton(() => displayedCancel(e), () => e.clef || 'treble', apply),
+          set: (e, v) => { if (v) e.cancel = storedKeySignature(e, v); else delete e.cancel; } }]),
       ] },
       geometrySection(el),
       actionsSection(),
@@ -4116,6 +4330,8 @@
     });
   }
   document.querySelectorAll('.palette-tile').forEach(wirePaletteDrag);
+  // Drawn like the time signature menu's tiles.
+  document.getElementById('tile-timesig').appendChild(timeSigIcon({ numerator: 4, denominator: 4 }, 24));
 
   wireMarquee();
   document.addEventListener('keydown', e => {
@@ -4540,9 +4756,9 @@
   }
   function selectedDuration() {
     const c = cellAt(staffEditor.el, staffEditor.sel);
-    return c && staffEditor.sel.subIdx == null ? c.duration : null;
+    return c ? c.duration : null;
   }
-  const NO_ROOM = "That length doesn't fit before the barline (a tuplet's notes can't change length)";
+  const NO_ROOM = "That length doesn't fit before the barline (or, in a tuplet, before the tuplet's end)";
   function pickDuration(d) { editSelected((el, sel) => setCellDuration(el, sel, d), NO_ROOM); }
   function durationStep(fn, why) {
     const d = selectedDuration();
@@ -4968,7 +5184,8 @@
         : 'Set the sheet’s key above to transpose.'));
       return;
     }
-    const apply = () => { renderTransposeBox(); renderSvg(); };
+    // The edit box too: a loose key signature's fields depend on its key as shown.
+    const apply = () => { renderTransposeBox(); renderSvg(); renderEditBox(); };
 
     const line = mk('div', 'tr-key-line');
     line.appendChild(mk('span', 'tr-key', `Key: ${transposedKeyName()} (${formatAmount(t.semitones)})`));
@@ -5250,6 +5467,12 @@
     return new XMLSerializer().serializeToString(clone);
   }
 
+  // Chromium-based browsers (Chrome, Edge, Brave, Opera, Android Chrome; the
+  // UA's "Chrome/"), but no browser on iOS, which are all WebKit underneath
+  // (their UAs say CriOS/EdgiOS instead). Firefox keeps the wait: untested.
+  const FONTS_READY_AT_DECODE = /(Chrome|Chromium|Edg|OPR)\//.test(navigator.userAgent)
+    && !/iPhone|iPad|iPod/.test(navigator.userAgent);
+
   async function sheetJpegBytes() {
     const markup = sheetSvgMarkup(await loadShareFontCss());
     const url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml' }));
@@ -5267,10 +5490,14 @@
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       };
       // WebKit can paint an SVG image before its embedded fonts are ready;
-      // drawing a second time a moment later picks them up.
+      // drawing a second time a moment later picks them up. Chromium has them
+      // by the time decode() resolves (the pages come out byte-identical
+      // either way), so it skips the wait: a setlist PDF is then ~6x faster.
       draw();
-      await new Promise(r => setTimeout(r, 150));
-      draw();
+      if (!FONTS_READY_AT_DECODE) {
+        await new Promise(r => setTimeout(r, 150));
+        draw();
+      }
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
       return { bytes: new Uint8Array(await blob.arrayBuffer()), w: canvas.width, h: canvas.height };
     } finally {
@@ -5475,9 +5702,9 @@
   // shrinks further only when a set is too long for the page.
   function renderSetlistSvg(sets, subtitle) {
     const svg = document.getElementById('sheet-svg');
-    svg.setAttribute('viewBox', `0 0 ${PAGE_W} ${PAGE_H}`);
+    svg.setAttribute('viewBox', `0 ${-PAGE_TOP_PAD} ${PAGE_W} ${PAGE_H}`);
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    svg.appendChild(svgRect(0, 0, PAGE_W, PAGE_H, { cls: 'page-bg' }));
+    svg.appendChild(svgRect(0, -PAGE_TOP_PAD, PAGE_W, PAGE_H, { cls: 'page-bg' }));
     svg.appendChild(svgText('Setlist', PAGE_W / 2, PAGE_MARGIN, { cls: 'page-title-text', anchor: 'middle', size: 22 }));
     if (subtitle) {
       svg.appendChild(svgText(subtitle, PAGE_W / 2, PAGE_MARGIN + 22, { cls: 'page-key-text', anchor: 'middle', size: 13 }));
@@ -5486,7 +5713,7 @@
     const cols = sets.slice(0, 3);
     const labelled = cols.length > 1;
     const top = PAGE_MARGIN + 70;
-    const bottom = PAGE_H - PAGE_MARGIN;
+    const bottom = PAGE_H - PAGE_TOP_PAD - PAGE_MARGIN; // the page ends there, drawn from -PAGE_TOP_PAD
     const colW = (PAGE_W - 2 * PAGE_MARGIN) / cols.length;
     const gap = 24;
     const rows = Math.max(...cols.map(c => c.length)) + (labelled ? 1.5 : 0);
