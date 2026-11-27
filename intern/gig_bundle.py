@@ -86,6 +86,9 @@ def build_leadsheet_plan(
     sheet and anything worth checking, for a note page at the front.
     mode "original" draws every sheet in its own key, "transposed" in the
     key it's played in, and "setlist" also puts the setlist page first.
+    Each page says which set its song is in ("set": 1, 2, ..., numbered
+    like the setlist page, which skips empty sets), so the setlist PDF can
+    put a "Set 2" page between the sets.
     `picks` (the gig page's Custom option) limits the PDF to those setlist
     rows -- index into gig["songs"] -> singer to transpose for, overriding
     the setlist's -- and leaves the setlist page out.
@@ -115,6 +118,7 @@ def build_leadsheet_plan(
         singer = picks[index] if picks is not None else row.get("singer") or ""
         played_offset = (row.get(singer) if singer else 0) or 0
         sets[-1].append({"title": title, "key": chords.transpose_key(row.get("key") or "", played_offset)})
+        set_number = sum(1 for songs in sets if songs)
         if row.get("repertoire_id"):
             sheet = by_song.get(row["repertoire_id"])
         else:
@@ -124,7 +128,7 @@ def build_leadsheet_plan(
             missing.append(title)
             continue
         if original:
-            pages.append({"sheet": sheet, "semitones": 0, "flats": False, "label": title, "singer": ""})
+            pages.append({"sheet": sheet, "semitones": 0, "flats": False, "label": title, "singer": "", "set": set_number})
             continue
 
         offset = row.get(singer) if singer else 0
@@ -150,7 +154,9 @@ def build_leadsheet_plan(
             flats = chords.prefers_flats(sheet_read[0] + semitones, sheet_read[1]) if semitones else False
         who = SINGER_NAMES.get(singer, "")
         label = f"{title} — {who} {chords.offset_label(offset, song_key)}".strip() if who else title
-        pages.append({"sheet": sheet, "semitones": semitones, "flats": flats, "label": label, "singer": who})
+        pages.append({
+            "sheet": sheet, "semitones": semitones, "flats": flats, "label": label, "singer": who, "set": set_number,
+        })
 
     name = " ".join(part for part in (gig.get("date"), gig.get("venue")) if part) or "Gig"
     return {

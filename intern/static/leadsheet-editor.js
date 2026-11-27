@@ -5737,6 +5737,20 @@
     });
   }
 
+  // The page between two sets in a gig's lead-sheet PDF with its setlist:
+  // "Set 2" in the middle of a blank page, in the setlist page's title font.
+  function renderSetDividerSvg(setNumber) {
+    const svg = document.getElementById('sheet-svg');
+    svg.setAttribute('viewBox', `0 ${-PAGE_TOP_PAD} ${PAGE_W} ${PAGE_H}`);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.appendChild(svgRect(0, -PAGE_TOP_PAD, PAGE_W, PAGE_H, { cls: 'page-bg' }));
+    const size = 64;
+    // The page's middle (it's drawn from -PAGE_TOP_PAD), less the text's
+    // drop below its baseline-to-middle.
+    const y = PAGE_H / 2 - PAGE_TOP_PAD + size * 0.35;
+    svg.appendChild(svgText(`Set ${setNumber}`, PAGE_W / 2, y, { cls: 'page-title-text', anchor: 'middle', size }));
+  }
+
   // The front page of a gig's lead-sheet PDF with its setlist: white, with
   // the band's logo in the middle, half the page wide.
   async function coverPageJpeg() {
@@ -5772,6 +5786,10 @@
     for (let i = 0; i < plan.pages.length; i++) {
       const page = plan.pages[i];
       onProgress(i + 1, plan.pages.length);
+      if (withSetlist && i > 0 && page.set !== plan.pages[i - 1].set) {
+        renderSetDividerSvg(page.set);
+        jpegs.push(await sheetJpegBytes());
+      }
       model = JSON.parse(JSON.stringify(page.sheet));
       model.elements = model.elements || [];
       selectedIds.clear();
