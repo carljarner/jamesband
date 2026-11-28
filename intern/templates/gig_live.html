@@ -123,8 +123,7 @@
     function showLyrics(song) {
       let sheet = lyricsSheets.get(song.lyrics);
       if (!sheet) {
-        const doc = plan.lyrics[song.lyrics];
-        sheet = LyricsRender.sheet({ ...doc, key: song.key || doc.key || '' });
+        sheet = LyricsRender.sheet(plan.lyrics[song.lyrics]);
         lyricsSheets.set(song.lyrics, sheet);
       }
       const box = document.createElement('div');

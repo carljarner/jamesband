@@ -32,7 +32,17 @@
     return el;
   }
 
+  // The key as a gig lead sheet writes it: "Key: F", or transposed
+  // "Key: F (0.5 ↑)" -- how far from the lyrics' own key, in whole tones.
+  function keyLabel(key, semitones) {
+    if (!key) return '';
+    if (!semitones) return `Key: ${key}`;
+    return `Key: ${key} (${Math.abs(semitones) / 2} ${semitones > 0 ? '↑' : '↓'})`;
+  }
+
   // A read-only page: the same header and two-column body as the editor's.
+  // For a gig, the header is a lead sheet's: `singer` top left, and the key
+  // with `semitones` as an arrow.
   function sheet(doc) {
     const article = document.createElement('article');
     article.className = 'lyrics-sheet';
@@ -40,8 +50,9 @@
     head.className = 'lyrics-head';
     const center = div('lyrics-head__center');
     center.append(div('lyrics-field lyrics-title', doc.title || ''), div('lyrics-field lyrics-artist', doc.artist || ''));
-    const key = div('lyrics-key' + (doc.key ? '' : ' is-empty'), doc.key ? `Key: ${doc.key}` : '');
+    const key = div('lyrics-key' + (doc.key ? '' : ' is-empty'), keyLabel(doc.key, doc.semitones));
     head.append(center, key);
+    if (doc.singer) head.appendChild(div('lyrics-singer', `Singer: ${doc.singer}`));
     const body = div('lyrics-body');
     for (const block of doc.blocks || []) body.appendChild(blockElement(block));
     article.append(head, body);
@@ -50,12 +61,18 @@
 
   // A page shows exactly what one printed A4 page holds, the left column
   // filling first. Lyrics too long for that grow the page instead, in
-  // balanced columns ("is-long"). The sheet must be in the document.
-  // Returns whether it's long.
+  // balanced columns ("is-long"). The sheet must be in the document, and
+  // not scaled. Returns whether it's long.
+  // Overflowing lyrics spill into a third column off the page's right
+  // side. Safari (so every iPhone and iPad) doesn't count that column in
+  // scrollWidth, so the last line's position is checked as well.
   function fit(sheetEl) {
     const body = sheetEl.querySelector('.lyrics-body');
     sheetEl.classList.remove('is-long');
-    const over = body.scrollWidth > body.clientWidth + 2;
+    const box = body.getBoundingClientRect();
+    const last = body.lastElementChild && body.lastElementChild.getBoundingClientRect();
+    const over = body.scrollWidth > body.clientWidth + 2
+      || Boolean(last && (last.left >= box.right - 2 || last.bottom > box.bottom + 2));
     sheetEl.classList.toggle('is-long', over);
     return over;
   }

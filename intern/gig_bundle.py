@@ -31,6 +31,26 @@ def _played_key(row: dict, singer: str | None = None) -> str:
     return chords.transpose_key(row.get("key") or "", offset)
 
 
+def _lyrics_page(doc: dict, row: dict, singer: str | None = None) -> dict:
+    """A lyrics doc as drawn for a gig, with a header like a lead sheet's:
+    the key it's played in, how many semitones that is from the lyrics' own
+    key ("semitones", shown as an arrow) and who sings it ("singer")."""
+    if singer is None:
+        singer = row.get("singer") or ""
+    offset = (row.get(singer) if singer else 0) or 0
+    doc_key, song_key = doc.get("key") or "", row.get("key") or ""
+    semitones = _sheet_semitones(doc_key, song_key, offset)
+    key = chords.transpose_key(song_key, offset) if song_key else chords.transpose_key(doc_key, semitones)
+    return {
+        "title": doc.get("title") or "",
+        "artist": doc.get("artist") or "",
+        "blocks": doc.get("blocks") or [],
+        "key": key or doc_key,
+        "semitones": semitones if key else 0,
+        "singer": SINGER_NAMES.get(singer, ""),
+    }
+
+
 def _lyrics_finder():
     lyrics.auto_link()
     return song_links.row_finder(lyrics.list_lyrics())
@@ -47,7 +67,7 @@ def build_lyrics_bundle(gig_id: str) -> tuple[bytes, list[str]]:
     gig = setlists.get_setlist(gig_id)
     find = _lyrics_finder()
 
-    songs: list[tuple[dict, str]] = []
+    songs: list[dict] = []
     missing: list[str] = []
     for row in gig["songs"]:
         if row.get("type") != "song":
@@ -56,7 +76,7 @@ def build_lyrics_bundle(gig_id: str) -> tuple[bytes, list[str]]:
         if doc is None:
             missing.append(row.get("title") or "")
             continue
-        songs.append((doc, _played_key(row) or doc.get("key") or ""))
+        songs.append(_lyrics_page(doc, row))
 
     parts: list[bytes] = []
     if missing:
@@ -140,7 +160,7 @@ def build_leadsheet_plan(
             doc = find_lyrics(row)
             songs[-1]["lyrics"] = None if doc is None else len(lyrics_docs)
             if doc is not None:
-                lyrics_docs.append({k: doc.get(k) for k in ("title", "artist", "key", "blocks")})
+                lyrics_docs.append(_lyrics_page(doc, row, singer))
         if sheet is None:
             missing.append(title)
             continue

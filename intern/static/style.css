@@ -2865,7 +2865,7 @@ button.live__song.is-missing { color: var(--text-dim); }
 /* A lyrics page, scaled from its A4 size to the stage (see gig_live.html). */
 .live__lyrics { flex: none; position: relative; }
 .live__lyrics .lyrics-sheet { position: absolute; top: 0; left: 0; max-width: none; padding: 30px 40px 40px; transform-origin: 0 0; box-shadow: none; }
-.live__sheet.is-scrolling { align-items: flex-start; overflow-y: auto; }
+.live__sheet.is-scrolling { align-items: flex-start; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .live__placeholder {
   padding: 2rem 2.5rem;
   border-radius: var(--radius);
@@ -2996,6 +2996,18 @@ a.lyrics-add-btn { text-decoration: none; color: var(--text); }
   margin: 0 -12px 24px;
 }
 .lyrics-head__center { grid-column: 2; text-align: center; }
+/* A gig's lyrics (live mode): who sings it, top left like on a lead sheet. */
+.lyrics-singer {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  padding-top: 5px;
+  white-space: nowrap;
+  font-family: 'MuseJazzText', cursive;
+  font-size: 15px;
+  line-height: 1.1;
+  color: #55504a;
+}
 .lyrics-field { outline: none; border-radius: 3px; white-space: pre-wrap; }
 .lyrics-field:focus { background: rgba(79,215,209,0.12); }
 .lyrics-field:empty::before { content: attr(data-placeholder); color: #b3aea6; }
