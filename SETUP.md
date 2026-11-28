@@ -26,8 +26,9 @@ All other intern data is behind the login.
 - **Public page:** `.github/workflows/pages.yml` publishes `public/` on every
   push to `main` that changes `public/**` or the workflow. You can also start
   it by hand from the Actions tab.
-- **Intern app:** Coolify redeploys on pushes to `main` that touch the app's
-  code (see Watch Paths below).
+- **Intern app:** Coolify redeploys by itself on every push to `main` that
+  touches the app's code (see Watch Paths below), so pushing is all it takes
+  to ship a change. There's no manual redeploy step.
 - Saving something in the intern app writes to the server disk only. It never
   creates a GitHub commit.
 
@@ -65,9 +66,10 @@ All other intern data is behind the login.
 ### Data on the server
 
 Everything the app saves is stored under `/srv/jamesband/data` (`/data` in
-the container): `repertoire/`, `songs/`, `setlist/`, `setlists/`,
-`leadsheets/`, `gallery/`, and `public/` for the files the public page
-loads. The Docker image leaves out `intern/data/` (see `.dockerignore`), so a
+the container): `repertoire/`, `songs/`, `setlists/`, `leadsheets/`,
+`lyrics/` (with `lyrics_import.json`, the Google Doc the Lyrics page imports
+from), `gallery/`, and `public/` for the files the public page loads.
+`setlist/` holds the old Google Doc songbook, which the app no longer uses. The Docker image leaves out `intern/data/` (see `.dockerignore`), so a
 deploy never overwrites live data.
 
 ## DNS on simply.com
