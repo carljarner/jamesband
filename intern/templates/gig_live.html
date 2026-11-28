@@ -5,7 +5,17 @@
 {% block container_class %}live-container{% endblock %}
 {% block content %}
 <div class="live">
-  <aside class="live__side">
+  {# Small screens and tablets: just the sheet, under a bar whose burger
+     opens the setlist as a drawer. #}
+  <header class="live__bar">
+    <button type="button" id="live-menu" class="live__burger" aria-label="Setlist" aria-expanded="false" aria-controls="live-side">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="live__bar-title" id="live-bar-title"></div>
+    <div class="live__bar-count muted" id="live-bar-count"></div>
+  </header>
+  <div class="live__backdrop" id="live-backdrop" hidden></div>
+  <aside class="live__side" id="live-side">
     <a class="back live__back" href="/gigs/{{ gig.id }}">&larr; Back to gig</a>
     <div class="live__gig">
       <div class="live__venue">{{ gig.venue or "Untitled gig" }}</div>
@@ -16,6 +26,8 @@
   </aside>
   <main class="live__stage" id="live-stage">
     <div id="live-sheet" class="live__sheet"></div>
+    <div class="live__tap live__tap--prev" aria-hidden="true">&lsaquo;</div>
+    <div class="live__tap live__tap--next" aria-hidden="true">&rsaquo;</div>
   </main>
 </div>
 
@@ -41,6 +53,13 @@
     const stage = document.getElementById('live-stage');
     const sheetBox = document.getElementById('live-sheet');
     const fullscreenBtn = document.getElementById('live-fullscreen');
+    const menuBtn = document.getElementById('live-menu');
+    const side = document.getElementById('live-side');
+    const backdrop = document.getElementById('live-backdrop');
+    const barTitle = document.getElementById('live-bar-title');
+    const barCount = document.getElementById('live-bar-count');
+    // Must match the small-screen block in style.css.
+    const compact = window.matchMedia('(max-width: 1100px), (pointer: coarse)');
     const markup = new Map(); // page index -> SVG markup, drawn once
     const buttons = [];
     let current = 0;
@@ -73,7 +92,7 @@
         key.textContent = song.key;
         btn.appendChild(key);
       }
-      btn.addEventListener('click', () => { show(i); btn.blur(); });
+      btn.addEventListener('click', () => { show(i); btn.blur(); setMenu(false); });
       nav.appendChild(btn);
       buttons.push(btn);
     });
@@ -106,12 +125,27 @@
       }
       buttons.forEach((b, j) => b.classList.toggle('is-current', j === current));
       buttons[current].scrollIntoView({ block: 'nearest' });
+      barTitle.textContent = song.key ? `${song.title} (${song.key})` : song.title;
+      barCount.textContent = `${current + 1} / ${songs.length}`;
     }
+
+    // The setlist drawer (small screens).
+    function setMenu(open) {
+      side.classList.toggle('is-open', open);
+      backdrop.hidden = !open;
+      menuBtn.setAttribute('aria-expanded', String(open));
+      if (open && buttons[current]) buttons[current].scrollIntoView({ block: 'center' });
+    }
+    menuBtn.addEventListener('click', () => setMenu(!side.classList.contains('is-open')));
+    backdrop.addEventListener('click', () => setMenu(false));
+    compact.addEventListener('change', () => setMenu(false));
 
     function toggleFullscreen() {
       if (document.fullscreenElement) document.exitFullscreen();
       else document.documentElement.requestFullscreen().catch(() => {});
     }
+    // iPhones can't go fullscreen.
+    if (!document.documentElement.requestFullscreen) fullscreenBtn.hidden = true;
     fullscreenBtn.addEventListener('click', () => { toggleFullscreen(); fullscreenBtn.blur(); });
     document.addEventListener('fullscreenchange', () => {
       fullscreenBtn.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
@@ -124,6 +158,7 @@
     document.addEventListener('keydown', e => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      if (e.key === 'Escape') { setMenu(false); return; }
       let to = null;
       if (NEXT.includes(e.key)) to = current + 1;
       else if (PREV.includes(e.key)) to = current - 1;
@@ -135,10 +170,29 @@
       show(to);
     });
 
-    // Clicking the right half of the sheet goes on, the left half back.
+    // Clicking the right half of the sheet goes on, the left half back --
+    // on small screens only in the bottom corners, so the rest of the sheet
+    // can be touched (and pinch-zoomed) freely.
     stage.addEventListener('click', e => {
       const box = stage.getBoundingClientRect();
+      if (compact.matches && e.clientY - box.top < box.height * 0.7) return;
       show(e.clientX - box.left > box.width / 2 ? current + 1 : current - 1);
+    });
+
+    // Swiping: left for the next song, right for the one before. One finger
+    // only, mostly sideways, so pinch-zooming and scrolling don't count.
+    let touch = null;
+    stage.addEventListener('touchstart', e => {
+      touch = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+    }, { passive: true });
+    stage.addEventListener('touchmove', e => { if (e.touches.length > 1) touch = null; }, { passive: true });
+    stage.addEventListener('touchend', e => {
+      if (!touch || window.visualViewport && window.visualViewport.scale > 1.05) { touch = null; return; }
+      const dx = e.changedTouches[0].clientX - touch.x;
+      const dy = e.changedTouches[0].clientY - touch.y;
+      touch = null;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      show(dx < 0 ? current + 1 : current - 1);
     });
 
     if (!songs.length) {

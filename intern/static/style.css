@@ -2918,3 +2918,66 @@ button.live__song.is-missing { color: var(--text-dim); }
   font-size: 1.2rem;
   text-align: center;
 }
+.live__stage { position: relative; }
+.live__bar, .live__tap { display: none; }
+
+/* Small screens and tablets (iPads too): just the sheet, under a bar whose
+   burger opens the setlist as a drawer. Swipes and the bottom corners
+   change song. Must match `compact` in gig_live.html. */
+@media (max-width: 1100px), (pointer: coarse) {
+  .live { display: flex; flex-direction: column; }
+  .live__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: none;
+    height: 48px;
+    padding: 0 0.75rem;
+    background: var(--surface);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  button.live__burger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+    padding: 0 9px;
+    border: 0;
+    background: transparent;
+  }
+  button.live__burger:hover { background: var(--surface-alt); }
+  .live__burger span { display: block; height: 2px; border-radius: 1px; background: var(--text); }
+  .live__bar-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+  .live__bar-count { font-size: 0.85rem; white-space: nowrap; }
+
+  .live__side {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    width: min(340px, 85vw);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  }
+  .live__side.is-open { transform: none; }
+  .live__backdrop { position: fixed; inset: 0; z-index: 19; background: rgba(0,0,0,0.5); }
+
+  .live__stage { flex: 1; padding: 8px; cursor: default; }
+  /* Faint arrows in the bottom corners, where a tap changes song. */
+  .live__tap {
+    display: block;
+    position: absolute;
+    bottom: 12px;
+    font-size: 2.4rem;
+    line-height: 1;
+    color: var(--text-dim);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  .live__tap--prev { left: 14px; }
+  .live__tap--next { right: 14px; }
+}
