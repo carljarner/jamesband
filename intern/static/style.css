@@ -1148,9 +1148,11 @@ input.top-box__search {
   font-size: 0.85rem;
 }
 
-.lyrics-column__link-row { display: flex; gap: 0.5rem; align-items: stretch; }
-.lyrics-column__link-row input { flex: 1; min-width: 0; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.8rem; }
-#mastersongbook-status { font-size: 0.8rem; margin: 0.75rem 0; }
+/* The setlist's songs without lyrics, each a link to write them. */
+.missing-lyrics__status { font-size: 0.8rem; margin: 0 0 0.5rem; }
+.missing-lyrics li { padding: 0; }
+.missing-lyrics a { display: block; padding: 0.4rem 0.6rem; color: var(--text); text-decoration: none; }
+.missing-lyrics li:hover { border-color: var(--accent-2); }
 
 #repertoire-list li, #new-song-list li.pick-list__choice { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
 #repertoire-list li:hover, #new-song-list li.pick-list__choice:hover { border-color: var(--accent-2); }
@@ -1165,76 +1167,6 @@ input.top-box__search {
   .setlist-top-columns { flex-direction: column; }
   .top-box { height: auto; max-height: 400px; }
 }
-
-/* Nested inside the Lyrics column (.top-box), so kept compact -- the two
-   lists get their own small scrollviews rather than growing the column. */
-.connect-titles {
-  display: flex;
-  align-items: stretch;
-  gap: 0.6rem;
-  flex: 1;
-  min-height: 0;
-}
-
-.connect-titles__col {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--surface-alt);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 6px;
-  padding: 0.6rem;
-}
-
-.connect-titles__col h3 {
-  margin: 0 0 0.4rem;
-  font-family: 'Bebas Neue', sans-serif;
-  letter-spacing: 0.04em;
-  font-size: 0.8rem;
-  color: var(--accent-2);
-  font-weight: 400;
-}
-
-.connect-titles__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.connect-titles__list li {
-  padding: 0.3rem 0.5rem;
-  margin-bottom: 0.25rem;
-  background: var(--surface);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 6px;
-  font-size: 0.78rem;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.connect-titles__list li:hover { border-color: var(--accent-2); }
-.connect-titles__list li.is-selected {
-  border-color: var(--accent-2);
-  background: rgba(79,215,209,0.12);
-}
-.connect-titles__list li.is-selected::before { content: '✓ '; color: var(--accent-2); }
-
-.connect-btn {
-  display: block;
-  margin: 0.75rem auto 0;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.68rem;
-}
-
-.connect-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.connect-btn:disabled:hover { background: transparent; color: var(--text); }
 
 .setlist-wrap {
   overflow-x: auto;
@@ -2868,6 +2800,26 @@ body.lead-viewer .tr-acc .eb-btn { width: 40px; padding: 0; font-size: 1.1rem; }
 .live__venue { font-family: 'Bebas Neue', 'Inter', sans-serif; font-size: 1.5rem; letter-spacing: 0.03em; line-height: 1.1; }
 .live__date { font-size: 0.85rem; }
 .live__fullscreen { align-self: stretch; }
+/* Lead sheets | Lyrics, above Fullscreen. */
+.live__mode {
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.live__mode button {
+  flex: 1;
+  padding: 0.4rem 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+}
+.live__mode button:hover { background: var(--surface-alt); color: var(--text); }
+.live__mode button[aria-pressed="true"] { background: var(--surface-alt); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent-2); }
 .live__songs { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -0.25rem; padding: 0 0.25rem; }
 .live__set {
   margin: 0.6rem 0 0.2rem;
@@ -2910,6 +2862,10 @@ button.live__song.is-missing { color: var(--text-dim); }
 }
 .live__sheet { height: 100%; display: flex; align-items: center; justify-content: center; }
 .live__sheet svg { display: block; height: 100%; width: auto; max-width: 100%; }
+/* A lyrics page, scaled from its A4 size to the stage (see gig_live.html). */
+.live__lyrics { flex: none; position: relative; }
+.live__lyrics .lyrics-sheet { position: absolute; top: 0; left: 0; max-width: none; padding: 30px 40px 40px; transform-origin: 0 0; box-shadow: none; }
+.live__sheet.is-scrolling { align-items: flex-start; overflow-y: auto; }
 .live__placeholder {
   padding: 2rem 2.5rem;
   border-radius: var(--radius);
@@ -2986,60 +2942,28 @@ button.live__song.is-missing { color: var(--text-dim); }
 /* The "+" on the Lyrics page is a link styled like the other "+" buttons. */
 a.lyrics-add-btn { text-decoration: none; color: var(--text); }
 
-.lyrics-editor { max-width: calc(210mm + 240px + 1.5rem); margin: 0 auto; }
-
-.lyrics-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 1rem;
-  padding: 0.5rem 0.6rem;
-  background: var(--surface);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: var(--radius);
-}
-.lyrics-tool {
-  padding: 0.35rem 0.8rem;
-  font-size: 0.72rem;
-  border-width: 1px;
-  border-color: rgba(255,255,255,0.18);
-}
-.lyrics-tool:hover { background: var(--surface-alt); color: var(--text); border-color: var(--accent-2); }
-.lyrics-tool[aria-pressed="true"] { border-color: var(--accent-2); color: var(--accent-2); }
+/* The editor is laid out like the lead sheet editor (.editor-layout): the
+   Format box on the left, the page, the Song and Tips boxes on the right. */
+.lyrics-editor-layout .page-column { flex: 0 1 210mm; max-width: 210mm; }
+.lyrics-side { width: 270px; position: sticky; top: 1rem; flex-wrap: nowrap; }
+.lyrics-side > * { flex-shrink: 0; }
+.lyrics-format .mode-seg .eb-btn { padding: 0.35rem 0; }
 .lyrics-tool--section { font-weight: 700; }
 .lyrics-swatch {
   display: inline-block;
-  width: 0.8rem;
-  height: 0.8rem;
-  margin-right: 0.35rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.3rem;
   border-radius: 2px;
-  vertical-align: -2px;
+  vertical-align: -1px;
 }
 .lyrics-swatch--blue { background: rgb(201, 226, 255); }
 .lyrics-swatch--red { background: rgb(255, 205, 205); }
-.lyrics-tool-sep { width: 1px; align-self: stretch; margin: 0 0.2rem; background: rgba(255,255,255,0.12); }
-.lyrics-status { margin-left: auto; font-size: 0.78rem; color: var(--text-dim); }
-.lyrics-status.is-error { color: var(--accent); }
-
-.lyrics-layout { display: flex; align-items: flex-start; justify-content: center; gap: 1.5rem; }
-.lyrics-page-column { flex: 0 1 210mm; min-width: 0; }
-.lyrics-side {
-  flex: 0 0 240px;
-  position: sticky;
-  top: 4.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.lyrics-song-select { width: 100%; margin: 0.3rem 0 0.2rem; font-size: 0.8rem; }
+.lyrics-status { min-height: 1em; margin: 0; padding: 0 0.15rem; font-size: 0.72rem; color: var(--text-dim); }
+.lyrics-status.is-error { color: #ff9b92; }
 .lyrics-tips ul { margin: 0.2rem 0 0; padding-left: 1rem; line-height: 1.45; }
 .lyrics-tips li { margin-bottom: 0.25rem; }
 .lyrics-tips b { color: var(--text); font-weight: 600; }
-.lyrics-delete { align-self: flex-start; }
 .lyrics-note { margin: 0.6rem 0 0; font-size: 0.85rem; }
 
 /* One A4 page: the lead sheet's header, placed where it is on a lead sheet
@@ -3137,18 +3061,16 @@ select.lyrics-key-select:hover, select.lyrics-key-select:focus { background: rgb
   .lyrics-sheet { padding: 6mm; }
 }
 
-@media (max-width: 1100px) {
-  .lyrics-layout { flex-direction: column; align-items: center; }
-  .lyrics-page-column { flex: none; width: 100%; max-width: 210mm; }
-  .lyrics-side { position: static; flex: none; width: 100%; max-width: 210mm; }
+@media (max-width: 1000px) {
+  .lyrics-editor-layout .page-column { flex: 0 0 auto; width: 100%; max-width: 210mm; }
+  .lyrics-side { position: static; flex-direction: column; width: 100%; max-width: 420px; }
+  .lyrics-side .link-box { max-width: none; }
 }
 
 @media print {
   /* Paper is white, margins included (the app's dark scheme would tint them). */
   :root { color-scheme: light; }
   html { background: #fff; }
-  .lyrics-editor { max-width: none; }
-  .lyrics-layout { display: block; }
   .lyrics-sheet { max-width: none; height: 296mm; border-radius: 0; box-shadow: none; }
   /* Longer lyrics flow over the pages, with the margins on the paper. */
   .lyrics-sheet.is-long { page: lyrics-long; height: auto; min-height: 0; padding: 0; }

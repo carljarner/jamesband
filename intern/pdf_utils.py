@@ -1,4 +1,4 @@
-"""Small PDF helpers shared by gig_bundle.py and setlist.py: a plain-text
+"""Small PDF helpers for gig_bundle.py: a plain-text
 note page (for listing songs that couldn't be found), and merging a list of
 PDFs page-by-page into one.
 """

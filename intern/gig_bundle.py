@@ -1,64 +1,70 @@
 """Bundles a gig's lyrics and lead sheets.
 
-Lyrics: for each song in its setlist, look up the matching master songbook
-page and merge the results into one PDF. Songs with no match are listed on
-a note page prepended to the bundle, so the information travels with the
-file itself rather than needing a separate UI warning.
+Lyrics: each song in the setlist gets its lyrics (written on the Lyrics
+page, see lyrics.py) drawn as a page of the gig's lyrics PDF, in the key
+it's played in (see lyrics_pdf.py). Songs without lyrics are listed on a
+note page at the front, so the information travels with the file itself
+rather than needing a separate UI warning.
 
 Lead sheets are only drawn in the browser (static/leadsheet-editor.js), so
 here we just work out which sheet each song uses and how far to transpose
 it; the gig's lead-sheets page renders and merges them into the PDF.
 """
 
-from io import BytesIO
-
-from pypdf import PdfReader, PdfWriter
-
 import chords
 import leadsheets
+import lyrics
+import lyrics_pdf
 import pdf_utils
-import setlist
 import setlists
+import song_links
 
 SINGER_NAMES = {"signe": "Signe", "jonas": "Jonas", "duet": "Duet"}
 
 
+def _played_key(row: dict, singer: str | None = None) -> str:
+    """The key a setlist row is played in: its song key moved by its
+    singer's transposition (or `singer`'s, when given)."""
+    if singer is None:
+        singer = row.get("singer") or ""
+    offset = (row.get(singer) if singer else 0) or 0
+    return chords.transpose_key(row.get("key") or "", offset)
+
+
+def _lyrics_finder():
+    lyrics.auto_link()
+    return song_links.row_finder(lyrics.list_lyrics())
+
+
+def gig_filename(gig: dict, what: str) -> str:
+    name = " ".join(part for part in (gig.get("date"), gig.get("venue")) if part) or "Gig"
+    return f"{name} – {what}.pdf"
+
+
 def build_lyrics_bundle(gig_id: str) -> tuple[bytes, list[str]]:
-    """Returns (pdf_bytes, missing_titles). Raises KeyError if gig_id unknown."""
+    """Returns (pdf_bytes, missing_titles): the lyrics of every song in the
+    gig's setlist, in order. Raises KeyError if gig_id unknown."""
     gig = setlists.get_setlist(gig_id)
+    find = _lyrics_finder()
 
+    songs: list[tuple[dict, str]] = []
     missing: list[str] = []
+    for row in gig["songs"]:
+        if row.get("type") != "song":
+            continue
+        doc = find(row)
+        if doc is None:
+            missing.append(row.get("title") or "")
+            continue
+        songs.append((doc, _played_key(row) or doc.get("key") or ""))
+
     parts: list[bytes] = []
-
-    songbook = setlist.get_songbook()
-    master_path = setlist.get_master_pdf_path()
-    if songbook and master_path.exists():
-        aliases = setlist.get_aliases()
-        pages_by_title = {song["title"]: song["pages"] for song in songbook["songs"]}
-        reader = PdfReader(str(master_path))
-
-        for row in gig["songs"]:
-            if row.get("type") != "song":
-                continue
-            title = row.get("title") or ""
-            pages = pages_by_title.get(aliases.get(title, title))
-            if not pages:
-                missing.append(title)
-                continue
-            writer = PdfWriter()
-            for page_num in pages:
-                writer.add_page(reader.pages[page_num])
-            buf = BytesIO()
-            writer.write(buf)
-            parts.append(buf.getvalue())
-    else:
-        missing = [row.get("title") or "" for row in gig["songs"] if row.get("type") == "song"]
-
     if missing:
-        parts.insert(0, pdf_utils.note_page_pdf("Missing lyrics", missing))
+        parts.append(pdf_utils.note_page_pdf("Missing lyrics", missing))
+    if songs:
+        parts.append(lyrics_pdf.build(songs))
     if not parts:
-        parts.append(pdf_utils.note_page_pdf("Not available", ["No lyrics available for this gig."]))
-
+        parts.append(pdf_utils.note_page_pdf("Not available", ["This gig has no songs yet."]))
     return pdf_utils.merge_pdfs(parts), missing
 
 
@@ -79,7 +85,7 @@ LEADSHEET_MODES = ("original", "transposed", "setlist")
 
 
 def build_leadsheet_plan(
-    gig_id: str, mode: str = "setlist", picks: dict[int, str] | None = None
+    gig_id: str, mode: str = "setlist", picks: dict[int, str] | None = None, with_lyrics: bool = False
 ) -> dict:
     """What the gig's lead-sheet PDF holds, in setlist order: each song's
     sheet with the transposition to draw it at, plus the songs that have no
@@ -94,13 +100,15 @@ def build_leadsheet_plan(
     `picks` (the gig page's Custom option) limits the PDF to those setlist
     rows -- index into gig["songs"] -> singer to transpose for, overriding
     the setlist's -- and leaves the setlist page out.
+    `with_lyrics` (for live mode) adds each song's lyrics too: "lyrics" in
+    "songs" indexes into the plan's "lyrics" (None without any).
     Raises KeyError if gig_id is unknown."""
     original = mode == "original"
     gig = setlists.get_setlist(gig_id)
     leadsheets.auto_link()
-    by_song = leadsheets.links()
-    by_new = leadsheets.new_song_links()
-    by_title = {sheet["title"].strip().casefold(): sheet for sheet in leadsheets.list_leadsheets()}
+    find_sheet = song_links.row_finder(leadsheets.list_leadsheets())
+    find_lyrics = _lyrics_finder() if with_lyrics else None
+    lyrics_docs: list[dict] = []
 
     pages: list[dict] = []
     # Every song in setlist order, sheet or not, for live mode's sidebar:
@@ -121,18 +129,18 @@ def build_leadsheet_plan(
             continue
         title = row.get("title") or ""
         singer = picks[index] if picks is not None else row.get("singer") or ""
-        played_offset = (row.get(singer) if singer else 0) or 0
-        sets[-1].append({"title": title, "key": chords.transpose_key(row.get("key") or "", played_offset)})
+        sets[-1].append({"title": title, "key": _played_key(row, singer)})
         set_number = sum(1 for songs in sets if songs)
-        if row.get("repertoire_id"):
-            sheet = by_song.get(row["repertoire_id"])
-        else:
-            folded = title.strip().casefold()
-            sheet = by_new.get(folded) or by_title.get(folded)
+        sheet = find_sheet(row)
         songs.append({
             "title": title, "key": sets[-1][-1]["key"], "set": set_number,
             "page": None if sheet is None else len(pages),
         })
+        if find_lyrics:
+            doc = find_lyrics(row)
+            songs[-1]["lyrics"] = None if doc is None else len(lyrics_docs)
+            if doc is not None:
+                lyrics_docs.append({k: doc.get(k) for k in ("title", "artist", "key", "blocks")})
         if sheet is None:
             missing.append(title)
             continue
@@ -167,12 +175,14 @@ def build_leadsheet_plan(
             "sheet": sheet, "semitones": semitones, "flats": flats, "label": label, "singer": who, "set": set_number,
         })
 
-    name = " ".join(part for part in (gig.get("date"), gig.get("venue")) if part) or "Gig"
-    return {
+    plan = {
         "pages": pages,
         "songs": songs,
         "sets": [songs for songs in sets if songs] if mode == "setlist" and picks is None else [],
         "missing": missing,
         "notes": notes,
-        "filename": f"{name} – lead sheets{' (original keys)' if original else ''}.pdf",
+        "filename": gig_filename(gig, f"lead sheets{' (original keys)' if original else ''}"),
     }
+    if with_lyrics:
+        plan["lyrics"] = lyrics_docs
+    return plan

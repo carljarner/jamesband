@@ -21,6 +21,10 @@
       <div class="live__venue">{{ gig.venue or "Untitled gig" }}</div>
       <div class="live__date muted">{{ gig.date|dadate }}</div>
     </div>
+    <div class="live__mode" role="group" aria-label="Show">
+      <button type="button" data-mode="sheets" aria-pressed="true" title="Lead sheets (L switches)">Lead sheets</button>
+      <button type="button" data-mode="lyrics" aria-pressed="false" title="Lyrics (L switches)">Lyrics</button>
+    </div>
     <button type="button" id="live-fullscreen" class="btn-small live__fullscreen">Fullscreen</button>
     <nav id="live-songs" class="live__songs" aria-label="Setlist"></nav>
   </aside>
@@ -46,6 +50,7 @@
   const leadsheetId = '';
 </script>
 <script src="/static/leadsheet-editor.js?v={{ static_version }}"></script>
+<script src="/static/lyrics-render.js?v={{ static_version }}"></script>
 <script>
   (function () {
     const songs = plan.songs;
@@ -61,8 +66,14 @@
     // Must match the small-screen block in style.css.
     const compact = window.matchMedia('(max-width: 1100px), (pointer: coarse)');
     const markup = new Map(); // page index -> SVG markup, drawn once
+    const lyricsSheets = new Map(); // lyrics index -> its page, built once
+    const modeButtons = [...document.querySelectorAll('.live__mode button')];
     const buttons = [];
     let current = 0;
+    // 'sheets' or 'lyrics', remembered between visits.
+    const MODE_KEY = 'live-mode';
+    let mode = 'sheets';
+    try { if (localStorage.getItem(MODE_KEY) === 'lyrics') mode = 'lyrics'; } catch (err) { /* no storage */ }
 
     // The sidebar: every song in setlist order, under its set's heading
     // when the gig has more than one set.
@@ -78,7 +89,7 @@
       }
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'live__song' + (song.page === null ? ' is-missing' : '');
+      btn.className = 'live__song';
       const num = document.createElement('span');
       num.className = 'live__song-num';
       num.textContent = i + 1;
@@ -102,6 +113,45 @@
       return markup.get(pageIndex);
     }
 
+    // Whether the song has what the current mode shows.
+    function hasContent(song) {
+      return mode === 'lyrics' ? song.lyrics != null : song.page !== null;
+    }
+
+    // The lyrics page, scaled to fit the stage the way a lead sheet does.
+    // Lyrics longer than a page keep that scale and scroll.
+    function showLyrics(song) {
+      let sheet = lyricsSheets.get(song.lyrics);
+      if (!sheet) {
+        const doc = plan.lyrics[song.lyrics];
+        sheet = LyricsRender.sheet({ ...doc, key: song.key || doc.key || '' });
+        lyricsSheets.set(song.lyrics, sheet);
+      }
+      const box = document.createElement('div');
+      box.className = 'live__lyrics';
+      box.appendChild(sheet);
+      sheetBox.appendChild(box);
+      sheet.style.transform = '';
+      const long = LyricsRender.fit(sheet);
+      const w = sheet.offsetWidth;
+      const pageH = w * 297 / 210;
+      const scale = Math.min(sheetBox.clientWidth / w, sheetBox.clientHeight / pageH);
+      sheet.style.transform = `scale(${scale})`;
+      box.style.width = `${w * scale}px`;
+      box.style.height = `${sheet.offsetHeight * scale}px`;
+      sheetBox.classList.toggle('is-scrolling', long);
+      sheetBox.scrollTop = 0;
+    }
+
+    function setMode(next, redraw = true) {
+      mode = next;
+      try { localStorage.setItem(MODE_KEY, mode); } catch (err) { /* no storage */ }
+      modeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+      buttons.forEach((b, i) => b.classList.toggle('is-missing', !hasContent(songs[i])));
+      if (redraw && songs.length) show(current);
+    }
+    modeButtons.forEach(b => b.addEventListener('click', () => { setMode(b.dataset.mode); b.blur(); }));
+
     function placeholder(text) {
       const div = document.createElement('div');
       div.className = 'live__placeholder';
@@ -114,7 +164,11 @@
       current = Math.max(0, Math.min(songs.length - 1, i));
       const song = songs[current];
       sheetBox.replaceChildren();
-      if (song.page === null) {
+      sheetBox.classList.remove('is-scrolling');
+      if (mode === 'lyrics') {
+        if (song.lyrics == null) sheetBox.appendChild(placeholder(`No lyrics — ${song.title}`));
+        else showLyrics(song);
+      } else if (song.page === null) {
         sheetBox.appendChild(placeholder(`No lead sheet — ${song.title}`));
       } else {
         sheetBox.innerHTML = sheetMarkup(song.page);
@@ -165,6 +219,7 @@
       else if (e.key === 'Home') to = 0;
       else if (e.key === 'End') to = songs.length - 1;
       else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); return; }
+      else if (e.key === 'l' || e.key === 'L') { e.preventDefault(); setMode(mode === 'lyrics' ? 'sheets' : 'lyrics'); return; }
       if (to === null) return;
       e.preventDefault();
       show(to);
@@ -195,6 +250,14 @@
       show(dx < 0 ? current + 1 : current - 1);
     });
 
+    // A lyrics page's scale follows the stage's size.
+    let resizeFrame = 0;
+    addEventListener('resize', () => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => { if (mode === 'lyrics' && songs.length) show(current); });
+    });
+
+    setMode(mode, false);
     if (!songs.length) {
       sheetBox.appendChild(placeholder('This gig has no songs yet.'));
       return;

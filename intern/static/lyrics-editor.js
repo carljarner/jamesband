@@ -10,7 +10,7 @@
  * read back from the page by serialize() and drawn by renderBlocks().
  */
 (function () {
-  const HL_COLORS = { blue: 'rgb(201, 226, 255)', red: 'rgb(255, 205, 205)' };
+  const { HL_COLORS, blockElement } = LyricsRender;
   const SAVE_DELAY = 800;
   const RETRY_DELAY = 5000;
   const BLOCK_TAGS = new Set(['DIV', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'UL', 'OL', 'BLOCKQUOTE', 'PRE', 'TABLE', 'TR', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER']);
@@ -24,11 +24,9 @@
   const keyLabel = document.getElementById('lyrics-key');
   const statusEl = document.getElementById('lyrics-status');
   const longNote = document.getElementById('lyrics-long-note');
-  const songSelect = document.getElementById('lyrics-song');
+  const songButton = document.getElementById('lyrics-song');
+  const songList = document.getElementById('lyrics-song-list');
   const songHint = document.getElementById('lyrics-song-hint');
-  const deleteBtn = document.getElementById('lyrics-delete');
-  const deleteModal = document.getElementById('delete-modal');
-  const deleteForm = document.getElementById('delete-form');
 
   const keySelect = Keys.makeKeySelect(doc.key || '');
   keySelect.classList.add('lyrics-key-select');
@@ -132,22 +130,6 @@
     const clean = blocks.map(b => ({ type: b.type, runs: b.runs }));
     while (clean.length && !clean[clean.length - 1].runs.some(r => r.text.trim())) clean.pop();
     return clean;
-  }
-
-  function blockElement(block) {
-    const el = document.createElement(block.type === 'section' ? 'h3' : 'div');
-    for (const run of block.runs) {
-      if (run.hl && HL_COLORS[run.hl]) {
-        const span = document.createElement('span');
-        span.style.backgroundColor = HL_COLORS[run.hl];
-        span.textContent = run.text;
-        el.appendChild(span);
-      } else {
-        el.appendChild(document.createTextNode(run.text));
-      }
-    }
-    if (!block.runs.length) el.appendChild(document.createElement('br'));
-    return el;
   }
 
   function renderBlocks(blocks) {
@@ -254,7 +236,11 @@
   function syncToolbar() {
     const block = currentBlock();
     const type = block && /^H[1-6]$/.test(block.tagName) ? 'section' : 'line';
-    blockButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.block === type)));
+    blockButtons.forEach(b => {
+      const on = b.dataset.block === type;
+      b.setAttribute('aria-pressed', String(on));
+      b.classList.toggle('eb-btn--on', on);
+    });
   }
   document.addEventListener('selectionchange', syncToolbar);
 
@@ -422,15 +408,11 @@
 
   /* ---------- One page or more ---------- */
 
-  // The page shows exactly what one printed A4 page holds, the left column
-  // filling first. Lyrics too long for that grow the page instead, in
-  // balanced columns, and say they'll run onto a second printed page.
+  // One printed A4 page, or a longer page that says it'll run onto a
+  // second printed one (see LyricsRender.fit).
   let layoutFrame = 0;
   function layoutPages() {
-    sheet.classList.remove('is-long');
-    const over = body.scrollWidth > body.clientWidth + 2;
-    sheet.classList.toggle('is-long', over);
-    longNote.hidden = !over;
+    longNote.hidden = !LyricsRender.fit(sheet);
     body.classList.toggle('is-empty', !body.textContent.trim() && body.querySelectorAll('div, h3').length <= 1);
   }
   function queueLayout() {
@@ -502,9 +484,7 @@
         const created = await resp.json();
         doc.id = created.id;
         history.replaceState(null, '', `/lyrics/${encodeURIComponent(doc.id)}`);
-        deleteBtn.hidden = false;
-        deleteForm.action = `/lyrics/${encodeURIComponent(doc.id)}/delete`;
-        refreshSongChoices();
+        renderSongPicker();
       }
       setStatus(dirty ? '' : 'Saved');
     } catch (err) {
@@ -525,63 +505,111 @@
   });
 
   /* ---------- Song ---------- */
+  // Which song these lyrics are for, picked like a lead sheet's (see
+  // leadsheet-editor.js): a button showing the song, opening a list of the
+  // upcoming new songs and the repertoire. Songs that already have lyrics
+  // are greyed out and struck through; picking the connected song again
+  // disconnects it. Before the first save the pick is just remembered, and
+  // the first save connects it.
 
-  const songsByValue = new Map();
-  function refreshSongChoices() {
-    songSelect.textContent = '';
-    songsByValue.clear();
-    songSelect.appendChild(new Option('— Not connected —', ''));
-    const groups = [['New songs', songChoicesData.new_songs], ['Repertoire', songChoicesData.repertoire]];
-    for (const [label, songs] of groups) {
-      if (!songs.length) continue;
-      const group = document.createElement('optgroup');
-      group.label = label;
-      for (const song of songs) {
-        const value = label === 'Repertoire' ? `rep:${song.id}` : `new:${song.title}`;
-        const taken = song.sheet_id && song.sheet_id !== doc.id;
-        const text = song.artist ? `${song.title} – ${song.artist}` : song.title;
-        const option = new Option(taken ? `${text} (has lyrics)` : text, value);
-        option.disabled = Boolean(taken);
-        group.appendChild(option);
-        songsByValue.set(value, song);
-      }
-      songSelect.appendChild(group);
-    }
-    songSelect.value = currentSongValue();
-    songHint.hidden = Boolean(songSelect.value);
+  const NEW_PREFIX = 'new:';
+  function mk(tag, className, text) {
+    const el = document.createElement(tag);
+    el.className = className;
+    if (text) el.textContent = text;
+    return el;
   }
 
-  function currentSongValue() {
-    if (doc.repertoire_id) return `rep:${doc.repertoire_id}`;
-    if (doc.new_song) {
-      const match = songChoicesData.new_songs.find(s => s.title.trim().toLowerCase() === doc.new_song.trim().toLowerCase());
-      return match ? `new:${match.title}` : '';
-    }
+  function linkValue() {
+    if (doc.repertoire_id) return doc.repertoire_id;
+    if (doc.new_song) return NEW_PREFIX + doc.new_song;
     return '';
   }
 
-  songSelect.addEventListener('change', async () => {
-    const value = songSelect.value;
-    const song = songsByValue.get(value);
-    const link = !value ? {} : value.startsWith('rep:') ? { repertoire_id: value.slice(4) } : { new_song: value.slice(4) };
+  function choiceFor(value) {
+    if (!value) return null;
+    if (value.startsWith(NEW_PREFIX)) {
+      const title = value.slice(NEW_PREFIX.length).trim().toLowerCase();
+      return songChoicesData.new_songs.find(s => s.title.trim().toLowerCase() === title) || null;
+    }
+    return songChoicesData.repertoire.find(s => s.id === value) || null;
+  }
+
+  function setSongListOpen(open) {
+    songList.hidden = !open;
+    songButton.setAttribute('aria-expanded', String(open));
+    if (open) {
+      const on = songList.querySelector('.is-on');
+      if (on) on.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function renderSongPicker() {
+    const value = linkValue();
+    const song = choiceFor(value);
+    const name = song ? song.title : (doc.new_song || '');
+
+    songButton.textContent = '';
+    songButton.appendChild(mk('span', 'song-pick__label' + (value ? '' : ' is-empty'), value ? name : '— not connected —'));
+    songButton.appendChild(mk('span', 'song-pick__caret', '▾'));
+
+    songList.textContent = '';
+    const addItem = (label, itemValue, takenBy) => {
+      const on = itemValue === value;
+      const item = mk('button', 'song-pick__item' + (on ? ' is-on' : '') + (takenBy ? ' is-taken' : ''), label);
+      item.type = 'button';
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', String(on));
+      if (takenBy) {
+        item.disabled = true;
+        item.title = `Has lyrics: ${takenBy}`;
+      } else if (on) {
+        item.title = 'Connected -- pick it again to disconnect';
+      }
+      item.addEventListener('click', () => pickSong(on ? '' : itemValue));
+      songList.appendChild(item);
+    };
+    const addGroup = (label, songs, valueOf) => {
+      if (!songs.length) return;
+      songList.appendChild(mk('div', 'song-pick__heading', label));
+      songs.forEach(s => addItem(s.title, valueOf(s), s.sheet_id && s.sheet_id !== doc.id ? s.sheet_title : null));
+    };
+    if (value && !song) {
+      // A new song that's no longer on an upcoming setlist.
+      songList.appendChild(mk('div', 'song-pick__heading', 'Connected'));
+      addItem(name, value, null);
+    }
+    addGroup('New songs', songChoicesData.new_songs, s => NEW_PREFIX + s.title);
+    addGroup('Repertoire', songChoicesData.repertoire, s => s.id);
+
+    songHint.hidden = Boolean(value);
+  }
+
+  async function pickSong(value) {
+    setSongListOpen(false);
+    const song = choiceFor(value);
+    const link = !value ? {} : value.startsWith(NEW_PREFIX)
+      ? { new_song: value.slice(NEW_PREFIX.length) }
+      : { repertoire_id: value };
     if (doc.id) {
       const resp = await fetch(`/lyrics/${encodeURIComponent(doc.id)}/link`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(link),
-      });
-      if (!resp.ok) {
-        setStatus(await resp.text() || 'Couldn’t connect the song', true);
-        songSelect.value = currentSongValue();
+      }).catch(() => null);
+      if (!resp || !resp.ok) {
+        setStatus((resp && await resp.text()) || 'Couldn’t connect the song', true);
         return;
       }
     }
     doc.repertoire_id = link.repertoire_id || null;
     doc.new_song = link.new_song || null;
     // Mark the song as taken by these lyrics (and free the one before).
-    for (const s of [...songChoicesData.new_songs, ...songChoicesData.repertoire]) {
-      if (s.sheet_id === doc.id && doc.id) s.sheet_id = null;
+    if (doc.id) {
+      for (const s of [...songChoicesData.new_songs, ...songChoicesData.repertoire]) {
+        if (s.sheet_id === doc.id) s.sheet_id = null;
+      }
+      if (song) { song.sheet_id = doc.id; song.sheet_title = fieldText(titleEl); }
     }
-    if (song && doc.id) song.sheet_id = doc.id;
-    songHint.hidden = Boolean(value);
+    renderSongPicker();
     // An empty title, artist or key is filled in from the song.
     let filled = false;
     if (song && !fieldText(titleEl)) { titleEl.textContent = song.title; filled = true; }
@@ -590,19 +618,22 @@
       keySelect.value = song.key; syncKeyLabel(); filled = true;
     }
     if (filled || !doc.id) changed();
+  }
+
+  songButton.addEventListener('click', () => setSongListOpen(songList.hidden));
+  document.addEventListener('click', e => {
+    if (!songList.hidden && !songList.contains(e.target) && !songButton.contains(e.target)) setSongListOpen(false);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !songList.hidden) { setSongListOpen(false); songButton.focus(); }
   });
 
-  /* ---------- Print and delete ---------- */
+  /* ---------- Print ---------- */
 
   document.getElementById('lyrics-print').addEventListener('click', () => {
     layoutPages();
     print();
   });
-
-  deleteBtn.addEventListener('click', () => { deleteModal.hidden = false; });
-  document.getElementById('delete-cancel').addEventListener('click', () => { deleteModal.hidden = true; });
-  deleteModal.addEventListener('click', e => { if (e.target === deleteModal) deleteModal.hidden = true; });
-  deleteForm.addEventListener('submit', () => { dirty = false; clearTimeout(saveTimer); });
 
   /* ---------- Start ---------- */
 
@@ -611,11 +642,7 @@
   artistEl.textContent = doc.artist || '';
   syncKeyLabel();
   renderBlocks(doc.blocks || []);
-  refreshSongChoices();
-  if (doc.id) {
-    deleteBtn.hidden = false;
-    deleteForm.action = `/lyrics/${encodeURIComponent(doc.id)}/delete`;
-  }
+  renderSongPicker();
   updateTitle();
   layoutPages();
   if (!doc.title) titleEl.focus();

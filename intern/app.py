@@ -23,6 +23,7 @@ import lyrics_import
 import repertoire
 import setlist
 import setlists
+import song_links
 import data_store
 
 # INTERN_PASSWORD may hold multiple comma-separated passwords, e.g.
@@ -131,32 +132,6 @@ async def setlists_edit_redirect(setlist_id: str):
     return RedirectResponse(f"/gigs/{setlist_id}", status_code=301)
 
 
-@app.post("/setlist/master-songbook")
-async def setlist_master_songbook(doc_url: str = Form(...)):
-    try:
-        setlist.set_master_songbook_url(doc_url)
-    except ValueError as exc:
-        return Response(content=str(exc), status_code=400)
-    return {"doc_url": setlist.get_master_songbook_url()}
-
-
-@app.post("/setlist/sync")
-async def setlist_sync(doc_url: str = Form(...)):
-    try:
-        return setlist.sync(doc_url)
-    except setlist.SyncError as exc:
-        return Response(content=str(exc), status_code=400)
-
-
-@app.post("/setlist/alias")
-async def setlist_alias(setlist_title: str = Form(...), doc_title: str = Form(...)):
-    try:
-        setlist.set_alias(setlist_title, doc_title)
-    except ValueError as exc:
-        return Response(content=str(exc), status_code=400)
-    return {"setlist_title": setlist_title, "doc_title": doc_title}
-
-
 @app.get("/setlist")
 async def setlist_picker_redirect():
     return RedirectResponse("/gigs", status_code=301)
@@ -165,6 +140,18 @@ async def setlist_picker_redirect():
 @app.get("/setlist/{gig_id}")
 async def setlist_editor_redirect(gig_id: str):
     return RedirectResponse(f"/gigs/{gig_id}/setlist", status_code=301)
+
+
+def _lyrics_index() -> dict:
+    """Which songs have lyrics, for the setlist editor's "Missing lyrics":
+    {by_song: {repertoire id: lyrics id}, by_title: {folded title: lyrics
+    id}} -- by_title for rows that aren't repertoire songs, matched the way
+    song_links.row_finder() does."""
+    lyrics.auto_link()
+    docs = lyrics.list_lyrics()
+    by_title = {song_links.fold(d["title"]): d["id"] for d in docs}
+    by_title.update({title: d["id"] for title, d in song_links.new_song_links(docs).items()})
+    return {"by_song": {rep_id: d["id"] for rep_id, d in song_links.links(docs).items()}, "by_title": by_title}
 
 
 @app.get("/gigs/{gig_id}/setlist", response_class=HTMLResponse)
@@ -181,9 +168,7 @@ async def setlist_editor_page(request: Request, gig_id: str):
             "repertoire_songs_json": json.dumps(repertoire.list_songs()),
             "setlist_songs_json": json.dumps(gig["songs"]),
             "new_songs_json": json.dumps(leadsheets.upcoming_new_songs()),
-            "master_songbook_url": setlist.get_master_songbook_url(),
-            "songbook_json": json.dumps(setlist.get_songbook()),
-            "aliases_json": json.dumps(setlist.get_aliases()),
+            "lyrics_index_json": json.dumps(_lyrics_index()).replace("</", "<\\/"),
         },
     )
 
@@ -354,7 +339,7 @@ async def gigs_live(request: Request, gig_id: str):
     # singers' keys, with the setlist alongside to jump around in.
     try:
         gig = setlists.get_setlist(gig_id)
-        plan = gig_bundle.build_leadsheet_plan(gig_id, "transposed")
+        plan = gig_bundle.build_leadsheet_plan(gig_id, "transposed", with_lyrics=True)
     except KeyError:
         raise HTTPException(status_code=404)
     return templates.TemplateResponse(
@@ -367,13 +352,15 @@ async def gigs_live(request: Request, gig_id: str):
 @app.get("/gigs/{gig_id}/lyrics")
 async def gigs_lyrics(gig_id: str):
     try:
-        pdf_bytes, _missing = gig_bundle.build_lyrics_bundle(gig_id)
+        gig = setlists.get_setlist(gig_id)
+        pdf_bytes, _missing = await run_in_threadpool(gig_bundle.build_lyrics_bundle, gig_id)
     except KeyError:
         raise HTTPException(status_code=404)
+    filename = gig_bundle.gig_filename(gig, "lyrics")
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": 'attachment; filename="lyrics.pdf"'},
+        headers={"Content-Disposition": f"attachment; filename=\"lyrics.pdf\"; filename*=UTF-8''{quote(filename)}"},
     )
 
 
@@ -578,6 +565,10 @@ async def lyrics_new(request: Request, song: str = "", new_song: str = ""):
             if existing:
                 return RedirectResponse(f"/lyrics/{existing['id']}", status_code=303)
             doc.update(title=match["title"], artist=match.get("artist") or "", key=match.get("key") or "", new_song=match["title"])
+        else:
+            # A song from a past gig: just its title, which the gig's lyrics
+            # find it by.
+            doc.update(title=new_song.strip())
     return _lyrics_editor(request, doc)
 
 
@@ -678,15 +669,6 @@ async def lyrics_link(lyrics_id: str, request: Request):
     except (ValueError, TypeError) as exc:
         return Response(content=str(exc), status_code=400)
     return Response(status_code=204)
-
-
-@app.post("/lyrics/{lyrics_id}/delete")
-async def lyrics_delete(lyrics_id: str):
-    try:
-        lyrics.delete(lyrics_id)
-    except KeyError:
-        raise HTTPException(status_code=404)
-    return RedirectResponse("/lyrics", status_code=303)
 
 
 @app.get("/gallery", response_class=HTMLResponse)

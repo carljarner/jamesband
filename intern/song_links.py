@@ -60,6 +60,23 @@ def new_song_links(docs: list[dict]) -> dict[str, dict]:
     return {fold(d["new_song"]): d for d in docs if d.get("new_song")}
 
 
+def row_finder(docs: list[dict]) -> Callable[[dict], dict | None]:
+    """A function giving a setlist row's doc among `docs` (or None): the doc
+    connected to its repertoire song; for a row that isn't one, the doc
+    connected to that new song, or else one with the same title."""
+    by_song = links(docs)
+    by_new = new_song_links(docs)
+    by_title = {fold(d["title"]): d for d in docs}
+
+    def find(row: dict) -> dict | None:
+        if row.get("repertoire_id"):
+            return by_song.get(row["repertoire_id"])
+        folded = fold(row.get("title"))
+        return by_new.get(folded) or by_title.get(folded)
+
+    return find
+
+
 def apply_link(
     doc: dict, docs: list[dict], repertoire_id: str | None, new_song: str | None, kind: str
 ) -> None:

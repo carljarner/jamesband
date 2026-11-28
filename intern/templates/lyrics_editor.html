@@ -2,61 +2,57 @@
 {% block title %}{{ doc.title or 'New lyrics' }} &middot; Lyrics{% endblock %}
 {% block container_class %}container--full{% endblock %}
 {% block content %}
-<div class="lyrics-editor">
-  <p class="no-print"><a class="back" href="/lyrics">&larr; Lyrics</a></p>
+<p class="no-print"><a class="back" href="/lyrics">&larr; Lyrics</a></p>
 
-  <div class="lyrics-toolbar no-print" role="toolbar" aria-label="Lyrics formatting">
-    <button type="button" class="lyrics-tool" data-block="line" aria-pressed="true" title="Normal text (⌘⌥0 / Ctrl+Alt+0)">Text</button>
-    <button type="button" class="lyrics-tool lyrics-tool--section" data-block="section" aria-pressed="false" title="Section heading, e.g. Vers 1, Omkvæd, Bro (⌘⌥1 / Ctrl+Alt+1)">Section</button>
-    <span class="lyrics-tool-sep" aria-hidden="true"></span>
-    <button type="button" class="lyrics-tool" data-hl="blue" title="Highlight blue (press again to remove)"><span class="lyrics-swatch lyrics-swatch--blue" aria-hidden="true"></span>Blue</button>
-    <button type="button" class="lyrics-tool" data-hl="red" title="Highlight red (press again to remove)"><span class="lyrics-swatch lyrics-swatch--red" aria-hidden="true"></span>Red</button>
-    <button type="button" class="lyrics-tool" data-hl="" title="Remove highlighting">Clear</button>
-    <span id="lyrics-status" class="lyrics-status" role="status"></span>
-    <button type="button" id="lyrics-print" class="lyrics-tool">Print</button>
-  </div>
-
-  <div class="lyrics-layout">
-    <div class="lyrics-page-column">
-      <article id="lyrics-sheet" class="lyrics-sheet">
-        <header class="lyrics-head">
-          <div class="lyrics-head__center">
-            <div id="lyrics-title" class="lyrics-field lyrics-title" contenteditable="plaintext-only" spellcheck="false" data-placeholder="Song title" role="textbox" aria-label="Song title"></div>
-            <div id="lyrics-artist" class="lyrics-field lyrics-artist" contenteditable="plaintext-only" spellcheck="false" data-placeholder="Artist" role="textbox" aria-label="Artist"></div>
-          </div>
-          <label id="lyrics-key" class="lyrics-key">Key: <span id="lyrics-key-slot"></span></label>
-        </header>
-        <div id="lyrics-body" class="lyrics-body" contenteditable="true" spellcheck="false" data-placeholder="Write the lyrics here…" role="textbox" aria-multiline="true" aria-label="Lyrics"></div>
-      </article>
-      <p id="lyrics-long-note" class="muted lyrics-note no-print" hidden>Longer than one page: printed, it continues on page 2.</p>
+{# Laid out like the lead sheet editor (_leadsheet_editor_body.html): the
+   tools on the left, the page, and the song on the right. #}
+<div class="editor-layout lyrics-editor-layout">
+  <div class="editor-palette editor-palette--left no-print">
+    <div class="edit-box lyrics-format" role="toolbar" aria-label="Lyrics formatting">
+      <div class="eb-head"><span class="eb-head-title">Format</span></div>
+      <div class="eb-seg mode-seg">
+        <button type="button" class="eb-btn lyrics-tool eb-btn--on" data-block="line" aria-pressed="true" title="Normal text (⌘⌥0 / Ctrl+Alt+0)">Text</button>
+        <button type="button" class="eb-btn lyrics-tool lyrics-tool--section" data-block="section" aria-pressed="false" title="Section heading, e.g. Vers 1, Omkvæd, Bro (⌘⌥1 / Ctrl+Alt+1)">Section</button>
+      </div>
+      <div class="eb-seg mode-seg">
+        <button type="button" class="eb-btn lyrics-tool" data-hl="blue" title="Highlight blue (press again to remove)"><span class="lyrics-swatch lyrics-swatch--blue" aria-hidden="true"></span>Blue</button>
+        <button type="button" class="eb-btn lyrics-tool" data-hl="red" title="Highlight red (press again to remove)"><span class="lyrics-swatch lyrics-swatch--red" aria-hidden="true"></span>Red</button>
+        <button type="button" class="eb-btn lyrics-tool" data-hl="" title="Remove highlighting">Clear</button>
+      </div>
     </div>
-
-    <aside class="lyrics-side no-print">
-      <div class="edit-box">
-        <div class="eb-head"><span class="eb-head-title">Song</span></div>
-        <select id="lyrics-song" class="lyrics-song-select" aria-label="The song these lyrics are for"></select>
-        <div id="lyrics-song-hint" class="eb-hint" hidden>Not connected to a song, so the Lyrics page lists it under “Not connected”.</div>
-      </div>
-      <div class="edit-box lyrics-tips">
-        <div class="eb-head"><span class="eb-head-title">Tips</span></div>
-        <ul>
-          <li>Type <b>[Omkvæd]</b> on its own line and press Enter to make it a section.</li>
-          <li>Select text and pick <b>Blue</b> or <b>Red</b> to highlight it. Pick it again to remove it.</li>
-          <li>Pasting from the Google Doc keeps its sections and highlights.</li>
-          <li>Changes save by themselves.</li>
-        </ul>
-      </div>
-      <button type="button" id="lyrics-delete" class="btn-small danger lyrics-delete" hidden>Delete lyrics</button>
-    </aside>
+    <button type="button" id="lyrics-print" class="btn-small practice-print">Print</button>
+    <div id="lyrics-status" class="eb-hint lyrics-status" role="status"></div>
   </div>
-</div>
 
-<div id="delete-modal" class="modal-overlay no-print" hidden>
-  <div class="modal-box modal-box--centered modal-box--confirm" role="dialog" aria-modal="true" aria-labelledby="delete-question">
-    <p id="delete-question">Delete these lyrics?</p>
-    <div class="modal-actions">
-      <button type="button" id="delete-cancel" class="btn-small">Cancel</button>
-      <form method="post" id="delete-form"><button type="submit" class="btn-small danger">Delete</button></form>
+  <div class="page-column">
+    <article id="lyrics-sheet" class="lyrics-sheet">
+      <header class="lyrics-head">
+        <div class="lyrics-head__center">
+          <div id="lyrics-title" class="lyrics-field lyrics-title" contenteditable="plaintext-only" spellcheck="false" data-placeholder="Song title" role="textbox" aria-label="Song title"></div>
+          <div id="lyrics-artist" class="lyrics-field lyrics-artist" contenteditable="plaintext-only" spellcheck="false" data-placeholder="Artist" role="textbox" aria-label="Artist"></div>
+        </div>
+        <label id="lyrics-key" class="lyrics-key">Key: <span id="lyrics-key-slot"></span></label>
+      </header>
+      <div id="lyrics-body" class="lyrics-body" contenteditable="true" spellcheck="false" data-placeholder="Write the lyrics here…" role="textbox" aria-multiline="true" aria-label="Lyrics"></div>
+    </article>
+    <p id="lyrics-long-note" class="muted lyrics-note no-print" hidden>Longer than one page: printed, it continues on page 2.</p>
+  </div>
+
+  <div class="editor-palette editor-palette--side lyrics-side no-print">
+    <div class="edit-box link-box">
+      <div class="eb-head"><span class="eb-head-title">Song</span></div>
+      <button type="button" id="lyrics-song" class="song-pick__button" aria-haspopup="listbox" aria-expanded="false" aria-controls="lyrics-song-list" title="The song these lyrics are for -- gig lyrics and live mode use it"></button>
+      <div id="lyrics-song-list" class="song-pick__list" role="listbox" aria-label="Song" hidden></div>
+      <div id="lyrics-song-hint" class="eb-hint link-status is-unlinked" hidden>Not connected to a song, so gigs won’t find these lyrics.</div>
+    </div>
+    <div class="edit-box lyrics-tips">
+      <div class="eb-head"><span class="eb-head-title">Tips</span></div>
+      <ul>
+        <li>Type <b>[Omkvæd]</b> on its own line and press Enter to make it a section.</li>
+        <li>Select text and pick <b>Blue</b> or <b>Red</b> to highlight it. Pick it again to remove it.</li>
+        <li>Pasting from the Google Doc keeps its sections and highlights.</li>
+        <li>Changes save by themselves.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -68,5 +64,6 @@
   const songChoicesData = {{ song_choices_json|safe }};
 </script>
 <script src="/static/keys.js?v={{ static_version }}"></script>
+<script src="/static/lyrics-render.js?v={{ static_version }}"></script>
 <script src="/static/lyrics-editor.js?v={{ static_version }}"></script>
 {% endblock %}

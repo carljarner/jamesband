@@ -138,11 +138,6 @@ def set_link(lyrics_id: str, repertoire_id: str | None = None, new_song: str | N
     return lyrics
 
 
-def delete(lyrics_id: str) -> None:
-    get_lyrics(lyrics_id)
-    _path(lyrics_id).unlink()
-
-
 def links() -> dict[str, dict]:
     return song_links.links(list_lyrics())
 

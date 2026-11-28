@@ -13,24 +13,8 @@
         <span class="top-box__toggle" aria-hidden="true"></span>
       </div>
       <div class="top-box__body">
-      <div class="lyrics-column__link-row">
-        <input type="url" id="mastersongbook-input" placeholder="Google Doc link to the master songbook"
-               value="{{ master_songbook_url or '' }}" />
-        <button type="button" id="mastersongbook-sync" class="btn-small" title="Fetch the doc and rebuild the song -&gt; page mapping">Sync</button>
-      </div>
-      <p id="mastersongbook-status" class="muted"></p>
-
-      <div class="connect-titles">
-        <div class="connect-titles__col">
-          <h3>Setlist missing lyrics</h3>
-          <ul id="unmatched-setlist-list" class="connect-titles__list"></ul>
-        </div>
-        <div class="connect-titles__col">
-          <h3>Google docs</h3>
-          <ul id="unmatched-docs-list" class="connect-titles__list"></ul>
-        </div>
-      </div>
-      <button type="button" id="connect-btn" class="connect-btn" disabled>Connect</button>
+      <p id="missing-lyrics-status" class="muted missing-lyrics__status"></p>
+      <ul id="missing-lyrics-list" class="pick-list missing-lyrics"></ul>
       </div>
     </div>
 
@@ -101,8 +85,7 @@
   const initialSongs = {{ setlist_songs_json|safe }};
   const upcomingNewSongs = {{ new_songs_json|safe }};
   const gigId = "{{ setlist.id }}";
-  let songbook = {{ songbook_json|safe }};
-  let aliases = {{ aliases_json|safe }};
+  const lyricsIndex = {{ lyrics_index_json|safe }};
 
   /* ---------- Collapsible top boxes ----------
      Clicking any box's title row opens or closes all three together. They
@@ -135,173 +118,45 @@
     });
   });
 
-  /* ---------- Lyrics / master songbook ---------- */
-  const mastersongbookInput = document.getElementById('mastersongbook-input');
-  const mastersongbookSyncBtn = document.getElementById('mastersongbook-sync');
-  const mastersongbookStatus = document.getElementById('mastersongbook-status');
-  const unmatchedSetlistList = document.getElementById('unmatched-setlist-list');
-  const unmatchedDocsList = document.getElementById('unmatched-docs-list');
-  const connectBtn = document.getElementById('connect-btn');
+  /* ---------- Lyrics ----------
+     The setlist's songs that have no lyrics yet (on the Lyrics page), each
+     a link to write them. Rows are matched to lyrics the way the gig's
+     lyrics PDF does (song_links.row_finder): by repertoire song, else by
+     title. */
+  const missingLyricsList = document.getElementById('missing-lyrics-list');
+  const missingLyricsStatus = document.getElementById('missing-lyrics-status');
 
-  function knownTitles() {
-    return new Set(songbook ? songbook.songs.map(s => s.title) : []);
+  function hasLyrics(song) {
+    if (song.repertoire_id) return Boolean(lyricsIndex.by_song[song.repertoire_id]);
+    return Boolean(lyricsIndex.by_title[song.title.trim().toLowerCase()]);
   }
 
-  function resolvedTitle(title) {
-    return aliases[title] || title;
-  }
-
-  function setlistTitles() {
-    return [...new Set(songs.filter(s => s.type === 'song' && s.title.trim()).map(s => s.title))];
-  }
-
-  function formatSyncedAt(iso) {
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} - ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-
-  function updateMastersongbookStatus() {
-    if (!songbook) {
-      mastersongbookStatus.textContent = 'Not synced yet.';
-    } else {
-      mastersongbookStatus.textContent = `Synced ${formatSyncedAt(songbook.synced_at)} · ${songbook.songs.length} song(s).`;
-    }
-    mastersongbookStatus.classList.remove('save-status--error');
-  }
-
-  let selectedSetlistTitle = null;
-  let selectedDocTitle = null;
-
-  function updateConnectBtn() {
-    connectBtn.disabled = !(selectedSetlistTitle && selectedDocTitle);
-  }
-
-  async function saveAlias(setlistTitle, docTitle) {
-    const body = new URLSearchParams({ setlist_title: setlistTitle, doc_title: docTitle });
-    return fetch('/setlist/alias', { method: 'POST', body });
-  }
-
-  // Same "does this text contain that text" test as the Repertoire search
-  // box, just applied between a setlist title and a doc title instead of a
-  // search term and a song -- e.g. the doc's "Den jeg elsker" contains-match
-  // against the setlist's "Den jeg elsker, elsker jeg". Only auto-connects
-  // when a title matches exactly one title on the other side, so a short or
-  // generic title that could plausibly mean several songs is left for a
-  // human to connect deliberately.
-  function findAutoConnections(unmatchedSetlist, unmatchedDocs) {
-    const contains = (a, b) => a.toLowerCase().includes(b.toLowerCase());
-    const pairs = [];
-    for (const setlistTitle of unmatchedSetlist) {
-      const candidates = unmatchedDocs.filter(docTitle =>
-        contains(setlistTitle, docTitle) || contains(docTitle, setlistTitle)
-      );
-      if (candidates.length !== 1) continue;
-      const docTitle = candidates[0];
-      const reverseCandidates = unmatchedSetlist.filter(s =>
-        contains(s, docTitle) || contains(docTitle, s)
-      );
-      if (reverseCandidates.length === 1) pairs.push([setlistTitle, docTitle]);
-    }
-    return pairs;
-  }
-
-  function computeUnmatched() {
-    const known = knownTitles();
-    const unmatchedSetlist = setlistTitles().filter(title => !known.has(resolvedTitle(title)));
-    const matchedDocTitles = new Set(setlistTitles().map(resolvedTitle));
-    const unmatchedDocs = songbook
-      ? songbook.songs.map(s => s.title).filter(title => !matchedDocTitles.has(title))
-      : [];
-    return { unmatchedSetlist, unmatchedDocs };
-  }
-
-  function renderConnectLists() {
-    let { unmatchedSetlist, unmatchedDocs } = computeUnmatched();
-
-    const autoPairs = findAutoConnections(unmatchedSetlist, unmatchedDocs);
-    if (autoPairs.length) {
-      autoPairs.forEach(([setlistTitle, docTitle]) => {
-        aliases[setlistTitle] = docTitle;
-        saveAlias(setlistTitle, docTitle);
-      });
-      ({ unmatchedSetlist, unmatchedDocs } = computeUnmatched());
-    }
-
-    if (!unmatchedSetlist.includes(selectedSetlistTitle)) selectedSetlistTitle = null;
-    if (!unmatchedDocs.includes(selectedDocTitle)) selectedDocTitle = null;
-
-    function renderList(el, titles, selected, onSelect) {
-      el.innerHTML = '';
-      titles.forEach(title => {
-        const li = document.createElement('li');
-        li.textContent = title;
-        li.classList.toggle('is-selected', title === selected);
-        li.addEventListener('click', () => onSelect(title));
-        el.appendChild(li);
-      });
-    }
-
-    renderList(unmatchedSetlistList, unmatchedSetlist, selectedSetlistTitle, title => {
-      selectedSetlistTitle = selectedSetlistTitle === title ? null : title;
-      renderConnectLists();
+  function renderMissingLyrics() {
+    const seen = new Set();
+    const missing = songs.filter(s => {
+      if (s.type !== 'song' || !s.title.trim() || hasLyrics(s)) return false;
+      const id = s.repertoire_id || s.title.trim().toLowerCase();
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
     });
-    renderList(unmatchedDocsList, unmatchedDocs, selectedDocTitle, title => {
-      selectedDocTitle = selectedDocTitle === title ? null : title;
-      renderConnectLists();
-    });
-
-    updateConnectBtn();
+    const total = songs.filter(s => s.type === 'song' && s.title.trim()).length;
+    missingLyricsStatus.textContent = !total ? 'No songs yet.'
+      : missing.length ? `${missing.length} of ${total} song${total === 1 ? '' : 's'} without lyrics:`
+      : 'All songs have lyrics.';
+    missingLyricsList.replaceChildren(...missing.map(s => {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = s.repertoire_id
+        ? `/lyrics/new?song=${encodeURIComponent(s.repertoire_id)}`
+        : `/lyrics/new?new_song=${encodeURIComponent(s.title.trim())}`;
+      a.target = '_blank';
+      a.title = 'Write the lyrics';
+      a.textContent = s.title;
+      li.appendChild(a);
+      return li;
+    }));
   }
-
-  connectBtn.addEventListener('click', async () => {
-    if (!selectedSetlistTitle || !selectedDocTitle) return;
-    const setlistTitle = selectedSetlistTitle;
-    const docTitle = selectedDocTitle;
-    try {
-      const resp = await saveAlias(setlistTitle, docTitle);
-      if (!resp.ok) {
-        alert((await resp.text()) || 'Failed to connect.');
-        return;
-      }
-      aliases[setlistTitle] = docTitle;
-      selectedSetlistTitle = null;
-      selectedDocTitle = null;
-      renderConnectLists();
-    } catch (err) {
-      alert('Failed to connect.');
-    }
-  });
-
-  mastersongbookInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); mastersongbookSyncBtn.click(); }
-  });
-
-  mastersongbookSyncBtn.addEventListener('click', async () => {
-    const docUrl = mastersongbookInput.value.trim();
-    if (!docUrl) {
-      mastersongbookStatus.textContent = "Link can't be empty.";
-      mastersongbookStatus.classList.add('save-status--error');
-      return;
-    }
-    mastersongbookStatus.textContent = 'Syncing…';
-    mastersongbookStatus.classList.remove('save-status--error');
-    try {
-      const body = new URLSearchParams({ doc_url: docUrl });
-      const resp = await fetch('/setlist/sync', { method: 'POST', body });
-      if (!resp.ok) {
-        mastersongbookStatus.textContent = (await resp.text()) || 'Sync failed.';
-        mastersongbookStatus.classList.add('save-status--error');
-        return;
-      }
-      songbook = await resp.json();
-      updateMastersongbookStatus();
-      renderConnectLists();
-    } catch (err) {
-      mastersongbookStatus.textContent = 'Sync failed.';
-      mastersongbookStatus.classList.add('save-status--error');
-    }
-  });
 
   /* ---------- Setlist builder ---------- */
   const repertoireListEl = document.getElementById('repertoire-list');
@@ -618,8 +473,7 @@
       wireRowDrag(tr, handleTd, song);
       tbody.appendChild(tr);
     });
-    updateMastersongbookStatus();
-    renderConnectLists();
+    renderMissingLyrics();
     if (lastSavedSnapshot !== null) save();
   }
 
