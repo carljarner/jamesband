@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Live &middot; {{ gig.venue or gig.date }}{% endblock %}
+{% block topbar %}{% endblock %}
+{% block page_nav %}{% endblock %}
+{% block container_class %}live-container{% endblock %}
+{% block content %}
+<div class="live">
+  <aside class="live__side">
+    <a class="back live__back" href="/gigs/{{ gig.id }}">&larr; Back to gig</a>
+    <div class="live__gig">
+      <div class="live__venue">{{ gig.venue or "Untitled gig" }}</div>
+      <div class="live__date muted">{{ gig.date|dadate }}</div>
+    </div>
+    <button type="button" id="live-fullscreen" class="btn-small live__fullscreen">Fullscreen</button>
+    <nav id="live-songs" class="live__songs" aria-label="Setlist"></nav>
+  </aside>
+  <main class="live__stage" id="live-stage">
+    <div id="live-sheet" class="live__sheet"></div>
+  </main>
+</div>
+
+{# The editor's own sheet page, off screen: each song is drawn here and its
+   markup copied onto the stage. #}
+<div class="bundle-render" aria-hidden="true">
+  {% include "_leadsheet_editor_body.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.LEADSHEET_BUNDLE_PAGE = true;
+  const plan = {{ plan_json|safe }};
+  const initialSheet = plan.pages.length ? plan.pages[0].sheet : { title: '', elements: [] };
+  const leadsheetId = '';
+</script>
+<script src="/static/leadsheet-editor.js?v={{ static_version }}"></script>
+<script>
+  (function () {
+    const songs = plan.songs;
+    const nav = document.getElementById('live-songs');
+    const stage = document.getElementById('live-stage');
+    const sheetBox = document.getElementById('live-sheet');
+    const fullscreenBtn = document.getElementById('live-fullscreen');
+    const markup = new Map(); // page index -> SVG markup, drawn once
+    const buttons = [];
+    let current = 0;
+
+    // The sidebar: every song in setlist order, under its set's heading
+    // when the gig has more than one set.
+    const manySets = new Set(songs.map(s => s.set)).size > 1;
+    let lastSet = null;
+    songs.forEach((song, i) => {
+      if (manySets && song.set !== lastSet) {
+        const h = document.createElement('div');
+        h.className = 'live__set';
+        h.textContent = `Set ${song.set}`;
+        nav.appendChild(h);
+        lastSet = song.set;
+      }
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'live__song' + (song.page === null ? ' is-missing' : '');
+      const num = document.createElement('span');
+      num.className = 'live__song-num';
+      num.textContent = i + 1;
+      const title = document.createElement('span');
+      title.className = 'live__song-title';
+      title.textContent = song.title;
+      btn.append(num, title);
+      if (song.key) {
+        const key = document.createElement('span');
+        key.className = 'live__song-key';
+        key.textContent = song.key;
+        btn.appendChild(key);
+      }
+      btn.addEventListener('click', () => { show(i); btn.blur(); });
+      nav.appendChild(btn);
+      buttons.push(btn);
+    });
+
+    function sheetMarkup(pageIndex) {
+      if (!markup.has(pageIndex)) markup.set(pageIndex, window.renderLeadSheetMarkup(plan.pages[pageIndex]));
+      return markup.get(pageIndex);
+    }
+
+    function placeholder(text) {
+      const div = document.createElement('div');
+      div.className = 'live__placeholder';
+      div.textContent = text;
+      return div;
+    }
+
+    function show(i) {
+      if (!songs.length) return;
+      current = Math.max(0, Math.min(songs.length - 1, i));
+      const song = songs[current];
+      sheetBox.replaceChildren();
+      if (song.page === null) {
+        sheetBox.appendChild(placeholder(`No lead sheet — ${song.title}`));
+      } else {
+        sheetBox.innerHTML = sheetMarkup(song.page);
+        const svg = sheetBox.querySelector('svg');
+        // Let the viewBox scale it to the stage instead of its page size.
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+      }
+      buttons.forEach((b, j) => b.classList.toggle('is-current', j === current));
+      buttons[current].scrollIntoView({ block: 'nearest' });
+    }
+
+    function toggleFullscreen() {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    }
+    fullscreenBtn.addEventListener('click', () => { toggleFullscreen(); fullscreenBtn.blur(); });
+    document.addEventListener('fullscreenchange', () => {
+      fullscreenBtn.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+    });
+
+    // Arrows and Enter step through the songs (a page-turner pedal sends
+    // arrows or Page Up/Down too).
+    const NEXT = ['ArrowRight', 'ArrowDown', 'Enter', ' ', 'PageDown'];
+    const PREV = ['ArrowLeft', 'ArrowUp', 'Backspace', 'PageUp'];
+    document.addEventListener('keydown', e => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      let to = null;
+      if (NEXT.includes(e.key)) to = current + 1;
+      else if (PREV.includes(e.key)) to = current - 1;
+      else if (e.key === 'Home') to = 0;
+      else if (e.key === 'End') to = songs.length - 1;
+      else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); return; }
+      if (to === null) return;
+      e.preventDefault();
+      show(to);
+    });
+
+    // Clicking the right half of the sheet goes on, the left half back.
+    stage.addEventListener('click', e => {
+      const box = stage.getBoundingClientRect();
+      show(e.clientX - box.left > box.width / 2 ? current + 1 : current - 1);
+    });
+
+    if (!songs.length) {
+      sheetBox.appendChild(placeholder('This gig has no songs yet.'));
+      return;
+    }
+    Promise.all(['MuseJazzText', 'MuseJazz'].map(f => document.fonts.load(`20px ${f}`)))
+      .catch(() => {})
+      .then(() => show(0));
+  })();
+</script>
+{% endblock %}

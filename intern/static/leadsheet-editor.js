@@ -5774,6 +5774,19 @@
     return { bytes: new Uint8Array(await blob.arrayBuffer()), w: canvas.width, h: canvas.height };
   }
 
+  // Draws one of the plan's pages on the sheet: its sheet at its
+  // transposition, with its singer.
+  function showBundlePage(page) {
+    model = JSON.parse(JSON.stringify(page.sheet));
+    model.elements = model.elements || [];
+    selectedIds.clear();
+    activeSlot = null;
+    transposeState.semitones = page.semitones;
+    transposeState.flats = page.flats;
+    bundleSinger = page.singer || '';
+    renderSvg();
+  }
+
   async function buildLeadSheetBundle(plan, onProgress) {
     await Promise.all(['MuseJazzText', 'MuseJazz'].map(f => document.fonts.load(`20px ${f}`))).catch(() => {});
     const jpegs = [];
@@ -5792,14 +5805,7 @@
         renderSetDividerSvg(page.set);
         jpegs.push(await sheetJpegBytes());
       }
-      model = JSON.parse(JSON.stringify(page.sheet));
-      model.elements = model.elements || [];
-      selectedIds.clear();
-      activeSlot = null;
-      transposeState.semitones = page.semitones;
-      transposeState.flats = page.flats;
-      bundleSinger = page.singer || '';
-      renderSvg();
+      showBundlePage(page);
       jpegs.push(await sheetJpegBytes());
     }
     if (!jpegs.length) jpegs.push(await notePageJpeg('No lead sheets', ['This gig has no songs yet.']));
@@ -5808,6 +5814,9 @@
 
   if (window.LEADSHEET_BUNDLE_PAGE) {
     window.buildLeadSheetBundle = buildLeadSheetBundle;
+    // Live mode shows the sheets on screen instead: one page's sheet as
+    // standalone SVG markup (the page's own CSS has the fonts).
+    window.renderLeadSheetMarkup = page => { showBundlePage(page); return sheetSvgMarkup(''); };
     return;
   }
 

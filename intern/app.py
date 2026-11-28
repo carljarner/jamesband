@@ -346,6 +346,22 @@ async def gigs_leadsheets(
     )
 
 
+@app.get("/gigs/{gig_id}/live", response_class=HTMLResponse)
+async def gigs_live(request: Request, gig_id: str):
+    # On stage: the gig's lead sheets on screen one at a time, in the
+    # singers' keys, with the setlist alongside to jump around in.
+    try:
+        gig = setlists.get_setlist(gig_id)
+        plan = gig_bundle.build_leadsheet_plan(gig_id, "transposed")
+    except KeyError:
+        raise HTTPException(status_code=404)
+    return templates.TemplateResponse(
+        request,
+        "gig_live.html",
+        {"gig": gig, "plan": plan, "plan_json": json.dumps(plan).replace("</", "<\\/")},
+    )
+
+
 @app.get("/gigs/{gig_id}/lyrics")
 async def gigs_lyrics(gig_id: str):
     try:

@@ -45,6 +45,7 @@
 
       <div class="gig-actions-row">
         <a id="lyrics-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/lyrics') if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Lyrics</a>
+        <a id="live-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/live') if setlist else '' }}" {% if not setlist %}hidden{% endif %}>Live mode</a>
         <div class="leadsheets-menu-wrap" id="leadsheets-wrap" {% if not setlist %}hidden{% endif %}>
           <a id="leadsheets-link" class="button-link" href="{{ ('/gigs/' + setlist.id + '/leadsheets') if setlist else '' }}" aria-haspopup="menu" aria-expanded="false">Lead sheets</a>
           <div id="leadsheets-menu" class="leadsheets-menu" role="menu" hidden>
@@ -283,6 +284,7 @@
   const deleteBtn = document.getElementById('delete-gig');
   const deleteForm = document.getElementById('delete-form');
   const lyricsLink = document.getElementById('lyrics-link');
+  const liveLink = document.getElementById('live-link');
   const leadsheetsLink = document.getElementById('leadsheets-link');
   const leadsheetsWrap = document.getElementById('leadsheets-wrap');
   const leadsheetsMenu = document.getElementById('leadsheets-menu');
@@ -295,6 +297,8 @@
     deleteBtn.hidden = false;
     lyricsLink.hidden = false;
     lyricsLink.href = `/gigs/${id}/lyrics`;
+    liveLink.hidden = false;
+    liveLink.href = `/gigs/${id}/live`;
     leadsheetsWrap.hidden = false;
     leadsheetsLink.href = `/gigs/${id}/leadsheets`;
     editSetlistLink.hidden = false;

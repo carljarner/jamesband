@@ -89,6 +89,8 @@ def build_leadsheet_plan(
     Each page says which set its song is in ("set": 1, 2, ..., numbered
     like the setlist page, which skips empty sets), so the setlist PDF can
     put a "Set 1", "Set 2", ... page before each set's sheets.
+    "songs" lists every song in order, with or without a sheet, for the
+    gig's live mode.
     `picks` (the gig page's Custom option) limits the PDF to those setlist
     rows -- index into gig["songs"] -> singer to transpose for, overriding
     the setlist's -- and leaves the setlist page out.
@@ -101,6 +103,9 @@ def build_leadsheet_plan(
     by_title = {sheet["title"].strip().casefold(): sheet for sheet in leadsheets.list_leadsheets()}
 
     pages: list[dict] = []
+    # Every song in setlist order, sheet or not, for live mode's sidebar:
+    # "page" indexes into pages (None without a sheet).
+    songs: list[dict] = []
     missing: list[str] = []
     notes: list[str] = []
     # The setlist page: every song (with or without a sheet) and the key
@@ -124,6 +129,10 @@ def build_leadsheet_plan(
         else:
             folded = title.strip().casefold()
             sheet = by_new.get(folded) or by_title.get(folded)
+        songs.append({
+            "title": title, "key": sets[-1][-1]["key"], "set": set_number,
+            "page": None if sheet is None else len(pages),
+        })
         if sheet is None:
             missing.append(title)
             continue
@@ -161,6 +170,7 @@ def build_leadsheet_plan(
     name = " ".join(part for part in (gig.get("date"), gig.get("venue")) if part) or "Gig"
     return {
         "pages": pages,
+        "songs": songs,
         "sets": [songs for songs in sets if songs] if mode == "setlist" and picks is None else [],
         "missing": missing,
         "notes": notes,
