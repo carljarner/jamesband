@@ -7,14 +7,9 @@ each sheet is its own file under LEADSHEETS_DIR, named "<id>.json" -- sheets
 are large and edited one at a time, so this keeps diffs/commits scoped to
 the song that actually changed instead of rewriting every sheet each save.
 
-A sheet can be connected to one repertoire song ("repertoire_id"), and a
-song to at most one sheet. The key's three states: absent -- never decided,
-so auto_link() may connect it by title; None -- not connected to a
-repertoire song; an id -- connected. With repertoire_id None, "new_song"
-may instead hold the title of a song from an upcoming setlist that isn't in
-the repertoire yet (see upcoming_new_songs); once that song joins the
-repertoire, auto_link() moves the sheet over to it. "link_auto" marks a
-connection made by title matching rather than picked by hand.
+A sheet can be connected to one repertoire song, and a song to at most one
+sheet: "repertoire_id", "new_song" and "link_auto" work as described in
+song_links.py.
 
 Sheets are made and edited on leadsheets.dk only; here they're read-only
 copies (see leadsheets_remote.py), brought up to date by refresh_sheets().
@@ -32,8 +27,7 @@ from pathlib import Path
 
 import chords
 import data_store
-import repertoire
-import setlists
+import song_links
 
 LEADSHEETS_DIR = "leadsheets"
 
@@ -190,67 +184,17 @@ def stale_sheets(remote: list[dict]) -> tuple[list[dict], list[dict]]:
     return stale, gone
 
 
-# ── Connecting sheets to songs ─────────────────────────────────────────
+# ── Connecting sheets to songs (see song_links.py) ─────────────────────
 
-def _fold(title) -> str:
-    return str(title or "").strip().casefold()
-
-
-def upcoming_new_songs() -> list[dict]:
-    """Songs on upcoming setlists that aren't in the repertoire, once per
-    title (ignoring case), soonest gig first. A row whose title matches a
-    repertoire song counts as that song, even if it was never linked to it.
-    Each carries the song fields of its soonest row, so it can be copied
-    onto another setlist: [{title, artist, year, key, signe, jonas, duet,
-    indstilling, gigs: [{id, date, venue}]}]."""
-    upcoming, _ = setlists.split_upcoming_past(setlists.list_setlists())
-    known = {_fold(song.get("title")) for song in repertoire.list_songs()}
-    by_title: dict[str, dict] = {}
-    for gig in upcoming:
-        for row in gig.get("songs", []):
-            if row.get("type") != "song" or row.get("repertoire_id"):
-                continue
-            folded = _fold(row.get("title"))
-            if not folded or folded in known:
-                continue
-            entry = by_title.get(folded)
-            if entry is None:
-                entry = by_title[folded] = {field: row.get(field) for field in repertoire.FIELDS}
-                entry["title"] = row["title"].strip()
-                entry["artist"] = row.get("artist") or ""
-                entry["gigs"] = []
-            if not entry["artist"] and row.get("artist"):
-                entry["artist"] = row["artist"]
-            if not any(g["id"] == gig["id"] for g in entry["gigs"]):
-                entry["gigs"].append({"id": gig["id"], "date": gig.get("date", ""), "venue": gig.get("venue", "")})
-    return list(by_title.values())
+upcoming_new_songs = song_links.upcoming_new_songs
 
 
 def set_link(leadsheet_id: str, repertoire_id: str | None = None, new_song: str | None = None) -> dict:
     """Connect a sheet by hand to a repertoire song, or to a new song (by
     title), or to nothing when both are empty."""
     sheet = get_leadsheet(leadsheet_id)
-    repertoire_id = str(repertoire_id or "").strip() or None
-    new_song = str(new_song or "").strip() or None
-    if repertoire_id:
-        if not any(song["id"] == repertoire_id for song in repertoire.list_songs()):
-            raise ValueError("That repertoire song doesn't exist.")
-        other = sheet_for_repertoire_id(repertoire_id)
-        new_song = None
-    elif new_song:
-        other = sheet_for_new_song(new_song)
-    else:
-        other = None
-    if other and other["id"] != leadsheet_id:
-        raise ValueError(f"That song is already connected to the lead sheet '{other['title']}'.")
-    sheet["repertoire_id"] = repertoire_id
-    sheet.pop("link_auto", None)
-    if new_song:
-        sheet["new_song"] = new_song
-    else:
-        sheet.pop("new_song", None)
+    song_links.apply_link(sheet, list_leadsheets(), repertoire_id, new_song, "lead sheet")
     _save(sheet)
-    data_store.commit_and_push(f"Connect lead sheet '{sheet['title']}'")
     return sheet
 
 
@@ -259,89 +203,19 @@ def delete_leadsheet(leadsheet_id: str) -> None:
     if not path.exists():
         raise KeyError(leadsheet_id)
     path.unlink()
-    data_store.commit_and_push("Remove lead sheet")
-
-
-def sheet_for_repertoire_id(song_id: str) -> dict | None:
-    return next((s for s in list_leadsheets() if s.get("repertoire_id") == song_id), None)
-
-
-def sheet_for_new_song(title: str) -> dict | None:
-    folded = _fold(title)
-    return next((s for s in list_leadsheets() if s.get("new_song") and _fold(s["new_song"]) == folded), None)
 
 
 def new_song_links() -> dict[str, dict]:
     """{folded new-song title: its sheet} for every sheet connected to one."""
-    return {_fold(s["new_song"]): s for s in list_leadsheets() if s.get("new_song")}
+    return song_links.new_song_links(list_leadsheets())
 
 
 def links() -> dict[str, dict]:
     """{repertoire song id: its sheet} for every connected song."""
-    return {s["repertoire_id"]: s for s in list_leadsheets() if s.get("repertoire_id")}
-
-
-def _find_match(title: str, candidates: list[dict], all_titles: list[str]) -> dict | None:
-    """The repertoire song a sheet titled `title` should connect to, the way
-    the setlist editor auto-connects lyrics (findAutoConnections): an exact
-    title (ignoring case) first; else a title containing the other, but only
-    when that's unambiguous both ways -- one candidate song, and no other
-    unconnected sheet that would match it too."""
-    folded = title.casefold()
-    exact = [song for song in candidates if song["title"].strip().casefold() == folded]
-    if len(exact) == 1:
-        return exact[0]
-
-    def contains(a: str, b: str) -> bool:
-        a, b = a.casefold(), b.casefold()
-        return bool(a and b) and (a in b or b in a)
-
-    loose = [song for song in candidates if contains(song["title"].strip(), title)]
-    if len(loose) != 1:
-        return None
-    rivals = [t for t in all_titles if contains(loose[0]["title"].strip(), t)]
-    return loose[0] if len(rivals) == 1 else None
+    return song_links.links(list_leadsheets())
 
 
 def auto_link() -> None:
-    """Connect every sheet whose connection was never decided to the song
-    with the same title, if there is exactly one free one: a repertoire song
-    first, else a new song from an upcoming setlist. A sheet connected to a
-    new song moves to the repertoire song once one has that title. Sheets
-    with no match stay undecided, so a song added later still can."""
-    sheets = list_leadsheets()
-    songs = repertoire.list_songs()
-    taken = {s["repertoire_id"] for s in sheets if s.get("repertoire_id")}
-    free_songs = [song for song in songs if song["id"] not in taken]
-
-    for sheet in sheets:
-        if not sheet.get("new_song"):
-            continue
-        song = next((s for s in free_songs if _fold(s["title"]) == _fold(sheet["new_song"])), None)
-        if song is None:
-            continue
-        sheet["repertoire_id"] = song["id"]
-        del sheet["new_song"]
-        free_songs.remove(song)
-        _save(sheet)
-
-    undecided = [s for s in sheets if "repertoire_id" not in s]
-    if not undecided:
-        return
-    taken_new = {_fold(s["new_song"]) for s in sheets if s.get("new_song")}
-    free_new = [song for song in upcoming_new_songs() if _fold(song["title"]) not in taken_new]
-    undecided_titles = [s["title"] for s in undecided]
-    for sheet in undecided:
-        song = _find_match(sheet["title"], free_songs, undecided_titles)
-        if song is not None:
-            sheet["repertoire_id"] = song["id"]
-            free_songs.remove(song)
-        else:
-            song = _find_match(sheet["title"], free_new, undecided_titles)
-            if song is None:
-                continue
-            sheet["repertoire_id"] = None
-            sheet["new_song"] = song["title"]
-            free_new.remove(song)
-        sheet["link_auto"] = True
-        _save(sheet)
+    """Connect sheets whose connection was never decided by title (see
+    song_links.auto_link)."""
+    song_links.auto_link(list_leadsheets(), _save)

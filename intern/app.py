@@ -18,6 +18,8 @@ import gallery
 import gig_bundle
 import leadsheets
 import leadsheets_remote
+import lyrics
+import lyrics_import
 import repertoire
 import setlist
 import setlists
@@ -375,30 +377,30 @@ async def gigs_lyrics(gig_id: str):
     )
 
 
+def _library_sections(docs: list[dict], by_song: dict, by_new: dict) -> dict:
+    """The Lead Sheets and Lyrics pages' sections: upcoming new songs and
+    repertoire songs, each with its doc (if any), plus docs not connected
+    to a song shown elsewhere."""
+    songs = repertoire.list_songs()
+    new_songs = [
+        dict(song, doc=by_new.get(song["title"].strip().casefold()))
+        for song in leadsheets.upcoming_new_songs()
+    ]
+    shown = {d["id"] for d in by_song.values()} | {s["doc"]["id"] for s in new_songs if s["doc"]}
+    return {
+        "new_songs": new_songs,
+        "upcoming_gigs": setlists.split_upcoming_past(setlists.list_setlists())[0],
+        "with_doc": [dict(song, doc=by_song[song["id"]]) for song in songs if song["id"] in by_song],
+        "missing": [song for song in songs if song["id"] not in by_song],
+        "unlinked": [d for d in docs if d["id"] not in shown],
+    }
+
+
 @app.get("/leadsheets", response_class=HTMLResponse)
 async def leadsheets_page(request: Request):
     leadsheets.auto_link()
-    sheets = leadsheets.list_leadsheets()
-    by_song = leadsheets.links()
-    by_new = leadsheets.new_song_links()
-    songs = repertoire.list_songs()
-    new_songs = [
-        dict(song, sheet=by_new.get(song["title"].strip().casefold()))
-        for song in leadsheets.upcoming_new_songs()
-    ]
-    shown = {s["id"] for s in by_song.values()} | {s["sheet"]["id"] for s in new_songs if s["sheet"]}
-    return templates.TemplateResponse(
-        request,
-        "leadsheets.html",
-        {
-            "sheets": sheets,
-            "new_songs": new_songs,
-            "upcoming_gigs": setlists.split_upcoming_past(setlists.list_setlists())[0],
-            "with_sheet": [dict(song, sheet=by_song[song["id"]]) for song in songs if song["id"] in by_song],
-            "missing": [song for song in songs if song["id"] not in by_song],
-            "unlinked": [sheet for sheet in sheets if sheet["id"] not in shown],
-        },
-    )
+    sections = _library_sections(leadsheets.list_leadsheets(), leadsheets.links(), leadsheets.new_song_links())
+    return templates.TemplateResponse(request, "leadsheets.html", sections)
 
 
 # Sheets are made on leadsheets.dk; here the band imports read-only copies
@@ -474,23 +476,23 @@ async def leadsheet_page(request: Request, leadsheet_id: str):
         {
             "sheet": sheet,
             "sheet_json": json.dumps(sheet),
-            "song_choices_json": json.dumps(_song_choices()),
+            "song_choices_json": json.dumps(_song_choices(leadsheets.links(), leadsheets.new_song_links())),
         },
     )
 
 
-def _song_choices() -> dict:
-    """The songs a sheet's "Song" dropdown offers -- upcoming new songs and
-    the repertoire -- each with the sheet it's already connected to (if any)."""
-    linked = leadsheets.links()
-    linked_new = leadsheets.new_song_links()
+def _song_choices(linked: dict, linked_new: dict) -> dict:
+    """The songs a sheet's or lyrics' "Song" dropdown offers -- upcoming new
+    songs and the repertoire -- each with the doc of that kind it's already
+    connected to (if any), given links() and new_song_links()."""
 
-    def sheet_of(sheet):
-        return {"sheet_id": sheet["id"], "sheet_title": sheet["title"]} if sheet else {"sheet_id": None, "sheet_title": None}
+    def sheet_of(doc):
+        return {"sheet_id": doc["id"], "sheet_title": doc["title"]} if doc else {"sheet_id": None, "sheet_title": None}
 
     return {
         "new_songs": [
-            {"title": song["title"], "artist": song["artist"], **sheet_of(linked_new.get(song["title"].strip().casefold()))}
+            {"title": song["title"], "artist": song["artist"], "key": song.get("key") or "",
+             **sheet_of(linked_new.get(song["title"].strip().casefold()))}
             for song in leadsheets.upcoming_new_songs()
         ],
         "repertoire": [
@@ -528,6 +530,163 @@ async def leadsheet_delete(leadsheet_id: str):
     except KeyError:
         raise HTTPException(status_code=404)
     return RedirectResponse("/leadsheets", status_code=303)
+
+
+# ── Lyrics ─────────────────────────────────────────────────────────────
+# Written here, in the browser (static/lyrics-editor.js), one doc per song.
+
+@app.get("/lyrics", response_class=HTMLResponse)
+async def lyrics_page(request: Request):
+    lyrics.auto_link()
+    sections = _library_sections(lyrics.list_lyrics(), lyrics.links(), lyrics.new_song_links())
+    sections["import_doc_url"] = lyrics_import.get_doc_url()
+    return templates.TemplateResponse(request, "lyrics.html", sections)
+
+
+def _lyrics_editor(request: Request, doc: dict):
+    return templates.TemplateResponse(
+        request,
+        "lyrics_editor.html",
+        {
+            "doc": doc,
+            "doc_json": json.dumps(doc).replace("</", "<\\/"),
+            "song_choices_json": json.dumps(
+                _song_choices(lyrics.links(), lyrics.new_song_links())
+            ).replace("</", "<\\/"),
+        },
+    )
+
+
+@app.get("/lyrics/new", response_class=HTMLResponse)
+async def lyrics_new(request: Request, song: str = "", new_song: str = ""):
+    """The editor for lyrics not saved yet -- for a song when `song` (a
+    repertoire id) or `new_song` (an upcoming new song's title) is given.
+    The first save creates them."""
+    doc = {"id": None, "title": "", "artist": "", "key": "", "blocks": [], "repertoire_id": None}
+    if song:
+        match = next((s for s in repertoire.list_songs() if s["id"] == song), None)
+        if match:
+            existing = lyrics.links().get(song)
+            if existing:
+                return RedirectResponse(f"/lyrics/{existing['id']}", status_code=303)
+            doc.update(title=match["title"], artist=match.get("artist", ""), key=match.get("key", ""), repertoire_id=song)
+    elif new_song:
+        folded = new_song.strip().casefold()
+        match = next((s for s in leadsheets.upcoming_new_songs() if s["title"].strip().casefold() == folded), None)
+        if match:
+            existing = lyrics.new_song_links().get(folded)
+            if existing:
+                return RedirectResponse(f"/lyrics/{existing['id']}", status_code=303)
+            doc.update(title=match["title"], artist=match.get("artist") or "", key=match.get("key") or "", new_song=match["title"])
+    return _lyrics_editor(request, doc)
+
+
+@app.post("/lyrics")
+async def lyrics_create(request: Request):
+    try:
+        return lyrics.create(await request.json())
+    except (ValueError, TypeError) as exc:
+        return Response(content=str(exc), status_code=400)
+
+
+@app.post("/lyrics/import/preview")
+async def lyrics_import_preview(request: Request):
+    """The songs in the band's Google Doc, each with the song it most
+    likely is, for the Lyrics page's import list."""
+    try:
+        body = await request.json()
+        doc_url = str(body.get("doc_url") or "").strip() if isinstance(body, dict) else ""
+        if not doc_url:
+            raise ValueError("Paste the Google Doc link.")
+        html = await run_in_threadpool(lyrics_import.fetch_doc_html, doc_url)
+    except (ValueError, setlist.SyncError) as exc:
+        return Response(content=str(exc), status_code=400)
+    lyrics_import.set_doc_url(doc_url)
+    songs = lyrics_import.parse(html)
+    lyrics_import.suggest(songs, repertoire.list_songs(), leadsheets.upcoming_new_songs(), lyrics.list_lyrics())
+    return {"songs": songs, "choices": _song_choices(lyrics.links(), lyrics.new_song_links())}
+
+
+@app.post("/lyrics/import")
+async def lyrics_import_songs(request: Request):
+    """Creates lyrics for the picked songs: [{title, key, blocks,
+    repertoire_id | new_song}]. A song that already has lyrics is refused
+    (lyrics.create), never overwritten."""
+    body = await request.json()
+    songs = body.get("songs") if isinstance(body, dict) else None
+    if not isinstance(songs, list):
+        return Response(content="Pick the songs to import.", status_code=400)
+    by_id = {song["id"]: song for song in repertoire.list_songs()}
+    new_by_title = {s["title"].strip().casefold(): s for s in leadsheets.upcoming_new_songs()}
+    created, errors = [], []
+    for song in songs:
+        if not isinstance(song, dict):
+            continue
+        doc = {
+            "title": song.get("title"),
+            "artist": "",
+            "key": song.get("key") or "",
+            "blocks": song.get("blocks", []),
+            "repertoire_id": song.get("repertoire_id"),
+            "new_song": song.get("new_song"),
+        }
+        target = by_id.get(doc["repertoire_id"]) or new_by_title.get(str(doc["new_song"] or "").strip().casefold())
+        if target:
+            doc["title"] = target["title"]
+            doc["artist"] = target.get("artist") or ""
+            doc["key"] = doc["key"] or target.get("key") or ""
+        if not target and lyrics_import.already_imported(str(doc["title"] or ""), lyrics.list_lyrics()):
+            errors.append({"title": str(doc["title"]), "error": "already imported"})
+            continue
+        try:
+            created.append(lyrics.create(doc)["title"])
+        except (ValueError, TypeError) as exc:
+            errors.append({"title": str(doc["title"] or "?"), "error": str(exc)})
+    return {"created": created, "errors": errors}
+
+
+@app.get("/lyrics/{lyrics_id}", response_class=HTMLResponse)
+async def lyrics_edit_page(request: Request, lyrics_id: str):
+    try:
+        doc = lyrics.get_lyrics(lyrics_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    return _lyrics_editor(request, doc)
+
+
+@app.post("/lyrics/{lyrics_id}")
+async def lyrics_save(lyrics_id: str, request: Request):
+    try:
+        doc = lyrics.save(lyrics_id, await request.json())
+    except KeyError:
+        raise HTTPException(status_code=404)
+    except (ValueError, TypeError) as exc:
+        return Response(content=str(exc), status_code=400)
+    return {"updated_at": doc["updated_at"]}
+
+
+@app.post("/lyrics/{lyrics_id}/link")
+async def lyrics_link(lyrics_id: str, request: Request):
+    """Connect lyrics by hand: {repertoire_id}, {new_song} or {} for none."""
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("Malformed request.")
+        lyrics.set_link(lyrics_id, body.get("repertoire_id"), body.get("new_song"))
+    except KeyError:
+        raise HTTPException(status_code=404)
+    except (ValueError, TypeError) as exc:
+        return Response(content=str(exc), status_code=400)
+    return Response(status_code=204)
+
+
+@app.post("/lyrics/{lyrics_id}/delete")
+async def lyrics_delete(lyrics_id: str):
+    try:
+        lyrics.delete(lyrics_id)
+    except KeyError:
+        raise HTTPException(status_code=404)
+    return RedirectResponse("/lyrics", status_code=303)
 
 
 @app.get("/gallery", response_class=HTMLResponse)

@@ -20,7 +20,7 @@ from pypdf import PdfReader
 import data_store
 
 DOC_ID_RE = re.compile(r"/d/([a-zA-Z0-9_-]+)")
-EXPORT_URL = "https://docs.google.com/document/d/{doc_id}/export?format=pdf"
+EXPORT_URL = "https://docs.google.com/document/d/{doc_id}/export?format={fmt}"
 
 CONFIG_PATH = "setlist/config.json"
 SONGBOOK_PATH = "setlist/songbook.json"
@@ -84,9 +84,11 @@ def get_master_pdf_path():
     return data_store.DATA_DIR / MASTER_PDF_RELATIVE
 
 
-def _fetch_doc_pdf(doc_id: str) -> bytes:
+def fetch_doc_export(doc_id: str, fmt: str) -> bytes:
+    """The doc exported as `fmt` ("pdf", "html", ...) through its public
+    export link. Raises SyncError when Google refuses or the link is wrong."""
     try:
-        resp = requests.get(EXPORT_URL.format(doc_id=doc_id), timeout=30)
+        resp = requests.get(EXPORT_URL.format(doc_id=doc_id, fmt=fmt), timeout=30)
     except requests.RequestException as exc:
         raise SyncError(f"Couldn't reach Google Docs: {exc}") from exc
 
@@ -95,12 +97,17 @@ def _fetch_doc_pdf(doc_id: str) -> bytes:
             "Google Docs refused the export (403). Make sure the doc's "
             "sharing settings allow viewers to download/copy/print."
         )
-    if resp.status_code != 200 or not resp.content.startswith(b"%PDF"):
+    looks_right = resp.content.startswith(b"%PDF") if fmt == "pdf" else b"<html" in resp.content[:2000].lower()
+    if resp.status_code != 200 or not looks_right:
         raise SyncError(
             f"Export failed (status {resp.status_code}). Check the link is "
             "correct and set to 'Anyone with the link can view'."
         )
     return resp.content
+
+
+def _fetch_doc_pdf(doc_id: str) -> bytes:
+    return fetch_doc_export(doc_id, "pdf")
 
 
 # A song title is any line set noticeably larger than the doc's lyrics

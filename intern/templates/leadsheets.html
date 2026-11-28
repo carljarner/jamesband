@@ -4,7 +4,7 @@
 {% block content %}
 <div class="setlists-toolbar leadsheets-toolbar">
   <h1>Lead Sheets</h1>
-  <input type="search" id="sheet-search" class="leadsheets-search" placeholder="Search title or artist" aria-label="Search lead sheets" autocomplete="off" />
+  <input type="search" id="library-search" class="leadsheets-search" placeholder="Search title or artist" aria-label="Search lead sheets" autocomplete="off" />
   <div class="leadsheets-toolbar-actions">
     <button type="button" id="refresh-btn" class="add-row-btn add-row-btn--inline refresh-btn" title="Get the latest versions from leadsheets.dk" aria-label="Get the latest versions from leadsheets.dk">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M20 4v4.5h-4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -42,7 +42,7 @@
   <div class="leadsheet-subsection">
     <h3>{{ gig.date|dadate }}{% if gig.venue %} · {{ gig.venue }}{% endif %}</h3>
     <ul class="setlist-cards">
-      {% for song in gig_songs %}{{ song_card(song.title, song.artist, song.sheet) }}{% endfor %}
+      {% for song in gig_songs %}{{ song_card(song.title, song.artist, song.doc) }}{% endfor %}
     </ul>
   </div>
   {% endif %}
@@ -53,10 +53,10 @@
 </section>
 
 <section class="setlist-section leadsheet-section">
-  <h2>Repertoire <span class="muted leadsheet-section__count">{{ with_sheet|length }}</span></h2>
-  {% if with_sheet %}
+  <h2>Repertoire <span class="muted leadsheet-section__count">{{ with_doc|length }}</span></h2>
+  {% if with_doc %}
   <ul class="setlist-cards">
-    {% for song in with_sheet %}{{ song_card(song.title, song.artist, song.sheet) }}{% endfor %}
+    {% for song in with_doc %}{{ song_card(song.title, song.artist, song.doc) }}{% endfor %}
   </ul>
   {% else %}
   <p class="muted leadsheet-section__empty">No repertoire song has a sheet yet.</p>
@@ -91,7 +91,7 @@
   </ul>
 </section>
 {% endif %}
-<p id="sheet-search-empty" class="muted" hidden>Nothing matches your search.</p>
+<p id="library-search-empty" class="muted" hidden>Nothing matches your search.</p>
 
 <div id="import-modal" class="modal-overlay" hidden>
   <div class="modal-box modal-box--import" role="dialog" aria-modal="true" aria-labelledby="import-heading">
@@ -109,6 +109,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/library-search.js?v={{ static_version }}"></script>
 <script>
   // "+" imports read-only copies of leadsheets.dk sheets, where sheets are made and edited.
   const importModal = document.getElementById('import-modal');
@@ -211,30 +212,6 @@
       alert('Some sheets couldn’t be imported:\n' + result.errors.map(e => `${e.id}: ${e.error}`).join('\n'));
     }
     location.reload();
-  });
-
-  const sheetSearch = document.getElementById('sheet-search');
-  const sections = [...document.querySelectorAll('.leadsheet-section')];
-  const searchEmpty = document.getElementById('sheet-search-empty');
-  sheetSearch.addEventListener('input', () => {
-    const terms = sheetSearch.value.toLowerCase().split(/\s+/).filter(Boolean);
-    let shownTotal = 0;
-    for (const section of sections) {
-      const cards = [...section.querySelectorAll('.leadsheet-card')];
-      let shown = 0;
-      for (const card of cards) {
-        const match = terms.every(t => card.dataset.search.includes(t));
-        card.hidden = !match;
-        if (match) shown++;
-      }
-      shownTotal += shown;
-      // While searching, a section (or gig subsection) with nothing matching is hidden.
-      section.hidden = terms.length > 0 && shown === 0;
-      for (const sub of section.querySelectorAll('.leadsheet-subsection')) {
-        sub.hidden = terms.length > 0 && !sub.querySelector('.leadsheet-card:not([hidden])');
-      }
-    }
-    searchEmpty.hidden = !terms.length || shownTotal > 0;
   });
 
   // The circle-arrow brings every imported sheet up to date with

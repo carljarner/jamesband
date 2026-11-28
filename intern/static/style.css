@@ -2981,3 +2981,219 @@ button.live__song.is-missing { color: var(--text-dim); }
   .live__tap--prev { left: 14px; }
   .live__tap--next { right: 14px; }
 }
+
+/* ---------- Lyrics ---------- */
+/* The "+" on the Lyrics page is a link styled like the other "+" buttons. */
+a.lyrics-add-btn { text-decoration: none; color: var(--text); }
+
+.lyrics-editor { max-width: calc(210mm + 240px + 1.5rem); margin: 0 auto; }
+
+.lyrics-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius);
+}
+.lyrics-tool {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.72rem;
+  border-width: 1px;
+  border-color: rgba(255,255,255,0.18);
+}
+.lyrics-tool:hover { background: var(--surface-alt); color: var(--text); border-color: var(--accent-2); }
+.lyrics-tool[aria-pressed="true"] { border-color: var(--accent-2); color: var(--accent-2); }
+.lyrics-tool--section { font-weight: 700; }
+.lyrics-swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-right: 0.35rem;
+  border-radius: 2px;
+  vertical-align: -2px;
+}
+.lyrics-swatch--blue { background: rgb(201, 226, 255); }
+.lyrics-swatch--red { background: rgb(255, 205, 205); }
+.lyrics-tool-sep { width: 1px; align-self: stretch; margin: 0 0.2rem; background: rgba(255,255,255,0.12); }
+.lyrics-status { margin-left: auto; font-size: 0.78rem; color: var(--text-dim); }
+.lyrics-status.is-error { color: var(--accent); }
+
+.lyrics-layout { display: flex; align-items: flex-start; justify-content: center; gap: 1.5rem; }
+.lyrics-page-column { flex: 0 1 210mm; min-width: 0; }
+.lyrics-side {
+  flex: 0 0 240px;
+  position: sticky;
+  top: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.lyrics-song-select { width: 100%; margin: 0.3rem 0 0.2rem; font-size: 0.8rem; }
+.lyrics-tips ul { margin: 0.2rem 0 0; padding-left: 1rem; line-height: 1.45; }
+.lyrics-tips li { margin-bottom: 0.25rem; }
+.lyrics-tips b { color: var(--text); font-weight: 600; }
+.lyrics-delete { align-self: flex-start; }
+.lyrics-note { margin: 0.6rem 0 0; font-size: 0.85rem; }
+
+/* One A4 page: the lead sheet's header, placed where it is on a lead sheet
+   (28px from the top and sides), then the lyrics in two columns like the
+   old Google Doc, the left one filling first. */
+.lyrics-sheet {
+  width: 210mm;
+  max-width: 100%;
+  height: 297mm;
+  padding: 30px 40px 40px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: #111;
+  border-radius: 2px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11pt;
+  line-height: 1.25;
+  color-scheme: light;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.lyrics-head {
+  display: grid;
+  grid-template-columns: minmax(5rem, 1fr) minmax(0, 4fr) minmax(5rem, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+  /* The key sits 28px from the page edge, as on a lead sheet. */
+  margin: 0 -12px 24px;
+}
+.lyrics-head__center { grid-column: 2; text-align: center; }
+.lyrics-field { outline: none; border-radius: 3px; white-space: pre-wrap; }
+.lyrics-field:focus { background: rgba(79,215,209,0.12); }
+.lyrics-field:empty::before { content: attr(data-placeholder); color: #b3aea6; }
+.lyrics-title { font-family: 'MuseJazzText', cursive; font-size: 22px; line-height: 1.1; color: #1a1815; letter-spacing: 0.01em; }
+.lyrics-artist { margin-top: 5px; font-family: 'MuseJazzText', cursive; font-size: 13px; color: #55504a; }
+.lyrics-key {
+  grid-column: 3;
+  justify-self: end;
+  padding-top: 5px;
+  white-space: nowrap;
+  font-family: 'MuseJazzText', cursive;
+  font-size: 15px;
+  line-height: 1.1;
+  color: #55504a;
+}
+select.lyrics-key-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+select.lyrics-key-select:hover, select.lyrics-key-select:focus { background: rgba(79,215,209,0.12); outline: none; }
+
+.lyrics-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  column-count: 2;
+  column-gap: 10mm;
+  column-fill: auto;
+  overflow: hidden;
+  outline: none;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.lyrics-body > div, .lyrics-body > h3 { margin: 0; break-inside: avoid; }
+.lyrics-body > h3 {
+  margin-top: 0.9em;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: normal;
+  break-after: avoid;
+}
+.lyrics-body > h3:first-child { margin-top: 0; }
+.lyrics-body.is-empty::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  color: #b3aea6;
+  pointer-events: none;
+}
+
+/* Longer than one page: the page grows, in balanced columns. */
+.lyrics-sheet.is-long { height: auto; min-height: 297mm; }
+.lyrics-sheet.is-long .lyrics-body { column-fill: balance; overflow: visible; }
+
+@media (max-width: 600px) {
+  .lyrics-sheet { padding: 6mm; }
+}
+
+@media (max-width: 1100px) {
+  .lyrics-layout { flex-direction: column; align-items: center; }
+  .lyrics-page-column { flex: none; width: 100%; max-width: 210mm; }
+  .lyrics-side { position: static; flex: none; width: 100%; max-width: 210mm; }
+}
+
+@media print {
+  /* Paper is white, margins included (the app's dark scheme would tint them). */
+  :root { color-scheme: light; }
+  html { background: #fff; }
+  .lyrics-editor { max-width: none; }
+  .lyrics-layout { display: block; }
+  .lyrics-sheet { max-width: none; height: 296mm; border-radius: 0; box-shadow: none; }
+  /* Longer lyrics flow over the pages, with the margins on the paper. */
+  .lyrics-sheet.is-long { page: lyrics-long; height: auto; min-height: 0; padding: 0; }
+  .lyrics-field:empty::before, .lyrics-body.is-empty::before { content: none; }
+  .lyrics-key.is-empty { visibility: hidden; }
+}
+@page lyrics-long { size: A4 portrait; margin: 30px 40px 40px; }
+
+/* Lyrics page: import from the Google Doc. */
+.modal-box--lyrics-import { max-width: 760px; }
+.lyrics-import-read { display: flex; flex-direction: row; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+.modal-box .lyrics-import-read input { flex: 1; width: auto; min-width: 0; margin: 0; border-radius: var(--radius); }
+.lyrics-import-read button { flex: none; }
+.lyrics-import-all { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.4rem 0.8rem; font-size: 0.8rem; color: var(--text-dim); }
+.lyrics-import-all[hidden] { display: none; }
+.lyrics-import-list { height: min(460px, calc(100vh - 18rem)); }
+.lyrics-import-list[hidden] { display: none; }
+.lyrics-import-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 15rem);
+  grid-template-areas: "check info song" "check info note";
+  align-items: center;
+  column-gap: 0.7rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+}
+.lyrics-import-row > input { grid-area: check; }
+.lyrics-import-info { grid-area: info; min-width: 0; }
+.lyrics-import-song { grid-area: song; width: 100%; font-size: 0.78rem; }
+.lyrics-import-note { grid-area: note; font-size: 0.68rem; color: var(--text-dim); min-height: 0; }
+.lyrics-import-row.is-warning { border-color: rgba(255,90,78,0.5); }
+.lyrics-import-row.is-warning .lyrics-import-note { color: var(--accent); }
+.lyrics-import-heading {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.03em;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lyrics-import-meta { color: var(--text-dim); font-size: 0.72rem; line-height: 1.25; }
+@media (max-width: 600px) {
+  .lyrics-import-row { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "check info" "check song" "check note"; row-gap: 0.25rem; }
+}
+.lyrics-import-row.is-done { opacity: 0.55; }

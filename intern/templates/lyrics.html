@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}Lyrics{% endblock %}
+{% block container_class %}container--full{% endblock %}
+{% block content %}
+<div class="setlists-toolbar leadsheets-toolbar">
+  <h1>Lyrics</h1>
+  <input type="search" id="library-search" class="leadsheets-search" placeholder="Search title or artist" aria-label="Search lyrics" autocomplete="off" />
+  <div class="leadsheets-toolbar-actions">
+    <button type="button" id="import-btn" class="add-row-btn add-row-btn--inline refresh-btn lyrics-import-btn" title="Import from Google Doc" aria-label="Import from Google Doc">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 3h7l4 4v14H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 12h5M10 16h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <a href="/lyrics/new" class="add-row-btn add-row-btn--inline lyrics-add-btn" title="Write new lyrics" aria-label="Write new lyrics"></a>
+  </div>
+</div>
+
+<p id="import-result" class="muted refresh-status" role="status"></p>
+<div id="toast" class="toast" role="status" hidden></div>
+
+{# A card for a song: links to its lyrics when it has them; otherwise to a
+   new, unsaved page for it -- nothing is stored until something is typed. #}
+{% macro song_card(title, artist, doc, new_href) %}
+<li class="setlist-card leadsheet-card{{ '' if doc else ' leadsheet-card--empty' }}" data-search="{{ (title ~ ' ' ~ (artist or '') ~ ' ' ~ (doc.title if doc else '')) | lower }}">
+  <a href="{{ '/lyrics/' ~ doc.id if doc else new_href }}" class="leadsheet-card__link"{% if not doc %} title="Write the lyrics"{% endif %}>
+    <div class="setlist-card__header"><span>{{ title }}</span></div>
+    {% if artist %}<div class="leadsheet-card__artist">{{ artist }}</div>{% endif %}
+  </a>
+</li>
+{% endmacro %}
+
+<section class="setlist-section leadsheet-section">
+  <h2>New songs <span class="muted leadsheet-section__count">{{ new_songs|length }}</span></h2>
+  {% if new_songs %}
+  {# Each song under the first upcoming gig it's on; gigs with none are left out. #}
+  {% for gig in upcoming_gigs %}
+  {% set gig_songs = new_songs | selectattr('gigs.0.id', 'equalto', gig.id) | list %}
+  {% if gig_songs %}
+  <div class="leadsheet-subsection">
+    <h3>{{ gig.date|dadate }}{% if gig.venue %} · {{ gig.venue }}{% endif %}</h3>
+    <ul class="setlist-cards">
+      {% for song in gig_songs %}{{ song_card(song.title, song.artist, song.doc, '/lyrics/new?new_song=' ~ (song.title | urlencode)) }}{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% endfor %}
+  {% else %}
+  <p class="muted leadsheet-section__empty">No new songs on the upcoming setlists.</p>
+  {% endif %}
+</section>
+
+<section class="setlist-section leadsheet-section">
+  <h2>Repertoire <span class="muted leadsheet-section__count">{{ with_doc|length }}</span></h2>
+  {% if with_doc %}
+  <ul class="setlist-cards">
+    {% for song in with_doc %}{{ song_card(song.title, song.artist, song.doc, '') }}{% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted leadsheet-section__empty">No repertoire song has lyrics yet.</p>
+  {% endif %}
+</section>
+
+<section class="setlist-section leadsheet-section">
+  <h2>Missing <span class="muted leadsheet-section__count">{{ missing|length }}</span></h2>
+  {% if missing %}
+  <ul class="setlist-cards">
+    {% for song in missing %}{{ song_card(song.title, song.artist, None, '/lyrics/new?song=' ~ (song.id | urlencode)) }}{% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted leadsheet-section__empty">Every repertoire song has lyrics.</p>
+  {% endif %}
+</section>
+
+{% if unlinked %}
+<section class="setlist-section leadsheet-section">
+  <h2>Not connected <span class="muted leadsheet-section__count">{{ unlinked|length }}</span></h2>
+  <p class="muted leadsheet-section__hint">Lyrics not connected to a song. Open them to pick their song.</p>
+  <ul class="setlist-cards">
+    {% for doc in unlinked %}
+    <li class="setlist-card leadsheet-card" data-search="{{ (doc.title ~ ' ' ~ (doc.artist or '')) | lower }}">
+      <a href="/lyrics/{{ doc.id }}" class="leadsheet-card__link">
+        <div class="setlist-card__header"><span>{{ doc.title }}</span></div>
+        {% if doc.artist %}<div class="leadsheet-card__artist">{{ doc.artist }}</div>{% endif %}
+        {% if doc.new_song %}<div class="leadsheet-card__note">“{{ doc.new_song }}” is no longer on an upcoming setlist</div>{% endif %}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+<p id="library-search-empty" class="muted" hidden>Nothing matches your search.</p>
+
+<div id="import-modal" class="modal-overlay" hidden>
+  <div class="modal-box modal-box--import modal-box--lyrics-import" role="dialog" aria-modal="true" aria-labelledby="import-heading">
+    <p id="import-heading" class="import-heading">Import from Google Doc</p>
+    <form id="import-read" class="lyrics-import-read">
+      <input type="url" id="import-url" placeholder="https://docs.google.com/document/d/…" aria-label="Google Doc link" value="{{ import_doc_url }}" required />
+      <button type="submit" id="import-read-btn" class="btn-small">Read doc</button>
+    </form>
+    <p id="import-status" class="muted import-status">Each song in the doc (under its big heading) becomes lyrics here. Nothing is overwritten.</p>
+    <label id="import-all-row" class="lyrics-import-all" hidden><input type="checkbox" id="import-all" /> All</label>
+    <ul id="import-list" class="import-list lyrics-import-list" hidden></ul>
+    <div class="modal-actions">
+      <button type="button" id="import-cancel" class="btn-small">Cancel</button>
+      <button type="button" id="import-ok" class="primary btn-small" disabled>Import</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/library-search.js?v={{ static_version }}"></script>
+<script>
+  // Import: read the band's Google Doc, check each song's match, import.
+  const importModal = document.getElementById('import-modal');
+  const importUrl = document.getElementById('import-url');
+  const importStatus = document.getElementById('import-status');
+  const importList = document.getElementById('import-list');
+  const importAllRow = document.getElementById('import-all-row');
+  const importAll = document.getElementById('import-all');
+  const importOk = document.getElementById('import-ok');
+  const readBtn = document.getElementById('import-read-btn');
+  let rows = [];
+
+  document.getElementById('import-btn').addEventListener('click', () => {
+    importModal.hidden = false;
+    importUrl.focus();
+  });
+  document.getElementById('import-cancel').addEventListener('click', () => { importModal.hidden = true; });
+  importModal.addEventListener('click', e => { if (e.target === importModal) importModal.hidden = true; });
+
+  function songSelect(choices, current) {
+    const select = document.createElement('select');
+    select.className = 'lyrics-import-song';
+    select.setAttribute('aria-label', 'Song');
+    select.appendChild(new Option('Not connected', ''));
+    for (const [label, songs, value] of [
+      ['New songs', choices.new_songs, s => `new:${s.title}`],
+      ['Repertoire', choices.repertoire, s => `rep:${s.id}`],
+    ]) {
+      if (!songs.length) continue;
+      const group = document.createElement('optgroup');
+      group.label = label;
+      for (const song of songs) {
+        const option = new Option(song.sheet_id ? `${song.title} (has lyrics)` : song.title, value(song));
+        option.disabled = Boolean(song.sheet_id);
+        group.appendChild(option);
+      }
+      select.appendChild(group);
+    }
+    select.value = current;
+    return select;
+  }
+
+  // Checked rows; a song picked by two rows is flagged on the later one.
+  function refreshRows() {
+    const seen = new Set();
+    let picked = 0;
+    for (const row of rows) {
+      const option = row.select.selectedOptions[0];
+      const taken = Boolean(row.song.existing) || Boolean(option && option.disabled);
+      let note = '';
+      if (row.song.existing) note = `Already imported as “${row.song.existing}”`;
+      else if (taken) note = 'Already has lyrics';
+      else if (row.check.checked && row.select.value && seen.has(row.select.value)) note = 'Same song as a row above';
+      else if (!row.select.value) note = 'Imports as not connected';
+      if (row.check.checked && row.select.value && !taken) seen.add(row.select.value);
+      row.check.disabled = taken;
+      if (taken) row.check.checked = false;
+      row.note.textContent = note;
+      row.li.classList.toggle('is-warning', note === 'Same song as a row above');
+      row.li.classList.toggle('is-done', taken);
+      if (row.check.checked) picked++;
+    }
+    importOk.disabled = picked === 0;
+    importOk.textContent = picked ? `Import (${picked})` : 'Import';
+    const enabled = rows.filter(r => !r.check.disabled);
+    importAll.checked = enabled.length > 0 && enabled.every(r => r.check.checked);
+  }
+
+  document.getElementById('import-read').addEventListener('submit', async e => {
+    e.preventDefault();
+    readBtn.disabled = true;
+    importStatus.hidden = false;
+    importStatus.textContent = 'Reading the doc…';
+    importList.hidden = true;
+    importAllRow.hidden = true;
+    importList.textContent = '';
+    rows = [];
+    refreshRows();
+    try {
+      const resp = await fetch('/lyrics/import/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doc_url: importUrl.value }),
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      const { songs, choices } = await resp.json();
+      if (!songs.length) throw new Error('No songs found. Each song should start with a big heading.');
+      for (const song of songs) {
+        const li = document.createElement('li');
+        li.className = 'lyrics-import-row';
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.checked = true;
+        check.setAttribute('aria-label', `Import ${song.heading}`);
+        const info = document.createElement('div');
+        info.className = 'lyrics-import-info';
+        const heading = document.createElement('div');
+        heading.className = 'lyrics-import-heading';
+        heading.textContent = song.heading;
+        const meta = document.createElement('div');
+        meta.className = 'lyrics-import-meta';
+        const lines = song.blocks.filter(b => b.type === 'line' && b.runs.length).length;
+        meta.textContent = [song.key && `Key ${song.key}`, `${lines} lines`].filter(Boolean).join(' · ');
+        info.append(heading, meta);
+        const current = song.repertoire_id ? `rep:${song.repertoire_id}` : song.new_song ? `new:${song.new_song}` : '';
+        const select = songSelect(choices, current);
+        const note = document.createElement('div');
+        note.className = 'lyrics-import-note';
+        li.append(check, info, select, note);
+        importList.appendChild(li);
+        const row = { song, li, check, select, note };
+        rows.push(row);
+        check.addEventListener('change', refreshRows);
+        select.addEventListener('change', refreshRows);
+      }
+      importStatus.textContent = `${songs.length} songs in the doc. Check the song each one belongs to.`;
+      importList.hidden = false;
+      importAllRow.hidden = false;
+      refreshRows();
+    } catch (err) {
+      importStatus.textContent = err.message || 'Couldn’t read the doc.';
+    }
+    readBtn.disabled = false;
+  });
+
+  importAll.addEventListener('change', () => {
+    rows.forEach(r => { if (!r.check.disabled) r.check.checked = importAll.checked; });
+    refreshRows();
+  });
+
+  const RESULT_KEY = 'lyrics-import-result';
+  importOk.addEventListener('click', async () => {
+    const songs = rows.filter(r => r.check.checked).map(r => {
+      const value = r.select.value;
+      return {
+        title: r.song.title,
+        key: r.song.key,
+        blocks: r.song.blocks,
+        repertoire_id: value.startsWith('rep:') ? value.slice(4) : null,
+        new_song: value.startsWith('new:') ? value.slice(4) : null,
+      };
+    });
+    if (!songs.length) return;
+    importOk.disabled = true;
+    importOk.textContent = 'Importing…';
+    try {
+      const resp = await fetch('/lyrics/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ songs }),
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      const result = await resp.json();
+      sessionStorage.setItem(RESULT_KEY, JSON.stringify(result));
+      location.reload();
+    } catch (err) {
+      importStatus.textContent = err.message || 'Couldn’t import.';
+      refreshRows();
+    }
+  });
+
+  // After the reload: how it went.
+  const toast = document.getElementById('toast');
+  function showToast(message) {
+    toast.textContent = message;
+    toast.hidden = false;
+    requestAnimationFrame(() => toast.classList.add('toast--visible'));
+    setTimeout(() => {
+      toast.classList.remove('toast--visible');
+      setTimeout(() => { toast.hidden = true; }, 200);
+    }, 3000);
+  }
+  let lastImport = null;
+  try { lastImport = JSON.parse(sessionStorage.getItem(RESULT_KEY)); } catch (err) { /* none */ }
+  if (lastImport) {
+    sessionStorage.removeItem(RESULT_KEY);
+    const n = lastImport.created.length;
+    showToast(`Imported ${n} song${n === 1 ? '' : 's'}`);
+    if (lastImport.errors.length) {
+      document.getElementById('import-result').textContent =
+        'Not imported: ' + lastImport.errors.map(e => `${e.title} (${e.error})`).join(' · ');
+    }
+  }
+</script>
+{% endblock %}
